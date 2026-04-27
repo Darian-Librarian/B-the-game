@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <title>B | Issue 1: Welcome Home!</title>
   <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/dark.css">
-  <link rel="stylesheet" href="/styles.css"> </head>
+  <link rel="stylesheet" href="styles.css">
+
 <body>
   <button id="theme-toggle" onclick="cycleTheme()">Theme: Dark</button>
 
@@ -15,8 +16,7 @@
       name: 'B',
       repo: 'b-universe/B-the-game',
       logo: '/assets/b_logo.png',
-      loadSidebar: true,
-      basePath: '/docs/',
+      loadSidebar: '_sidebar.md',
       maxLevel: 0,
       subMaxLevel: 0,
       auto2top: true,
@@ -51,7 +51,7 @@
   <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
   <script src="https://unpkg.com/@popperjs/core@2"></script>
   <script src="https://unpkg.com/tippy.js@6"></script>
-  <script src="/glossary.js"></script>
+  <script src="glossary.js"></script>
   <script>
     const themes = ['dark', 'dim', 'ecstatic'];
     function applyTheme(name) {
