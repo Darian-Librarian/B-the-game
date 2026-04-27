@@ -106,18 +106,22 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--accent) !important;
   border-radius: 10px !important;
   bottom: 10px !important;
+  left: 10px !important;
+  width: 44px !important;
+  height: 44px !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
   align-items: center !important;
   gap: 4px !important;
-  height: 44px !important;
-  left: 10px !important;
-  width: 44px !important;
+  padding: 0 !important;
   transition: background-color 0.3s ease, border-color 0.3s ease !important;
+  z-index: 101 !important;
 }
 
 .sidebar-toggle span {
+  position: static !important;
+  margin: 0 !important;
   background-color: var(--accent) !important;
   height: 2px !important;
   width: 20px !important;
@@ -128,26 +132,29 @@ a:hover { text-decoration: underline; }
 .sidebar-toggle:hover span { background-color: var(--sidebar-bg) !important; }
 
 #theme-toggle {
+  position: fixed;
+  bottom: 10px;
+  left: 64px;
+  width: 226px !important; /* Constrains to sidebar width: 300 - 64 - 10 */
+  height: 44px;
   background: transparent;
+  color: var(--accent);
   border: 1px solid var(--accent);
   border-radius: 10px;
-  bottom: 10px;
-  color: var(--accent);
-  cursor: pointer;
-  display: flex;
   font-family: var(--font-mono);
   font-size: 0.8rem;
-  height: 44px;
-  justify-content: center;
+  cursor: pointer;
+  display: flex;
   align-items: center;
-  left: 64px;
-  right: 10px;
-  position: absolute;
+  justify-content: center;
   transition: all 0.3s ease !important;
   z-index: 100;
 }
 
-#theme-toggle:hover { background-color: var(--accent); color: var(--sidebar-bg); }
+#theme-toggle:hover {
+  background-color: var(--accent);
+  color: var(--sidebar-bg);
+}
 
 /* --- MARKDOWN ELEMENTS --- */
 .markdown-section blockquote {
@@ -232,7 +239,7 @@ body.ecstatic .markdown-section blockquote, body.ecstatic .markdown-section code
 
 body.ecstatic .markdown-section pre { animation: glow-pulse 4s ease-in-out infinite !important; }
 
-/* Decoration Bar */
+/*  --- DECORATION BAR --- */
 section.main::before {
   background: var(--rainbow-gradient);
   content: "";
