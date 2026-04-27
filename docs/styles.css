@@ -63,97 +63,52 @@ a:hover { text-decoration: underline; }
 .sidebar {
   background-color: var(--sidebar-bg) !important;
   border-right: 1px solid var(--sidebar-border) !important;
+  width: 300px !important; /* Enforces manifest visibility */
   display: flex !important;
   flex-direction: column !important;
   overflow-y: auto !important;
-  padding: 0 0 70px 0 !important;
+  padding: 0 0 70px 0 !important; /* Space for footer controls */
+  left: 0 !important;
+  transition: transform 0.25s ease-out !important;
 }
 
-.app-name-link {
-  border-bottom: 2px solid var(--accent);
-  display: block !important;
-  width: 100% !important;
+/* Correct the Accordion logic for indented lists */
+.sidebar-nav > ul > li > ul { 
+  display: none; 
+  padding-left: 15px !important;
 }
 
-.app-name-link img {
-  display: block !important;
-  width: 100% !important;
-  height: auto !important;
-}
-
-.sidebar .app-name { font-size: 0 !important; }
-
-.sidebar-nav > ul > li > ul { display: none; }
 .sidebar-nav li.active > ul, 
 .sidebar-nav li:has(.active) > ul { 
   display: block !important; 
 }
 
-.sidebar-nav > ul > li > a, .sidebar-nav > ul > li > strong {
-  font-family: var(--font-header);
-  font-size: 1.1rem;
-  font-weight: bold !important;
-  margin-top: 10px;
-  display: block;
+.sidebar-nav a {
+  color: var(--text-dim) !important;
+  transition: color 0.2s ease !important;
 }
 
-.sidebar-nav a.active {
+.sidebar-nav li.active > a {
   color: var(--accent) !important;
+  font-weight: bold !important;
   border-right: 2px solid var(--accent);
-  font-weight: bold;
 }
 
-/* --- UI CONTROLS --- */
+/* --- UI CONTROLS: FIXED POSITIONS --- */
 .sidebar-toggle {
-  background: transparent !important;
-  border: 1px solid var(--accent) !important;
-  border-radius: 10px !important;
+  position: fixed !important; /* Anchor to screen */
   bottom: 10px !important;
   left: 10px !important;
-  width: 44px !important;
-  height: 44px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-  align-items: center !important;
-  gap: 4px !important;
-  padding: 0 !important;
-  transition: background-color 0.3s ease, border-color 0.3s ease !important;
   z-index: 101 !important;
 }
 
-.sidebar-toggle span {
-  position: static !important;
-  margin: 0 !important;
-  background-color: var(--accent) !important;
-  height: 2px !important;
-  width: 20px !important;
-  transition: background-color 0.3s ease !important;
-}
-
-.sidebar-toggle:hover { background-color: var(--accent) !important; }
-.sidebar-toggle:hover span { background-color: var(--sidebar-bg) !important; }
-
 #theme-toggle {
-  position: fixed;
-  bottom: 10px;
-  left: 64px;
+  position: fixed !important;
+  bottom: 10px !important;
+  left: 64px !important;
   width: 226px !important;
   max-width: 226px !important;
-  height: 44px;
-  background: transparent;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 10px;
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease !important;
-  z-index: 100;
-  flex-shrink: 0;
+  z-index: 100 !important;
 }
 
 #theme-toggle:hover {
@@ -234,11 +189,17 @@ body.ecstatic {
   --quote-bg: rgba(255, 0, 255, 0.05);
 }
 
-body.ecstatic .app-name-link img, body.ecstatic a, body.ecstatic strong,
-body.ecstatic .term-definition, body.ecstatic h1, body.ecstatic h2, 
-body.ecstatic h3, body.ecstatic table th, body.ecstatic .sidebar-toggle,
-body.ecstatic #theme-toggle, body.ecstatic .github-corner svg,
-body.ecstatic .markdown-section blockquote, body.ecstatic .markdown-section code {
+body.ecstatic .app-name-link img,
+body.ecstatic a, 
+body.ecstatic strong,
+body.ecstatic .term-definition, 
+body.ecstatic h1, 
+body.ecstatic h2, 
+body.ecstatic h3, 
+body.ecstatic table th,
+body.ecstatic .sidebar-toggle,
+body.ecstatic #theme-toggle,
+body.ecstatic .markdown-section code { 
   animation: ecstatic-shift 15s linear infinite !important;
 }
 

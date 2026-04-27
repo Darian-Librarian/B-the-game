@@ -9,7 +9,7 @@ const dictionary = {
   "Biological Instability": "A measurement of mutation intensity caused by environmental corruption.",
   "The Lifecycle": "The fundamental progression system governing manifest existence and rebirth.",
   "Acquisition": "The different ways for obtaining new power signatures and tactical assets.",
-  "Effeciency Scaling": "The mathematical relationship between Total Level and manifest power output."
+  "Efficiency Scaling": "The mathematical relationship between Total Level and manifest power output."
 };
 
 // --- Power Icon Engine ---
