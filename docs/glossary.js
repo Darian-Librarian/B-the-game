@@ -162,7 +162,11 @@ window.renderBicons = function(container = document) {
   </span>
 `;
 
-    icon.replaceWith(wrapper);
+    if (icon.dataset.rendered) return;
+    icon.dataset.rendered = "true";
+    
+    icon.innerHTML = wrapper.innerHTML;
+    icon.classList.add('icon-rendered');
   });
 };
 
@@ -172,12 +176,17 @@ window.initWikiTooltips = function() {
   const content = document.querySelector('.content');
   if (!content) return;
 
-  const targets = content.querySelectorAll('p, li, td, .stub-text');
+  const targets = content.querySelectorAll(
+  'p:not(.processed), li:not(.processed), td:not(.processed), .stub-text:not(.processed)'
+  );
 
   Object.keys(dictionary).forEach(term => {
     const regex = new RegExp(`(?<!<a[^>]*>)\\b(${term})\\b(?![^<]*</a>)`, 'gi');
 
     targets.forEach(el => {
+      if (el.dataset.tooltipProcessed) return;
+      el.dataset.tooltipProcessed = "true";
+
       if (!el.closest('h1, h2, h3, h4, h5, h6, a')) {
         el.innerHTML = el.innerHTML.replace(
           regex, 
@@ -229,14 +238,11 @@ window.initWikiTooltips = function() {
 
 // --- Docsify hook ---
 window.$docsify = window.$docsify || {};
-window.$docsify.plugins = [
-  function(hook) {
-    hook.doneEach(function() {
-      initWikiTooltips();
+window.$docsify.plugins = window.$docsify.plugins || [];
 
-      requestAnimationFrame(() => {
-        renderBicons();
-      });
-    });
-  }
-].concat(window.$docsify.plugins || []);
+window.$docsify.plugins.push(function(hook) {
+  hook.doneEach(function() {
+    initWikiTooltips();
+    requestAnimationFrame(() => renderBicons());
+  });
+});
