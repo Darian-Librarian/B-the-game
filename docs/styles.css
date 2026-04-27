@@ -65,8 +65,8 @@ a:hover { text-decoration: underline; }
   border-right: 1px solid var(--sidebar-border) !important;
   display: flex !important;
   flex-direction: column !important;
-  overflow: visible !important;
-  padding: 0 !important;
+  overflow-y: auto !important;
+  padding: 0 0 70px 0 !important;
 }
 
 .app-name-link {
@@ -83,8 +83,11 @@ a:hover { text-decoration: underline; }
 
 .sidebar .app-name { font-size: 0 !important; }
 
-.sidebar-nav li > ul { display: none; }
-.sidebar-nav li.active > ul, .sidebar-nav li:has(.active) > ul { display: block !important; }
+.sidebar-nav > ul > li > ul { display: none; }
+.sidebar-nav li.active > ul, 
+.sidebar-nav li:has(.active) > ul { 
+  display: block !important; 
+}
 
 .sidebar-nav > ul > li > a, .sidebar-nav > ul > li > strong {
   font-family: var(--font-header);
@@ -135,7 +138,8 @@ a:hover { text-decoration: underline; }
   position: fixed;
   bottom: 10px;
   left: 64px;
-  width: 226px !important; /* Constrains to sidebar width: 300 - 64 - 10 */
+  width: 226px !important;
+  max-width: 226px !important;
   height: 44px;
   background: transparent;
   color: var(--accent);
@@ -149,6 +153,7 @@ a:hover { text-decoration: underline; }
   justify-content: center;
   transition: all 0.3s ease !important;
   z-index: 100;
+  flex-shrink: 0;
 }
 
 #theme-toggle:hover {

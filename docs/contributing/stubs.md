@@ -1,6 +1,6 @@
 # Stubs
 
-In the <strong>B</strong> archive, a stub is basically a placeholder for a page that exists but hasn't been fully fleshed out with stuff yet. You'll see them marked with a rocket icon and a call to action, acting as a signal that the topic is on the map but needs an operator to step in and expand the record. These entries keep our documentation high-signal by identifying gaps in our city archives or technical scripts, giving the community a direct starting point to contribute their own data without breaking the wiki's flow.
+In the <strong>B</strong> archive, a stub is basically a placeholder for a page that exists but hasn't been fully fleshed out with stuff yet. You'll see them marked with a rocket icon and a call to action, acting as a signal that the topic is on the map but needs an operator to step in and expand the record. These entries keep our documentation intuitive by identifying gaps in our city archives or technical scripts, giving the community a direct starting point to contribute their own data without breaking the wiki's flow.
 
 <div class="wiki-stub">
   <div class="stub-inner">
