@@ -1,1 +1,2 @@
-/docs/assets/icons/powers/templates
+/docs/assets/icons/powers/templates/*
+!docs/assets/icons/powers/templates/power-template.xcf
