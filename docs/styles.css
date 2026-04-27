@@ -63,25 +63,16 @@ a:hover { text-decoration: underline; }
 .sidebar {
   background-color: var(--sidebar-bg) !important;
   border-right: 1px solid var(--sidebar-border) !important;
-  width: 300px !important; /* Enforces manifest visibility */
-  display: flex !important;
-  flex-direction: column !important;
+  width: 300px !important;
+  display: block !important;
   overflow-y: auto !important;
-  padding: 0 0 70px 0 !important; /* Space for footer controls */
-  left: 0 !important;
+  padding: 0 0 80px 0 !important;
   transition: transform 0.25s ease-out !important;
 }
 
-/* Correct the Accordion logic for indented lists */
-.sidebar-nav > ul > li > ul { 
-  display: none; 
-  padding-left: 15px !important;
-}
-
+.sidebar-nav > ul > li > ul { display: none; padding-left: 15px !important; }
 .sidebar-nav li.active > ul, 
-.sidebar-nav li:has(.active) > ul { 
-  display: block !important; 
-}
+.sidebar-nav li:has(.active) > ul { display: block !important; }
 
 .sidebar-nav a {
   color: var(--text-dim) !important;
@@ -96,24 +87,49 @@ a:hover { text-decoration: underline; }
 
 /* --- UI CONTROLS: FIXED POSITIONS --- */
 .sidebar-toggle {
-  position: fixed !important; /* Anchor to screen */
-  bottom: 10px !important;
+  background: transparent !important;
+  border: 1px solid var(--accent) !important;
+  border-radius: 10px !important;
+  bottom: 15px !important; /* Lifted slightly for padding */
   left: 10px !important;
-  z-index: 101 !important;
+  width: 44px !important;
+  height: 44px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 4px !important;
+  z-index: 1000 !important;
+}
+
+.sidebar-toggle span {
+  position: static !important;
+  margin: 0 !important;
+  background-color: var(--accent) !important;
+  height: 2px !important;
+  width: 20px !important;
 }
 
 #theme-toggle {
   position: fixed !important;
-  bottom: 10px !important;
+  bottom: 15px !important;
   left: 64px !important;
-  width: 226px !important;
-  max-width: 226px !important;
-  z-index: 100 !important;
+  width: 226px !important; /* Locked width for a 300px sidebar */
+  height: 44px !important;
+  background-color: transparent !important; /* Fixes the solid white block */
+  color: var(--accent) !important;
+  border: 1px solid var(--accent) !important;
+  border-radius: 10px !important;
+  font-family: var(--font-mono) !important; /* Consolas */
+  font-size: 0.85rem !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  z-index: 999 !important;
 }
-
 #theme-toggle:hover {
-  background-color: var(--accent);
-  color: var(--sidebar-bg);
+  background-color: var(--accent) !important;
+  color: var(--sidebar-bg) !important;
 }
 
 /* --- MARKDOWN ELEMENTS --- */
