@@ -8,11 +8,11 @@ A comprehensive log of lore, mechanics, and resources for B, the game!.
     <h3><a href="#/account/beginners-guide">Beginner's Guide</a></h3>
     Everything you need to manifest your first player.
     <ul>
-      <li><a href="#/account/Selecting-a-Player-Style">Selecting a Player Style</a></li>
+      <li><a href="#/account/selecting-a-player-style">Selecting a Player Style</a></li>
       <li><a href="#/account/heritage-and-body-types">Heritage & Body Types</a></li>
-      <li><a href="#/account/Integrity">The Integrity Axis</a></li>
-      <li><a href="#/account/Archetypes-Overview">Archetypes & Powersets</a></li>
-      <li><a href="#/account/Total-Level-Progression">Level Progression</a></li>
+      <li><a href="#/account/integrity">The Integrity Axis</a></li>
+      <li><a href="#/account/archetypes-overview">Archetypes & Powersets</a></li>
+      <li><a href="#/account/total-level-progression">Level Progression</a></li>
       <li><a href="#/account/identification-and-alignment">Identification & Alignment</a></li>
     </ul>
   </div>
@@ -54,9 +54,9 @@ A comprehensive log of lore, mechanics, and resources for B, the game!.
     <h3><a href="#/news">News & Announcements</a></h3>
     Latest updates and world events.
     <ul>
-      <li><a href="#/announcements/Issue-1">Issue 1: Initial Manifestation</a></li>
-      <li><a href="#/announcements/Status">Server Status</a></li>
-      <li><a href="#/announcements/Changelog">Edit Logs</a></li>
+      <li><a href="#/announcements/issue-1">Issue 1: Initial Manifestation</a></li>
+      <li><a href="#/announcements/status">Server Status</a></li>
+      <li><a href="#/announcements/changelog">Edit Logs</a></li>
     </ul>
   </div>
 

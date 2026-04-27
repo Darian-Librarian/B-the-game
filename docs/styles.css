@@ -334,3 +334,41 @@ body.ecstatic .wiki-stub::before {
 .synthetic { background-color: var(--color-synthetic) !important; }
 .mutation { background-color: var(--color-mutation) !important; }
 .primal { background-color: var(--color-primal) !important; }
+
+/* --- PORTAL GRID LAYOUT --- */
+.portal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin: 2em 0;
+}
+
+.portal-card {
+  background: var(--bg-dark);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.portal-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--accent);
+}
+
+.portal-card h3 {
+  margin-top: 0 !important;
+  border-bottom: 1px solid var(--accent);
+  padding-bottom: 10px;
+}
+
+.portal-card ul {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 15px;
+}
+
+.portal-card li {
+  margin: 8px 0;
+  font-size: 0.9rem;
+}
