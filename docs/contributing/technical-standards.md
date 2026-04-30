@@ -44,6 +44,10 @@ Visual assets and UI should fit our digital theme:
 * **Rainbow Guidelines**: Only the **Ecstatic** theme can use multi-color gradients for borders and transitions.
 * **Image Rendering**: Icons and low-poly assets should use pixelated scaling for a sharp, gritty 16/32-bit look on high-res displays.
 
+<div align="left">
+  <a href="#/contributing/contributing"><b>←  Back to Contributing</b></a>
+</div>
+
 ---
 
 <div class="nav-tray" style="flex-wrap: wrap;">

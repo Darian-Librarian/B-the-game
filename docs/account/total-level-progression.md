@@ -36,6 +36,7 @@ Because the **Total Level** is a sum of your player roster, the death of a perma
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px;">
   <a href="#/account/archetypes-overview" style="text-decoration: none;">←  Archetypes & Powersets</b></a>
+    <a href="#/account/total-level-progression" style="text-decoration: none;">Level Progression  →</a>
 </div>
 
 ---

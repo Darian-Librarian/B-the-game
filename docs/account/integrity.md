@@ -52,7 +52,7 @@ Shifting away from a **Neural** link is a traumatic process, whether mechanical 
 If every player on your roster dies, the account enters stasis. You can't create a new character until **24 hours** after the last player manifestation or someone saves you. Establish a **Processing Base** or **Isolation Bed** early to store player backups and mitigate stasis risks.
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px;">
-  <a href="#/account/heritage-and-body-types" style="text-decoration: none;">←  Heritage & Body Types</b></a>
+  <a href="#/account/heritage-and-body-types" style="text-decoration: none;"><b>←  Heritage & Body Types<b></a>
   <a href="#/account/archetypes-overview" style="text-decoration: none;"><b>Archetypes & Powersets  →</b></a>
 </div>
 

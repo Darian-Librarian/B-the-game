@@ -84,8 +84,8 @@ Select a Powerset Type below to view specific pools and individual powersets:
 * [Neural and Minions](#/account/powersets/neural-and-minions)
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px;">
-  <a href="#/account/integrity" style="text-decoration: none;">←  The Integrity Axis</b></a>
-  <a href="#/account/total-level-progression" style="text-decoration: none;"><b>Level Progression</b></a>
+  <a href="#/account/integrity" style="text-decoration: none;"><b>←  The Integrity Axis</b></a>
+  <a href="#/account/total-level-progression" style="text-decoration: none;"><b>Level Progression  →</b></a>
 </div>
 
 ---

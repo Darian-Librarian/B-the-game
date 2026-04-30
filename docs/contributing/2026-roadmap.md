@@ -50,6 +50,12 @@ Once the documentation for **Issue 1** is verified as complete, development will
 
 *Empty - Pending completion of Part 3.*
 
+
+
+<div align="left">
+  <a href="#/contributing/contributing"><b>←  Back to Contributing</b></a>
+</div>
+
 ---
 
 <div class="nav-tray" style="flex-wrap: wrap;">

@@ -29,21 +29,21 @@ Welcome to **B**! This guide is designed to navigate you through the technical a
   <h3>Account Security</h3>
   Protecting your account, community rules, and helpful security tips.
   <ul>
-    <li><a href="#/account/Security#identity-verification">Discord Link Verification</a></li>
-    <li><a href="#/account/Security#operational-policy">Account Sharing & Rules</a></li>
-    <li><a href="#/account/Security#automation-and-scripting">Automation & Macro Limits</a></li>
-    <li><a href="#/account/Security#technical-security-tips">Helpful Security Information</a></li>
+    <li><a class="stub-link" href="#/account/Security#identity-verification">Discord Link Verification</a></li>
+    <li><a class="stub-link" href="#/account/Security#operational-policy">Account Sharing & Rules</a></li>
+    <li><a class="stub-link" href="#/account/Security#automation-and-scripting">Automation & Macro Limits</a></li>
+    <li><a class="stub-link" href="#/account/Security#technical-security-tips">Helpful Security Information</a></li>
   </ul>
-  <p><small><i>View all the <a href="#/account/rules">rules</a> here.</i></small></p>
+  <p><small><i>View all the <a class="stub-link" href="#/account/rules">rules</a> here.</i></small></p>
 </div>
 
 <div class="portal-card">
   <h3>Announcements</h3>
   Latest updates and world events.
   <ul>
-    <li><a href="#/announcements/Issue-1">Issue 1: Welcome Home!</a></li>
-    <li><a href="#/announcements/Status">Server Status</a></li>
-    <li><a href="#/announcements/Changelog">Edit Logs</a></li>
+    <li><a class="stub-link" href="#/announcements/Issue-1">Issue 1: Welcome Home!</a></li>
+    <li><a class="stub-link" href="#/announcements/Status">Server Status</a></li>
+    <li><a href="https://github.com/b-Universe/B-the-game/commits/main/">Edit Logs</a></li>
   </ul>
 </div>
 

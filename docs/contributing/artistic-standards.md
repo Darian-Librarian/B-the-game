@@ -42,6 +42,10 @@ To maintain consistency in power icon creation, use the master template:
 - **Grid Settings**: Use a 32x32 canvas with 1px grid snapping for all power and archetype icons.
 - **Export Settings**: Export as .png with no compression or interlacing to ensure the pixel grid remains qwispy.
 
+<div align="left">
+  <a href="#/contributing/contributing"><b>←  Back to Contributing</b></a>
+</div>
+
 ---
 
 <div class="nav-tray" style="flex-wrap: wrap;">
