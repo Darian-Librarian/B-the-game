@@ -21,24 +21,17 @@ In the <strong>B</strong> archive, a stub is basically a placeholder for a page 
 ---
 
 <div class="nav-tray" style="flex-wrap: wrap;">
-  <strong>B</strong>
-  <span>|</span>
-  <a href="#/wiki/play-info">Play</a>
-  <span>|</span>
+  <strong>B</strong><span>|</span> 
+  <a href="#/wiki/play-info">Play</a><span>|</span> 
   <a href="#/wiki/discord-community">Discord</a>
 </div>
 
 <div class="nav-tray" style="margin-top: 10px; flex-wrap: wrap;">
   <strong>Categories:</strong>
-  <a href="#/contributing/contributing">Contributing</a>
-  <span>|</span>
-  <a href="#/contributing/contributing-on-github">GitHub Guide</a>
-  <span>|</span>
-  <a href="#/contributing/technical-standards">Technical Standards</a>
-  <span>|</span>
-  <a href="#/contributing/artistic-standards">Artistic Standards</a>
-  <span>|</span>
-  <a href="#/contributing/2026-roadmap">2026 Roadmap</a>
-  <span>|</span>
+  <a href="#/contributing/contributing">Contributing</a><span>|</span> 
+  <a href="#/contributing/contributing-on-github">GitHub Guide</a><span>|</span> 
+  <a href="#/contributing/technical-standards">Technical Standards</a><span>|</span> 
+  <a href="#/contributing/artistic-standards">Artistic Standards</a><span>|</span> 
+  <a href="#/contributing/2026-roadmap">2026 Roadmap</a><span>|</span> 
   <a href="#/contributing/stubs"><strong>Stubs</strong></a>
 </div>

@@ -15,38 +15,24 @@
 ---
 
 <div class="nav-tray" style="flex-wrap: wrap;">
-  <strong>B</strong>
-  <span>|</span>
-  <a href="#/wiki/play-info">Play</a>
-  <span>|</span>
+  <strong>B</strong><span>|</span>
+  <a href="#/wiki/play-info">Play</a><span>|</span>
   <a href="#/wiki/discord-community">Discord</a>
 </div>
 
 <div class="nav-tray" style="flex-wrap: wrap;">
   <strong>Categories:</strong>
-  <a href="#/badges/badges">Index</a>
-  <span>|</span>
-  <a href="#/badges/achievements">Achievements</a>
-  <span>|</span>
-  <a href="#/badges/accolades">Accolades</a>
-  <span>|</span>
-  <a href="#/badges/exploration">Exploration</a>
-  <span>|</span>
-  <a href="#/badges/gladiator"><strong>Gladiator</strong></a>
-  <span>|</span>
-  <a href="#/badges/integrity-path">Integrity Path</a>
-  <span>|</span>
-  <a href="#/badges/veteran">Veteran</a>
-  <span>|</span>
-  <a href="#/badges/efficiency">Efficiency</a>
-  <span>|</span>
-  <a href="#/badges/neural-and-pet">Neural & Pet</a>
-  <span>|</span>
-  <a href="#/badges/scientific-advancement">Science</a>
-  <span>|</span>
-  <a href="#/badges/arcane-arts">Magic</a>
-  <span>|</span>
-  <a href="#/badges/technical-mastery">Technical</a>
-  <span>|</span>
+  <a href="#/badges/badges">Index</a><span>|</span>
+  <a href="#/badges/achievements">Achievements</a><span>|</span>
+  <a href="#/badges/accolades">Accolades</a><span>|</span>
+  <a href="#/badges/exploration">Exploration</a><span>|</span>
+  <a href="#/badges/gladiator"><strong>Gladiator</strong></a><span>|</span>
+  <a href="#/badges/integrity-path">Integrity Path</a><span>|</span>
+  <a href="#/badges/veteran">Veteran</a><span>|</span>
+  <a href="#/badges/efficiency">Efficiency</a><span>|</span>
+  <a href="#/badges/neural-and-pet">Neural & Pet</a><span>|</span>
+  <a href="#/badges/scientific-advancement">Science</a><span>|</span>
+  <a href="#/badges/arcane-arts">Magic</a><span>|</span>
+  <a href="#/badges/technical-mastery">Technical</a><span>|</span>
   <a href="#/badges/day-jobs">Day Jobs</a>
 </div>
