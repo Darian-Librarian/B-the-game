@@ -39,8 +39,8 @@ Ready to push some code or add some lore? Follow this process:
 4. **NLAEOF (Cursor Parking)**: Always leave a **New Line At the End Of the File**. On the **Live Server**, this gives us "parking space" for our cursors so we don't bump into each other's code while hot-loading scripts.
 5. **Pull Request**: Once your changes are clean, submit a PR for review by **Bear** or **Darian**.
 
-<div align="right">
-  <a href="#/contributing/contributing"><b>Back to Contributing</b></a> →
+<div align="left">
+  <a href="#/contributing/contributing"><b>←  Back to Contributing</b></a>
 </div>
 
 ---

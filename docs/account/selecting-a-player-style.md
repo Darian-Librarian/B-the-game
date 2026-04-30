@@ -63,7 +63,7 @@ Your player will be persistent while you're AFK or when you log off. However, th
 **Recovery Protocol**: Gain rates return to 100% after nine hours of downtime. This is designed so you can sleep, eat, and actually talk to your wife. **Darian** misses you ever since you got addicted to the grind.
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px;">
-  <a href="#/account/beginners-guide" style="text-decoration: none;">←  Beginner's Guide</b></a>
+  <a href="#/account/beginners-guide" style="text-decoration: none;"><b>←  Beginner's Guide</b></a>
   <a href="#/account/heritage-and-body-types" style="text-decoration: none;"><b>Heritage & Body Types →</b></a>
 </div>
 

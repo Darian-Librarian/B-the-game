@@ -417,3 +417,30 @@ body.ecstatic .wiki-stub::before {
   color: var(--bg) !important;
   transition: fill 0.3s ease, color 0.3s ease !important;
 }
+
+/* --- STUB LINK ARCHITECTURE --- */
+.stub-link {
+  color: var(--text-dim) !important;
+  text-decoration: line-through !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+  position: relative;
+}
+
+.stub-link::after {
+  content: " [STUB]";
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  vertical-align: super;
+  color: var(--accent);
+  opacity: 0.8;
+  text-decoration: none !important;
+  display: inline-block;
+  margin-left: 4px;
+}
+
+/* Ensure the Ecstatic theme doesn't make stubs look "active" */
+body.ecstatic .stub-link {
+  animation: none !important;
+  filter: grayscale(1) !important;
+}

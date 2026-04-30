@@ -46,7 +46,7 @@ On the opposite side, you find guidance from a neon-coded **Anime Girl** who emb
 * **Cat-Person** (Primal/Arcane): Agility-focused, with high detection and energy recovery.
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px;">
-  <a href="#/account/selecting-a-player-style" style="text-decoration: none;">←  Selecting a Player Style</b></a>
+  <a href="#/account/selecting-a-player-style" style="text-decoration: none;"><b>←  Selecting a Player Style</b></a>
   <a href="#/account/integrity" style="text-decoration: none;"><b>The Integrity Axis  →</b></a>
 </div>
 
