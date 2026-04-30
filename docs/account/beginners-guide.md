@@ -6,6 +6,8 @@ Welcome to **B**! This guide is designed to navigate you through the technical a
 
 ## Getting Started
 
+> Note: This game is currently both incomplete and has no gameplay available yet.
+
 <div class="portal-grid">
 
 <div class="portal-card">

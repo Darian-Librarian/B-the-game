@@ -1,6 +1,8 @@
 # B
 
-A comprehensive log of lore, mechanics, and resources for B, the game!.
+A comprehensive log of lore, mechanics, and resources for B, the game!
+
+> Note: This game is currently both incomplete and has no gameplay available yet.
 
 <div class="portal-grid">
 
