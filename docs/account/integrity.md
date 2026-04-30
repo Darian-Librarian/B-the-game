@@ -1,79 +1,72 @@
 # The Integrity Axis
 
-The **Integrity Axis** defines your physical composition. Every player starts at a point between -100% Synthetic, back to the baseline of your heritage (0%), and then +100% mutated. Modifying and shifting your body composition changes this value, and reaching specific thresholds unlocks or locks certain powersets.
+The **Integrity Axis** measures your physical composition. It is a technical spectrum defining what your vessel is made of, which directly dictates your resource needs and power compatibility.
+
+Initial character creation is restricted to three primary types. Advanced hybrid states and mixed-integrity combinations remain locked until you achieve the **Creation Discovery**.
+
+* **Synthetic (-100%)**: Total technological replacement. You are machine, code, and steel. Natural regeneration is disabled in favor of hardware durability and complexity slots.
+* **Baseline (0%)**: The natural state of your heritage. Stable and versatile, the baseline is the most adaptive starting point for any character biography.
+* **Biomorphic (+100%)**: Biological ascension. You are mutated flesh and evolving biomass, granting rapid natural regeneration at the cost of high metabolic stability.
 
 ---
 
-## The Integrity Scale
-
-This scale tracks your physical composition from total machine to total biological mutation.
-
-![](/../assets/beginners-guide/bio-synthetic-scale-integrity-axis.png)
-
-* **-100% [Synthetic]:** Strictly technological. Absolute hardware replacement and industrial optimization.
-* **0% [Baseline]:** Your pure heritage state. The equilibrium of adaptability.
-* **+100% [Magical/Mutation]:** Strictly biological or arcane. Total mutation or ethereal shift from the starting heritage.
-
----
-
-## The Integrity Equilibrium
+## Resource & Maintenance
 
 Integrity is a zero-sum system: to shift toward one extreme, you must move away from the other.
 
-**The Balance Formula:** `Baseline (%) + Synthetic Shift (%) + Mutation/Magical Shift (%) = 100%`
-
-* **Synthetic (Industrial):** Hardware replacement. Higher percentages unlock more **Complexity Slots** and you begin to require your **Energy Source** to electric.
-* **Mutation (Primal/Magical):** Biological evolution or arcane affinity. Higher percentages increase **Regeneration** and power peaks but increase **Metabolic Hunger**.
-* **Baseline (Heritage):** Your starting ancestry. Higher percentages provide **Ethereal** stability and status effect resistance while more mutates you further from purity.
-
----
-
-## Resource Management
-
-| Integrity State | Energy Source | Regeneration | Maintenance Cost |
-| :--- | :--- | :--- | :--- |
-| **Baseline (0%)** | Nutrients | 100% | Standard food intake. |
-| **Mutated (+100%)** | Bio-Mass | 200% | 2x nutrient intake (**Metabolic Hunger**). |
-| **Synthetic (-100%)** | Electricity | 0% | Constant wattage or battery cells. |
+| State | Energy Source | Upkeep |
+| :--- | :--- | :--- |
+| **Synthetic** | Electricity / Fuel | Constant power dependency; natural regeneration is absent |
+| **Baseline** | Nutrients | Standard metabolic upkeep; fewer extreme specializations |
+| **Biomorphic** | Biomass / Nutrients | Rapid natural regeneration; extreme hunger and instability risk |
 
 ---
 
-## Severance
+## Roster Collapse & Stasis
 
-Shifting away from a **Neural** link is a traumatic process, whether mechanical or biological.
+Death in **B** is a technical failure, not necessarily a permanent end. However, if your entire roster falls, your account enters **Stasis**.
 
-* **Firmware Severance (Synthetic):** Requires a **Processing Base** for a Logic Purge, causing **System Latency**.
-* **Neural Scabbing (Mutation):** Requires an **Isolation Bed** for a procedure, causing **Phantom Link Syndrome** and **Individualist Fatigue**.
+* **Recovery Windows**: Synthetic bodies remain salvageable the longest, while Biomorphic entities are subject to rapid decay.
+* **Reconstruction**: Allied intervention or specialized facilities (like **Processing Bases**) are required to pull a player back from critical failure.
+* **Stasis**: Stasis does not reset your character creation timers. You must wait for the standard 24-hour cycle to rebuild unless rescue occurs.
 
 ---
 
-## Roster Management: Total Death
+## Integrity Shifting & Severance
 
-If every player on your roster dies, the account enters stasis. You can't create a new character until **24 hours** after the last player manifestation or someone saves you. Establish a **Processing Base** or **Isolation Bed** early to store player backups and mitigate stasis risks.
+Major body reconstruction moving between **Synthetic**, **Baseline**, or **Biomorphic** states requires **Severance**. This is a high-risk procedural overhaul of your physical architecture.
+
+### Synthetic Severance
+* **Facility**: Processing Bases.
+* **Process**: Logic Purges and mechanical reconstruction. This is a clean, surgical removal of biological noise to achieve machine dominance.
+
+### Biomorphic Severance
+* **Facility**: Isolation Beds.
+* **Process**: Genetic stabilization and biomass cleansing. This involves forced mutation and pathogen-driven evolution to shed artificial hardware.
+
+> **Severance Risk**: Radical shifts often result in system rejection, instability, and extended recovery fatigue.
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px;">
-  <a href="#/account/heritage-and-body-types" style="text-decoration: none;"><b>←  Heritage & Body Types<b></a>
+  <a href="#/account/heritage-and-body-types" style="text-decoration: none;"><b>←  Heritage, Body Types, & Affinity</b></a>
   <a href="#/account/archetypes-overview" style="text-decoration: none;"><b>Archetypes & Powersets  →</b></a>
 </div>
 
 ---
 
 <div class="nav-tray" style="flex-wrap: wrap;">
-  <strong>B</strong>
-  <span>|</span>
-  <a href="#/wiki/play-info">Play</a>
-  <span>|</span>
+  <strong>B</strong><span>|</span>
+  <a href="#/wiki/play-info">Play</a><span>|</span>
   <a href="#/wiki/discord-community">Discord</a>
 </div>
 
 <div class="nav-tray">
   <strong>Categories:</strong> 
   <a href="#/account/beginners-guide">Beginner's Guide</a><span>|</span> 
-  <a href="#/account/Selecting-a-Player-Style">Selecting a Player Style</a><span>|</span> 
-  <a href="#/account/heritage-and-body-types">Heritage & Body Types</a><span>|</span> 
-  <a href="#/account/Integrity"><strong>The Integrity Axis</strong></a><span>|</span> 
-  <a href="#/account/Archetypes-Overview">Archetypes & Powersets</a><span>|</span> 
-  <a href="#/account/Total-Level-Progression">Level Progression</a><span>|</span> 
+  <a href="#/account/selecting-a-player-style">Selecting a Player Style</a><span>|</span> 
+  <a href="#/account/heritage-and-body-types">Heritage, Body Types, & Affinity</a><span>|</span> 
+  <a href="#/account/integrity"><strong>The Integrity Axis</strong></a><span>|</span> 
+  <a href="#/account/archetypes-overview">Archetypes & Powersets</a><span>|</span> 
+  <a href="#/account/total-level-progression">Level Progression</a><span>|</span> 
   <a href="#/account/identification-and-alignment">Identification & Alignment</a><span>|</span> 
   <a href="#/account/character-creation">Character Creation Directory</a><span>|</span> 
 </div>
