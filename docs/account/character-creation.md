@@ -35,21 +35,19 @@ Before you begin, know this: in B, players don't log out. They stay in the world
 ---
 
 <div class="nav-tray" style="flex-wrap: wrap;">
-  <strong>B</strong>
-  <span>|</span>
-  <a href="#/wiki/play-info">Play</a>
-  <span>|</span>
+  <strong>B</strong><span>|</span>
+  <a href="#/wiki/play-info">Play</a><span>|</span>
   <a href="#/wiki/discord-community">Discord</a>
 </div>
 
 <div class="nav-tray">
   <strong>Categories:</strong> 
   <a href="#/account/beginners-guide">Beginner's Guide</a><span>|</span> 
-  <a href="#/account/Selecting-a-Player-Style">Selecting a Player Style</a><span>|</span> 
-  <a href="#/account/heritage-and-body-types">Heritage & Body Types</a><span>|</span> 
-  <a href="#/account/Integrity">The Integrity Axis</a><span>|</span> 
-  <a href="#/account/Archetypes-Overview">Archetypes & Powersets</a><span>|</span> 
-  <a href="#/account/Total-Level-Progression">Level Progression</a><span>|</span> 
+  <a href="#/account/selecting-a-player-style">Selecting a Player Style</a><span>|</span> 
+  <a href="#/account/heritage-and-body-types">Heritage, Body Types, & Affinity</a><span>|</span> 
+  <a href="#/account/integrity">The Integrity Axis</a><span>|</span> 
+  <a href="#/account/archetypes-overview">Archetypes & Powersets</a><span>|</span> 
+  <a href="#/account/total-level-progression">Level Progression</a><span>|</span> 
   <a href="#/account/identification-and-alignment">Identification & Alignment</a><span>|</span> 
   <a href="#/account/character-creation"><strong>Character Creation Directory</strong></a><span>|</span> 
 </div>

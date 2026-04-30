@@ -91,22 +91,19 @@ Select a Powerset Type below to view specific pools and individual powersets:
 ---
 
 <div class="nav-tray" style="flex-wrap: wrap;">
-  <strong>B</strong>
-  <span>|</span>
-  <a href="#/wiki/play-info">Play</a>
-  <span>|</span>
+  <strong>B</strong><span>|</span>
+  <a href="#/wiki/play-info">Play</a><span>|</span>
   <a href="#/wiki/discord-community">Discord</a>
 </div>
 
-<div class="nav-tray" style="flex-wrap: wrap;">
+<div class="nav-tray">
   <strong>Categories:</strong> 
   <a href="#/account/beginners-guide">Beginner's Guide</a><span>|</span> 
   <a href="#/account/selecting-a-player-style">Selecting a Player Style</a><span>|</span> 
-  <a href="#/account/heritage-and-body-types">Heritage & Body Types</a><span>|</span> 
+  <a href="#/account/heritage-and-body-types">Heritage, Body Types, & Affinity</a><span>|</span> 
   <a href="#/account/integrity">The Integrity Axis</a><span>|</span> 
   <a href="#/account/archetypes-overview"><strong>Archetypes & Powersets</strong></a><span>|</span> 
   <a href="#/account/total-level-progression">Level Progression</a><span>|</span> 
   <a href="#/account/identification-and-alignment">Identification & Alignment</a><span>|</span> 
-  <a href="#/account/character-creation">Character Creation Directory</a><span>|</span>
-  <a href="#/account/character-creation">Rules: All</a>
+  <a href="#/account/character-creation">Character Creation Directory</a><span>|</span> 
 </div>

@@ -35,28 +35,26 @@ Because the **Total Level** is a sum of your player roster, the death of a perma
 * **Roster Management: Total Death**: If your Total Level hits zero due to a full roster wipe, this state prevents any new progress for 24 hours from the last creation timestamp.
 
 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px;">
-  <a href="#/account/archetypes-overview" style="text-decoration: none;">←  Archetypes & Powersets</b></a>
-    <a href="#/account/total-level-progression" style="text-decoration: none;">Level Progression  →</a>
+  <a href="#/account/archetypes-overview" style="text-decoration: none;"><b>←  Archetypes & Powersets</b></a>
+    <a href="#/account/identification-and-alignment" style="text-decoration: none;"><b>Identification & Alignment  →</b></a>
 </div>
 
 ---
 
 <div class="nav-tray" style="flex-wrap: wrap;">
-  <strong>B</strong>
-  <span>|</span>
-  <a href="#/wiki/play-info">Play</a>
-  <span>|</span>
+  <strong>B</strong><span>|</span>
+  <a href="#/wiki/play-info">Play</a><span>|</span>
   <a href="#/wiki/discord-community">Discord</a>
 </div>
 
 <div class="nav-tray">
   <strong>Categories:</strong> 
   <a href="#/account/beginners-guide">Beginner's Guide</a><span>|</span> 
-  <a href="#/account/Selecting-a-Player-Style">Selecting a Player Style</a><span>|</span> 
-  <a href="#/account/heritage-and-body-types">Heritage & Body Types</a><span>|</span> 
-  <a href="#/account/Integrity">The Integrity Axis</a><span>|</span> 
-  <a href="#/account/Archetypes-Overview">Archetypes & Powersets</a><span>|</span> 
-  <a href="#/account/Total-Level-Progression"><strong>Level Progression</strong></a><span>|</span> 
+  <a href="#/account/selecting-a-player-style">Selecting a Player Style</a><span>|</span> 
+  <a href="#/account/heritage-and-body-types">Heritage, Body Types, & Affinity</a><span>|</span> 
+  <a href="#/account/integrity">The Integrity Axis</a><span>|</span> 
+  <a href="#/account/archetypes-overview">Archetypes & Powersets</a><span>|</span> 
+  <a href="#/account/total-level-progression"><strong>Level Progression</strong></a><span>|</span> 
   <a href="#/account/identification-and-alignment">Identification & Alignment</a><span>|</span> 
   <a href="#/account/character-creation">Character Creation Directory</a><span>|</span> 
 </div>

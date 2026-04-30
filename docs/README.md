@@ -8,10 +8,10 @@ A comprehensive log of lore, mechanics, and resources for B, the game!
 
   <div class="portal-card">
     <h3><a href="#/account/beginners-guide">Beginner's Guide</a></h3>
-    Everything you need to manifest your first player.
+    Everything you need for character creation and your first Arrival.
     <ul>
       <li><a href="#/account/selecting-a-player-style">Selecting a Player Style</a></li>
-      <li><a href="#/account/heritage-and-body-types">Heritage & Body Types</a></li>
+      <li><a href="#/account/heritage-and-body-types">Heritage,Body Types, & Affinity</a></li>
       <li><a href="#/account/integrity">The Integrity Axis</a></li>
       <li><a href="#/account/archetypes-overview">Archetypes & Powersets</a></li>
       <li><a href="#/account/total-level-progression">Level Progression</a></li>
