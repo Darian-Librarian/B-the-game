@@ -18,22 +18,6 @@ Not all entities contribute equally to the **Total Level** - this prevents unit 
 
 ---
 
-## Roster Badges
-
-Reaching specific **Total Level** thresholds earns your account permanent **Badges**. These grant passive, roster-wide auto-powers that scale your synchronization and operational output.
-
-![](/../assets/icons/badges/sync.png) **Skill Synchronization** (Level 10): Enables the sharing of minor passive skills across the roster.
-
-![](/../assets/icons/badges/efficiency-1.png) **Efficiency Threshold I** (Level 100): First major boost to account-wide resource management and power uptime.
-
-![](/../assets/icons/badges/automation.png) **Advanced Automation** (Level 250): Enables complex AFK scripting for players not under direct control.
-
-![](/../assets/icons/badges/efficiency-2.png) **Efficiency Threshold II** (Level 500): Significant reduction in Energy Source costs and maintenance requirements.
-
-![](/../assets/icons/badges/sovereign.png) **Sovereign Network** (Level 1000+): Massive boost to the Sync Factor, allowing for high-tier solo group play.
-
----
-
 ## Infinite Advancement
 
 Beyond the standard level caps, **B** usess an infinite advancement system. Once a player reaches their maximum individual level, experience earned feeds into a pool of **Enhancement Points**.Â 
