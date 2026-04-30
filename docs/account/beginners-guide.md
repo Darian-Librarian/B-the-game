@@ -34,7 +34,7 @@ Welcome to **B**! This guide is designed to navigate you through the technical a
     <li><a href="#/account/Security#automation-and-scripting">Automation & Macro Limits</a></li>
     <li><a href="#/account/Security#technical-security-tips">Helpful Security Information</a></li>
   </ul>
-  <p><small><i>View all the <a href="#/account/character-creation">rules</a> here.</i></small></p>
+  <p><small><i>View all the <a href="#/account/rules">rules</a> here.</i></small></p>
 </div>
 
 <div class="portal-card">

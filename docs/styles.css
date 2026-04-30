@@ -215,6 +215,7 @@ body.ecstatic h3,
 body.ecstatic table th,
 body.ecstatic .sidebar-toggle,
 body.ecstatic #theme-toggle,
+body.ecstatic .github-corner svg,
 body.ecstatic .markdown-section code { 
   animation: ecstatic-shift 15s linear infinite !important;
 }
@@ -278,12 +279,50 @@ body.ecstatic .wiki-stub::before {
   border-radius: 9px;
   display: flex;
   align-items: center;
-  padding: 24px;
+  padding: 20px;
   position: relative;
   width: 100%;
   z-index: 1;
-  transition: background 0.4s ease;
 }
+
+.stub-icon, .badge-icon {
+  width: 48px !important;
+  height: 48px !important;
+  margin-right: 20px !important;
+  flex-shrink: 0;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 48px;
+  line-height: 1 !important;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+}
+
+.stub-content, .badge-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+}
+
+.badge-entry {
+  display: flex;
+  align-items: center;
+  margin: 15px 0;
+  padding: 12px;
+  background: var(--bg-dim);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 10px;
+  transition: border-color 0.3s ease;
+}
+
+.badge-entry:hover {
+  border-color: var(--accent);
+}
+
+.badge-info h4 { margin: 0 !important; color: var(--accent); }
+.badge-info p { margin: 4px 0 0 0 !important; font-size: 0.9rem; color: var(--text-dim); }
 
 /* --- ICON STACK --- */
 .icon-stack {
@@ -360,4 +399,21 @@ body.ecstatic .wiki-stub::before {
 .portal-card li {
   margin: 8px 0;
   font-size: 0.9rem;
+}
+
+/* --- DIVIDER PIPE SPACING --- */
+.nav-tray span, 
+.wiki-stub span, 
+.portal-card span {
+  margin: 0 10px;
+  color: var(--accent);
+  font-weight: bold;
+  font-family: var(--font-mono);
+}
+
+/* --- GITHUB CORNER: ACCENT SYNC --- */
+.github-corner svg {
+  fill: var(--accent) !important;
+  color: var(--bg) !important;
+  transition: fill 0.3s ease, color 0.3s ease !important;
 }
