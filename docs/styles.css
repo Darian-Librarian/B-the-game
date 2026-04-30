@@ -18,6 +18,7 @@
   --font-mono: 'Consolas', monospace;
   --quote-accent: #00f2ff;
   --quote-bg: rgba(0, 242, 255, 0.05);
+  --code-border: rgba(116, 185, 255, 0.2);
   --color-human: transparent;
   --color-robotic: #d9d61bc3;
   --color-synthetic: #00f2ff8f;
@@ -143,7 +144,7 @@ a:hover { text-decoration: underline; }
 
 .markdown-section code {
   background-color: var(--bg-dim) !important;
-  border: 1px solid rgba(116, 185, 255, 0.2) !important;
+  border: 1px solid var(--code-border) !important;
   border-radius: 6px !important;
   color: var(--accent) !important;
   font-family: var(--font-mono) !important;
@@ -190,14 +191,17 @@ body.ecstatic *:is(h1, h2, h3, a, strong, blockquote, .term-definition) *:is(a, 
 }
 
 body.dim {
-  --bg: #1e2227;
-  --sidebar-bg: #181b1f;
-  --text: #b0b8c1;
-  --accent: #5fa8ff;
-  --term-accent: #8eb9f5;
-  --sidebar-border: #282c34;
-  --quote-accent: #00ff00;
-  --quote-bg: rgba(0, 255, 0, 0.05);
+  --bg: #141d16;
+  --sidebar-bg: #121a14;
+  --text: #c3f7d0;
+  --text-dim: #8bbf99;
+  --accent: #61ff8c;
+  --term-accent: #a7ffbe;
+  --sidebar-border: #1f3429;
+  --bg-dim: #122117;
+  --code-border: rgba(0, 255, 0, 0.18);
+  --quote-accent: #6bff6f;
+  --quote-bg: rgba(107, 255, 111, 0.08);
 }
 
 body.ecstatic {
