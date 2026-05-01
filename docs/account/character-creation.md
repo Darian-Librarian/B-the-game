@@ -10,7 +10,7 @@ Building a functional entity means making core choices that set your combat styl
 
 * **[Selecting a Player Style](account/selecting-a-player-style)**
   - Defining your operational intent. This choice determines if you function as a singular **Sovereign** entity, an **Adaptive** group member, or part of a **Neural** hivemind.
-* **[Heritage & Body Types](account/heritage)**
+* **[Heritage & Body Types](account/heritage-and-body-types)**
   - Selecting your Soul Architecture. This chooses your starting vessel (Human, Mythical, or Anomalous) and determines your affinity for specific **Energy Sources**.
 * **[The Integrity Axis](account/integrity)**
   - Balancing your physical composition. Here you define your flex between **Synthetic**, **Mutation**, and **Purity** to unlock specific Archetype playstyles and powersets.
@@ -20,7 +20,7 @@ Building a functional entity means making core choices that set your combat styl
   - Data on how your aggregate roster levels scale your account's passive rewards and efficiency.
 * **[Identification & Alignment](account/identification-and-alignment)**
   - Establishing your player's presence. This is where you define your unique name, history, and current moral standing within the world.
-* **[Account Security](account/security)**
+* <a class="stub-link" href=#/account/security>Security</a>
   - Protecting your account, community rules, and helpful security tips.
 
 ---
@@ -36,7 +36,7 @@ Before you begin, know this: in B, players don't log out. They stay in the world
 
 <div class="nav-tray" style="flex-wrap: wrap;">
   <strong>B</strong><span>|</span>
-  <a href="#/wiki/play-info">Play</a><span>|</span>
+  <a class="stub-link" href="#/wiki/play-info">Play</a><span>|</span>
   <a href="#/wiki/discord-community">Discord</a>
 </div>
 

@@ -10,9 +10,9 @@ This index tracks the structural milestones and honors earned within the **B** a
   - General gameplay milestones and combat tests.
 * **<a href="#/badges/accolades" class="stub-link">Accolades</a>**
   - Unique honors awarded for exceptional feats or community recognition.
-* **<a href="#/badges/exploration" class="stub-link">Exploration</a>**[cite: 2, 6]
+* **<a href="#/badges/exploration" class="stub-link">Exploration</a>**
   - Navigation data earned by mapping the sectors of **Atlas City**, **Lemon City**, and beyond.
-* **<a href="#/badges/gladiator" class="stub-link">Gladiator</a>**[cite: 2, 6]
+* **<a href="#/badges/gladiator" class="stub-link">Gladiator</a>**
   - Performance data tracking both PvP victories and total kill counts.
 * **<a href="#/badges/integrity-path" class="stub-link">Integrity Path</a>**
   - Specialized honors based on your standings of **Synthetic**, **Mutation**, and **Purity**.
