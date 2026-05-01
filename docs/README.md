@@ -56,8 +56,8 @@ A comprehensive log of lore, mechanics, and resources for B, the game!
     <h3><a href="#/news">News & Announcements</a></h3>
     Latest updates and world events.
     <ul>
-      <li><a href="#/announcements/issue-1">Issue 1: Initial Manifestation</a></li>
-      <li><a href="#/announcements/status">Server Status</a></li>
+      <li><a class="stub-link" href="#/announcements/issue-1">Issue 1: Initial Manifestation</a></li>
+      <li><a class="stub-link" href="#/announcements/status">Server Status</a></li>
       <li><a href="https://github.com/b-Universe/B-the-game/commits/main/">Commits</a></li>
     </ul>
   </div>
