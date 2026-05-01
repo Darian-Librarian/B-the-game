@@ -443,6 +443,10 @@ body.ecstatic .wiki-stub::before {
   margin-left: 4px;
 }
 
+.stub-link:visited {
+  color: var(--text-dim) !important;
+}
+
 /* Ensure the Ecstatic theme doesn't make stubs look "active" */
 body.ecstatic .stub-link {
   animation: none !important;
