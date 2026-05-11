@@ -19,7 +19,6 @@ export class MapOverlayManager {
       }
     };
 
-    // Dynamically inject the M button beneath the I button
     const sideHud = document.querySelector('.game-side-hud');
     if (sideHud && !document.getElementById('btn-fullscreen-map')) {
       const btn = document.createElement('button');
@@ -33,14 +32,12 @@ export class MapOverlayManager {
       sideHud.appendChild(btn);
     }
 
-    // Dynamically inject the Map Controls overlay
     const gameScreen = document.getElementById('game-screen');
     if (gameScreen && !document.getElementById('map-controls')) {
       const controls = document.createElement('div');
       controls.id = 'map-controls';
       controls.style.cssText = 'position: absolute; bottom: 30px; right: 30px; display: none; flex-direction: column; align-items: flex-end; gap: 15px; z-index: 200; font-family: var(--font-mono); user-select: none; pointer-events: auto;';
 
-      // Zoom Buttons
       const zoomGroup = document.createElement('div');
       zoomGroup.style.cssText = 'display: flex; flex-direction: column; border: 2px solid #f39c12; border-radius: 4px; overflow: hidden; background: rgba(5, 7, 10, 0.9); box-shadow: 0 0 15px rgba(0,0,0,0.8);';
 
@@ -61,7 +58,6 @@ export class MapOverlayManager {
       zoomGroup.appendChild(btnIn);
       zoomGroup.appendChild(btnOut);
 
-      // Scale/Ruler Marker
       const scaleBar = document.createElement('div');
       scaleBar.style.cssText = 'display: flex; flex-direction: column; align-items: flex-end; color: #f39c12; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; font-size: 0.85rem; font-weight: bold;';
       
@@ -83,7 +79,6 @@ export class MapOverlayManager {
       gameScreen.appendChild(controls);
     }
 
-    // Map Hotkey
     this.keydownListener = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.repeat) return; // Prevent rapid flickering if key is held!
@@ -93,7 +88,6 @@ export class MapOverlayManager {
     };
     window.addEventListener('keydown', this.keydownListener);
 
-    // Map Scroll Zoom
     this.wheelListener = (e) => {
       if (!this.active) return;
       if (e.deltaY < 0) {
@@ -110,14 +104,13 @@ export class MapOverlayManager {
     const line = document.getElementById('map-scale-line');
     const label = document.getElementById('map-scale-label');
     if (line && label) {
-      // Standard assumption: 1 Block (32x32) = 5 ft
-      let tiles = 20; // 100 ft default
+      let tiles = 20;
       let feet = 100;
       
       if (this.zoom >= 10) {
-        tiles = 10; feet = 50; // Map is super zoomed in, show 50ft ruler
+        tiles = 10; feet = 50;
       } else if (this.zoom <= 2) {
-        tiles = 40; feet = 200; // Map is extremely zoomed out, show 200ft ruler
+        tiles = 40; feet = 200;
       }
       
       line.style.width = `${tiles * this.zoom}px`;
@@ -140,15 +133,13 @@ export class MapOverlayManager {
     const eng = this.engine;
     const canvasW = eng.canvas.width;
     const canvasH = eng.canvas.height;
-    const mmTileSize = this.zoom; // Dynamically scales via mouse-wheel
+    const mmTileSize = this.zoom;
 
     ctx.save();
 
-    // Black out the map area
     ctx.fillStyle = 'rgba(5, 7, 10, 0.95)';
     ctx.fillRect(0, 0, canvasW, canvasH);
 
-    // Set up Top-Down projection
     ctx.translate(canvasW / 2, canvasH / 2);
     ctx.rotate(45 * Math.PI / 180);
 
@@ -159,12 +150,10 @@ export class MapOverlayManager {
     const offsetX = (pFracX - pGx) * mmTileSize;
     const offsetY = (pFracY - pGy) * mmTileSize;
 
-    // 1. Draw Solid Base Grass Color (Fixes black screen rendering bug!)
     ctx.fillStyle = '#447525';
     const maxD = Math.max(canvasW, canvasH) * 2;
     ctx.fillRect(-maxD, -maxD, maxD * 2, maxD * 2);
 
-    // 1.5. Draw Endless Grass Pattern seamlessly across the map!
     if (!this.grassPattern && eng.grassVariations && eng.grassVariations.length > 0) {
       this.grassPattern = ctx.createPattern(eng.grassVariations[0], 'repeat');
     }
@@ -173,7 +162,7 @@ export class MapOverlayManager {
       const shiftX = (pFracX * mmTileSize);
       const shiftY = (pFracY * mmTileSize);
       ctx.translate(-shiftX, -shiftY);
-      const scale = mmTileSize / 64; // Scale pattern exactly to Zoom level
+      const scale = mmTileSize / 64;
       ctx.scale(scale, scale);
       ctx.fillStyle = this.grassPattern;
       const fillMax = maxD / scale;
@@ -181,10 +170,8 @@ export class MapOverlayManager {
       ctx.restore();
     }
 
-    // 2. Enable Image Smoothing (Fixes the dither-y/static look on tiny textures!)
     ctx.imageSmoothingEnabled = true;
 
-    // 3. Draw Custom Placed Tiles
     for (let key in eng.mapData) {
       const coords = key.split(',');
       const gx = parseInt(coords[0], 10);
@@ -236,7 +223,6 @@ export class MapOverlayManager {
       }
     }
 
-    // 3. Draw Avatars and HUDs for Entities
     const drawMapAvatar = (entity, isPlayer = false) => {
       const drawX = (entity.x / 32 - pFracX) * mmTileSize;
       const drawY = (entity.y / 32 - pFracY) * mmTileSize;
@@ -256,7 +242,7 @@ export class MapOverlayManager {
 
       if (img && img.complete && img.naturalWidth > 0) {
         const fw = 96; const fh = 90;
-        const scale = Math.max(0.3, mmTileSize / 24); // Scale avatar dynamically but keep a minimum size
+        const scale = Math.max(0.3, mmTileSize / 24);
         ctx.scale(scale, scale);
         ctx.drawImage(img, (entity.frame || 0) * fw, 0, fw, fh, -fw / 2, -fh + 35, fw, fh);
       } else {
@@ -266,11 +252,11 @@ export class MapOverlayManager {
         ctx.fill();
       }
 
-      ctx.restore(); // Drop scale context for text
+      ctx.restore();
       
       ctx.save();
       ctx.translate(drawX, drawY);
-      ctx.rotate(-45 * Math.PI / 180); // Reverse rotation for readable text!
+      ctx.rotate(-45 * Math.PI / 180);
       
       const name = isPlayer ? eng.playerData.name : entity.name;
       ctx.fillStyle = '#fff';

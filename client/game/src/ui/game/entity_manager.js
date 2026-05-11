@@ -72,22 +72,21 @@ export class EntityManager {
       if (eng.keys['s']) { dx += 1; dy += 1; }
       if (eng.keys['a']) { dx -= 1; dy += 1; }
       if (eng.keys['d']) { dx += 1; dy -= 1; }
-      isPressingShift = eng.keys['shift'];
+      isPressingShift = eng.clientSettings.alwaysSprint ? !eng.keys['shift'] : !!eng.keys['shift'];
       isPressingSpace = eng.keys[' '];
     }
 
     if (dx !== 0 || dy !== 0) {
-      player.moveTarget = null; // Cancel auto-move on manual WASD input
+      player.moveTarget = null;
     } else if (player.moveTarget) {
       player.moveTarget.timer -= (dt / 1000);
       if (player.moveTarget.timer <= 0) {
-        player.moveTarget = null; // Timed out after 15s
+        player.moveTarget = null;
       } else {
         const dist = Math.hypot(player.moveTarget.x - player.x, player.moveTarget.y - player.y);
         if (dist < 5) {
-          player.moveTarget = null; // Target Reached
+          player.moveTarget = null;
         } else {
-          // Generate the directional vector toward the target
           dx = player.moveTarget.x - player.x;
           dy = player.moveTarget.y - player.y;
           if (player.moveTarget.sprint) isPressingShift = true;

@@ -1,12 +1,12 @@
-import { ChatManager } from './chat.js?v=disable-map-click';
-import { NetworkManager } from './network.js?v=disable-map-click';
-import { UIManager } from './ui.js?v=disable-map-click';
-import { InputManager } from './input.js?v=disable-map-click';
-import { MinimapManager } from './minimap.js?v=disable-map-click';
-import { Renderer } from './renderer.js?v=disable-map-click';
-import { CombatManager } from './combat.js?v=disable-map-click';
-import { EntityManager } from './entity_manager.js?v=disable-map-click';
-import { MapOverlayManager } from './map_overlay.js?v=disable-map-click';
+import { ChatManager } from './chat.js?v=ui-settings';
+import { NetworkManager } from './network.js?v=ui-settings';
+import { UIManager } from './ui.js?v=ui-settings';
+import { InputManager } from './input.js?v=ui-settings';
+import { MinimapManager } from './minimap.js?v=ui-settings';
+import { Renderer } from './renderer.js?v=ui-settings';
+import { CombatManager } from './combat.js?v=ui-settings';
+import { EntityManager } from './entity_manager.js?v=ui-settings';
+import { MapOverlayManager } from './map_overlay.js?v=ui-settings';
 
 export class GameEngine {
   constructor(canvasId, playerData, accountUuid) {
@@ -20,7 +20,7 @@ export class GameEngine {
     this.canvas.height = window.innerHeight;
 
     const savedSettingsStr = localStorage.getItem('b_client_settings');
-    const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, clickToMove: false };
+    const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true };
     this.clientSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
     this.tilt = 0.5;
     this.selectedTarget = null;
@@ -40,7 +40,6 @@ export class GameEngine {
     this.lastFpsTime = performance.now();
     this.ping = 0;
 
-    // Determine starting coordinates
     let startX = this.playerData.position ? this.playerData.position.x : 0;
     let startY = this.playerData.position ? this.playerData.position.y : 0;
 
@@ -50,7 +49,6 @@ export class GameEngine {
       console.log("Welcome back, Tim. Spawning at absolute zero.");
     }
 
-    // Initialize the player
     this.player = {
       x: startX,
       y: startY,
@@ -78,14 +76,12 @@ export class GameEngine {
     this.screenFade = 0;
     this.lastEmit = { x: this.player.x, y: this.player.y, state: this.player.state, dir: this.player.dir, hp: this.player.hp };
 
-    // Initialize Camera
     this.camera = {
       x: this.player.x,
       y: this.player.y,
       z: 0
     };
     
-    // Initialize NPCs
     this.npcs = [];
 
     // --- Input & Event Listeners ---
@@ -111,7 +107,6 @@ export class GameEngine {
     // --- Multiplayer Networking ---
     this.otherPlayers = {};
 
-    // Instantiate External Managers
     this.chat = new ChatManager(this);
     this.ui = new UIManager(this);
     this.network = new NetworkManager(this);
@@ -135,7 +130,6 @@ export class GameEngine {
       dir: this.player.dir
     });
 
-    // Server Sync Heartbeat
     this.syncTimer = setInterval(() => {
       if (this.socket && this.socket.connected && this.accountUuid) {
         this.socket.emit('sync_character', {
@@ -158,7 +152,6 @@ export class GameEngine {
     let centerY = this.canvas.height / 2;
     
     if (this.mapOverlay && this.mapOverlay.active) {
-       // Shift the 3D focal point to the top right corner when the Map is active!
        const mmSize = 250;
        centerX = this.canvas.width - mmSize / 2 - 20;
        centerY = 70 + mmSize / 2;
@@ -312,7 +305,6 @@ export class GameEngine {
 
     this.entityManager.update(dt);
 
-    // Network Emission
     if (
       Math.abs(this.player.x - this.lastEmit.x) > 1 || 
       Math.abs(this.player.y - this.lastEmit.y) > 1 || 
@@ -328,7 +320,6 @@ export class GameEngine {
       this.lastEmit = { x: this.player.x, y: this.player.y, state: this.player.state, dir: this.player.dir, hp: this.player.hp };
     }
 
-    // --- Z-Axis (True Vertical Physics & Gravity) ---
     this.applyGravity(this.player, dt);
     Object.values(this.otherPlayers).forEach(op => {
       if (op.state === 'jump' && op.prevState !== 'jump') op.vz = 450;
@@ -337,7 +328,6 @@ export class GameEngine {
     });
     this.npcs.forEach(npc => this.applyGravity(npc, dt));
 
-    // Smooth Camera Follow (Linear Interpolation)
     this.camera.x += (this.player.x - this.camera.x) * 0.005 * dt;
     this.camera.y += (this.player.y - this.camera.y) * 0.005 * dt;
 

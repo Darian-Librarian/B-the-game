@@ -22,48 +22,41 @@ export class CombatManager {
     const py = eng.player.y;
     const pz = eng.player.z || 0;
 
-    // Determine facing angle in radians
     let facingAngle = 0;
-    if (eng.player.dir === 'up') facingAngle = -Math.PI * 0.75; // -135 degrees
-    else if (eng.player.dir === 'down') facingAngle = Math.PI * 0.25; // 45 degrees
-    else if (eng.player.dir === 'left') facingAngle = Math.PI * 0.75; // 135 degrees
-    else if (eng.player.dir === 'right') facingAngle = -Math.PI * 0.25; // -45 degrees
+    if (eng.player.dir === 'up') facingAngle = -Math.PI * 0.75;
+    else if (eng.player.dir === 'down') facingAngle = Math.PI * 0.25;
+    else if (eng.player.dir === 'left') facingAngle = Math.PI * 0.75;
+    else if (eng.player.dir === 'right') facingAngle = -Math.PI * 0.25;
 
-    const fov = Math.PI / 3; // 60 degrees either side = 120 degree frontal cone!
+    const fov = Math.PI / 3;
 
     const checkHit = (tx, ty, tz) => {
       tz = tz || 0;
       
-      // 1. Z-Level Check: Must be roughly on the same vertical level (1.5 blocks leeway)
       if (Math.abs(pz - tz) > 48) return false; 
       
-      // 2. Distance Check
       const dist = Math.hypot(tx - px, ty - py);
       if (dist > 200) return false;
 
-      // 3. Cone Check: Is the target in front of us?
       const angleToTarget = Math.atan2(ty - py, tx - px);
       let angleDiff = angleToTarget - facingAngle;
-      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2; // Normalize to [-PI, PI]
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
       while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
       
       if (Math.abs(angleDiff) > fov) return false; 
 
-      // 4. Line of Sight Check: Raycast to see if a tall wall is in the way!
-      const steps = Math.ceil(dist / 16); // Sample every 16 world units
+      const steps = Math.ceil(dist / 16);
       for (let i = 1; i <= steps; i++) {
         const sampleX = px + ((tx - px) * (i / steps));
         const sampleY = py + ((ty - py) * (i / steps));
         const terrainZ = eng.getTerrainZ(sampleX, sampleY);
         
-        // If the terrain is 2 blocks (64 Z) higher than BOTH entities, it's a solid wall!
         if (terrainZ >= pz + 64 && terrainZ >= tz + 64) return false; 
       }
 
       return true;
     };
 
-    // Combat Logic: Hit NPCs in range
     eng.npcs.forEach(npc => {
       if (npc.state !== 'dead') {
         if (checkHit(npc.x, npc.y, npc.z)) {
@@ -72,7 +65,6 @@ export class CombatManager {
       }
     });
 
-    // PvP Logic: Hit Other Players in range
     for (let id in eng.otherPlayers) {
       const op = eng.otherPlayers[id];
       if (op.state !== 'death') {

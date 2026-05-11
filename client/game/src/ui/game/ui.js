@@ -137,7 +137,6 @@ export class UIManager {
         slot.draggable = true;
         slot.ondragstart = (e) => e.dataTransfer.setData('text/plain', JSON.stringify({ source: 'inventory', index: i }));
         
-        // Custom Tooltip Logic
         slot.onmouseenter = (e) => {
           const tooltip = document.getElementById('item-tooltip');
           if (tooltip) {
@@ -160,7 +159,6 @@ export class UIManager {
         };
       }
       
-      // Drop Zone Logic
       slot.ondragover = (e) => e.preventDefault();
       slot.ondrop = (e) => {
         e.preventDefault();
@@ -358,7 +356,6 @@ export class UIManager {
     if (epFill) epFill.style.width = `${(eng.player.energy / eng.player.maxEnergy) * 100}%`;
     if (epText) epText.innerText = `${Math.floor(eng.player.energy)} / ${eng.player.maxEnergy}`;
 
-    // Target Window Updates
     const targetWindow = document.getElementById('target-window');
     if (eng.selectedTarget && targetWindow) {
       let targetObj = null;

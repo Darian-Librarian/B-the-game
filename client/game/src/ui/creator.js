@@ -1063,6 +1063,29 @@ if (btnGameMenu && gameDropdown) {
     document.getElementById('settings-modal').style.display = 'none';
   });
 
+  const settingsTabBtns = document.querySelectorAll('.settings-tab-btn');
+  const settingsTabPanels = document.querySelectorAll('.settings-tab-panel');
+
+  settingsTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      settingsTabBtns.forEach(b => {
+        b.classList.remove('active');
+        b.style.borderColor = 'var(--text-dim)';
+        b.style.color = 'var(--text-primary)';
+        b.style.background = 'transparent';
+      });
+      btn.classList.add('active');
+      btn.style.borderColor = 'var(--accent-neon)';
+      btn.style.color = 'var(--accent-neon)';
+      btn.style.background = 'rgba(116, 185, 255, 0.1)';
+
+      const tabId = btn.dataset.tab;
+      settingsTabPanels.forEach(panel => {
+        panel.style.display = panel.id === tabId ? 'flex' : 'none';
+      });
+    });
+  });
+
   const rowToggleCombatChat = document.getElementById('row-toggle-combat-chat');
   const btnToggleCombatChat = document.getElementById('btn-toggle-combat-chat');
   const chatContainer = document.getElementById('game-chat-container');
@@ -1089,7 +1112,7 @@ if (btnGameMenu && gameDropdown) {
     });
   }
 
-  const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, clickToMove: false };
+  const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true };
   const savedSettingsStr = localStorage.getItem('b_client_settings');
   const savedSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
   
@@ -1125,6 +1148,11 @@ if (btnGameMenu && gameDropdown) {
   setupSettingToggle('row-toggle-cam-jump', 'btn-toggle-cam-jump', 'cameraFollowsJump');
   setupSettingToggle('row-toggle-minimap', 'btn-toggle-minimap', 'showMinimap');
   setupSettingToggle('row-toggle-click-move', 'btn-toggle-click-move', 'clickToMove');
+  setupSettingToggle('row-toggle-always-sprint', 'btn-toggle-always-sprint', 'alwaysSprint');
+  setupSettingToggle('row-toggle-player-names', 'btn-toggle-player-names', 'showPlayerNames');
+  setupSettingToggle('row-toggle-player-health', 'btn-toggle-player-health', 'showPlayerHealth');
+  setupSettingToggle('row-toggle-entity-names', 'btn-toggle-entity-names', 'showEntityNames');
+  setupSettingToggle('row-toggle-entity-health', 'btn-toggle-entity-health', 'showEntityHealth');
 
   // Hotkeys
   document.addEventListener('keydown', (e) => {

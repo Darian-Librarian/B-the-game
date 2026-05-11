@@ -62,7 +62,6 @@ export class InputManager {
       if (e.button === 0) { // Left Click
 
         if (eng.editMode) {
-          // Elevation Drag
           if (this.keys['shift'] && eng.selectedTiles.length > 0) {
             eng.isDraggingElevation = true;
             eng.elevationStartY = e.clientY;
@@ -76,7 +75,6 @@ export class InputManager {
             return; 
           }
 
-          // Tile Selection
           const ray = eng.getIsoRaycast(this.mousePos.x, this.mousePos.y);
           const gx = ray.gx;
           const gy = ray.gy;
@@ -106,7 +104,6 @@ export class InputManager {
         eng.selectedTarget = clickedTarget;
         eng.ui.update();
 
-        // Click to Move Logic (V-Key Force Move or Default Setting)
         if (!eng.mapOverlay || !eng.mapOverlay.active) {
           if (this.keys['v'] || (eng.clientSettings.clickToMove && !clickedTarget && !eng.editMode)) {
             const ray = eng.getIsoRaycast(this.mousePos.x, this.mousePos.y);

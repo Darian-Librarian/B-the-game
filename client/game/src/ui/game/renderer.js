@@ -78,7 +78,6 @@ export class Renderer {
     const ctx = eng.ctx;
 
     ctx.save();
-    // Wrap the main drawing logic to constrain it to the PIP window when Map Overlay is active
     if (eng.mapOverlay && eng.mapOverlay.active) {
       const mmSize = 250;
       const pipX = eng.canvas.width - mmSize / 2 - 20;
@@ -454,21 +453,25 @@ export class Renderer {
           if (eng.player.state !== 'death') {
             const barW = 80; const barH = 8;
             const hpPercent = Math.max(0, eng.player.hp / eng.player.maxHp);
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW, barH);
-            ctx.fillStyle = '#2ecc71';
-            ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW * hpPercent, barH);
-            ctx.strokeStyle = '#111';
-            ctx.strokeRect(pos.x - barW / 2, pos.y - 156, barW, barH);
+            if (eng.clientSettings.showPlayerHealth) {
+              ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+              ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW, barH);
+              ctx.fillStyle = '#2ecc71';
+              ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW * hpPercent, barH);
+              ctx.strokeStyle = '#111';
+              ctx.strokeRect(pos.x - barW / 2, pos.y - 156, barW, barH);
+            }
   
-            ctx.fillStyle = (eng.playerData.name && eng.playerData.name.toLowerCase() === 'tim') ? '#00d2ff' : '#fff';
-            ctx.font = 'bold 14px monospace';
-            ctx.textAlign = 'center';
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 3;
-            ctx.strokeText(`[${eng.playerData.name}]`, pos.x, pos.y - 171);
-            ctx.fillText(`[${eng.playerData.name}]`, pos.x, pos.y - 171);
+            if (eng.clientSettings.showPlayerNames) {
+              ctx.fillStyle = (eng.playerData.name && eng.playerData.name.toLowerCase() === 'tim') ? '#00d2ff' : '#fff';
+              ctx.font = 'bold 14px monospace';
+              ctx.textAlign = 'center';
+              ctx.lineJoin = 'round';
+              ctx.strokeStyle = '#000';
+              ctx.lineWidth = 3;
+              ctx.strokeText(`[${eng.playerData.name}]`, pos.x, pos.y - 171);
+              ctx.fillText(`[${eng.playerData.name}]`, pos.x, pos.y - 171);
+            }
           }
 
           if (eng.player.chatBubble && eng.player.chatBubble.timer > 0) {
@@ -506,13 +509,16 @@ export class Renderer {
             const maxHp = op.maxHp || 1000;
             const currentHp = op.hp !== undefined ? op.hp : 1000;
             const hpPercent = Math.max(0, currentHp / maxHp);
+          if (eng.clientSettings.showPlayerHealth) {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW, barH);
             ctx.fillStyle = '#2ecc71';
             ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW * hpPercent, barH);
             ctx.strokeStyle = '#111';
             ctx.strokeRect(pos.x - barW / 2, pos.y - 156, barW, barH);
+          }
   
+          if (eng.clientSettings.showPlayerNames) {
             ctx.fillStyle = (op.name.toLowerCase() === 'tim') ? '#00d2ff' : '#fff';
             ctx.font = 'bold 14px monospace';
             ctx.textAlign = 'center';
@@ -521,6 +527,7 @@ export class Renderer {
             ctx.lineWidth = 3;
             ctx.strokeText(`[${op.name}]`, pos.x, pos.y - 171);
             ctx.fillText(`[${op.name}]`, pos.x, pos.y - 171);
+          }
           }
           
           if (op.chatBubble && op.chatBubble.timer > 0) {
@@ -555,21 +562,25 @@ export class Renderer {
           if (npc.state !== 'dead') {
             const barW = 80; const barH = 8;
             const hpPercent = Math.max(0, npc.hp / npc.maxHp);
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW, barH);
-            ctx.fillStyle = '#ff4757';
-            ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW * hpPercent, barH);
-            ctx.strokeStyle = '#111';
-            ctx.strokeRect(pos.x - barW / 2, pos.y - 156, barW, barH);
+            if (eng.clientSettings.showEntityHealth) {
+              ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+              ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW, barH);
+              ctx.fillStyle = '#ff4757';
+              ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW * hpPercent, barH);
+              ctx.strokeStyle = '#111';
+              ctx.strokeRect(pos.x - barW / 2, pos.y - 156, barW, barH);
+            }
 
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 14px monospace';
-            ctx.textAlign = 'center';
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 3;
-            ctx.strokeText(npc.name, pos.x, pos.y - 171);
-            ctx.fillText(npc.name, pos.x, pos.y - 171);
+            if (eng.clientSettings.showEntityNames) {
+              ctx.fillStyle = '#fff';
+              ctx.font = 'bold 14px monospace';
+              ctx.textAlign = 'center';
+              ctx.lineJoin = 'round';
+              ctx.strokeStyle = '#000';
+              ctx.lineWidth = 3;
+              ctx.strokeText(npc.name, pos.x, pos.y - 171);
+              ctx.fillText(npc.name, pos.x, pos.y - 171);
+            }
           }
         }
       });
@@ -721,29 +732,27 @@ export class Renderer {
       
       if (eng.devOptions.showMousePos) {
         const drawMouseDot = (z, isBase) => {
-          const mPos = eng.getScreenPos(worldX, worldY, z);
+          const mPos = eng.getScreenPos(ray.exactX, ray.exactY, z);
           ctx.fillStyle = isBase ? 'rgba(255, 71, 87, 0.4)' : '#ff4757';
           ctx.fillRect(mPos.x - 2, mPos.y - 2, 4, 4);
           
           ctx.fillStyle = isBase ? 'rgba(255, 255, 255, 0.5)' : '#fff';
-          ctx.font = 'bold 12px monospace';
+          ctx.font = 'bold 14px monospace';
           ctx.textAlign = 'left';
           ctx.lineJoin = 'round';
           const dispZ = isBase ? 0 : Math.round(z / 32);
-          ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-          ctx.lineWidth = 3;
-          ctx.strokeText(`X:${Math.round(worldX)} Y:${Math.round(worldY)} Z:${dispZ}`, mPos.x + 10, mPos.y);
-          ctx.fillText(`X:${Math.round(worldX)} Y:${Math.round(worldY)} Z:${dispZ}`, mPos.x + 10, mPos.y);
+          ctx.strokeStyle = isBase ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.9)';
+          ctx.lineWidth = 4;
+          ctx.strokeText(`X:${Math.round(ray.exactX)} Y:${Math.round(ray.exactY)} Z:${dispZ}`, mPos.x + 10, mPos.y);
+          ctx.fillText(`X:${Math.round(ray.exactX)} Y:${Math.round(ray.exactY)} Z:${dispZ}`, mPos.x + 10, mPos.y);
         };
         
         if (ray.z > 0) drawMouseDot(0, true);
-        drawMouseDot(zOff, false);
+        drawMouseDot(ray.z * 32, false);
       }
     }
 
-    ctx.restore(); // DROP THE PIP CLIPPING MASK HERE! After ALL 3D drawing is done!
-
-    // Disable the 2D Minimap if the 3D PIP window has taken its place!
+    ctx.restore();
     if (eng.clientSettings.showMinimap && (!eng.mapOverlay || !eng.mapOverlay.active)) {
       eng.minimap.draw(ctx);
     }
