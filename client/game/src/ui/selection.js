@@ -1,0 +1,137 @@
+let enterKeyListener = null;
+
+export function initSelection(accountData) {
+  const listContainer = document.getElementById('character-list');
+  const btnPlay = document.getElementById('btn-play');
+  const selectionScreen = document.getElementById('selection-screen');
+  const creationScreen = document.getElementById('creation-screen');
+  const btnDelete = document.getElementById('btn-delete');
+  
+  listContainer.innerHTML = ''; 
+  selectionScreen.style.display = 'flex';
+  creationScreen.style.display = 'none';
+
+  if (accountData.characters.length === 0) {
+    listContainer.innerHTML = `
+      <div class="empty-state">
+        <p>No Players Found</p>
+        <button id="btn-init-creator" class="btn-secondary">Create New Character</button>
+      </div>
+    `;
+    
+    btnPlay.disabled = true;
+    btnPlay.style.opacity = "0.5";
+    if (btnDelete) btnDelete.disabled = true;
+    if (btnDelete) btnDelete.style.opacity = "0.5";
+
+    document.getElementById('btn-init-creator').onclick = () => {
+      openCharacterCreator(accountData.uuid);
+    };
+  } else {
+    accountData.characters.forEach((char, index) => {
+      const slot = document.createElement('div');
+      slot.className = 'char-slot';
+      slot.innerHTML = `
+        <div class="char-name">${char.name.toUpperCase()}</div>
+        <div class="char-meta">Level ${char.level} - ${char.race}</div>
+      `;
+
+      slot.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.char-slot').forEach(s => s.classList.remove('active'));
+        slot.classList.add('active');
+        btnPlay.disabled = false;
+        btnPlay.style.opacity = "1";
+        if (btnDelete) {
+          btnDelete.disabled = false;
+          btnDelete.style.opacity = "1";
+        }
+      });
+
+      listContainer.appendChild(slot);
+    });
+    
+    btnPlay.disabled = true;
+    btnPlay.style.opacity = "0.5";
+    if (btnDelete) {
+      btnDelete.disabled = true;
+      btnDelete.style.opacity = "0.5";
+    }
+  }
+
+  selectionScreen.onclick = (e) => {
+    if (!e.target.closest('.char-slot') && !e.target.closest('.selection-controls')) {
+      document.querySelectorAll('.char-slot').forEach(s => s.classList.remove('active'));
+      btnPlay.disabled = true;
+      btnPlay.style.opacity = "0.5";
+      if (btnDelete) {
+        btnDelete.disabled = true;
+        btnDelete.style.opacity = "0.5";
+      }
+    }
+  };
+
+  if (enterKeyListener) document.removeEventListener('keydown', enterKeyListener);
+  enterKeyListener = (e) => {
+    if (selectionScreen.style.display === 'flex' && e.key === 'Enter') {
+      const activeSlot = document.querySelector('.char-slot.active');
+      if (activeSlot && !btnPlay.disabled) btnPlay.click();
+    }
+  };
+  document.addEventListener('keydown', enterKeyListener);
+
+  document.getElementById('btn-back').onclick = () => {
+    selectionScreen.style.display = 'none';
+    creationScreen.style.display = 'flex';
+  };
+
+  if (btnDelete) {
+    btnDelete.onclick = () => {
+      const activeSlot = document.querySelector('.char-slot.active');
+      if (!activeSlot) return alert("Please select a character to delete.");
+      
+      const nameEl = activeSlot.querySelector('.char-name');
+      const charName = nameEl ? nameEl.innerText.trim() : '';
+
+      const deleteModal = document.getElementById('delete-modal');
+      const inputField = document.getElementById('delete-confirm-input');
+      inputField.value = '';
+      deleteModal.style.display = 'flex';
+
+      document.getElementById('confirm-delete-no').onclick = () => {
+        deleteModal.style.display = 'none';
+      };
+
+      document.getElementById('confirm-delete-yes').onclick = async () => {
+        if (inputField.value.trim().toLowerCase() !== charName.toLowerCase()) {
+          alert("Name does not match. Deletion cancelled.");
+          return;
+        }
+
+        const res = await fetch('/delete-character', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uuid: accountData.uuid, charName: charName })
+        });
+
+        if (res.ok) {
+          const updatedAccount = await res.json();
+          deleteModal.style.display = 'none';
+          Object.assign(accountData, updatedAccount);
+          initSelection(accountData);
+        } else {
+          const errText = await res.text();
+          alert(errText || "Failed to delete character.");
+        }
+      };
+    };
+  }
+}
+
+function openCharacterCreator(uuid) {
+  const selectionScreen = document.getElementById('selection-screen');
+  const creatorScreen = document.getElementById('character-creator-screen');
+  
+  selectionScreen.style.display = 'none';
+  creatorScreen.style.display = 'flex';
+}

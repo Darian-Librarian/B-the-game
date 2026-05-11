@@ -28,7 +28,6 @@ const showModal = (title, body) => {
   modal.style.display = 'flex';
 };
 
-// Fixed Toggle Logic
 const handleToggle = () => {
   isSignUpMode = !isSignUpMode;
   emailGroup.style.display = isSignUpMode ? 'flex' : 'none';
@@ -40,21 +39,18 @@ const handleToggle = () => {
     togglePrompt.innerHTML = `Don't Have An Account? <span id="toggle-auth">Sign Up!</span>`;
   }
   
-  // Use onclick to prevent event stacking
   document.getElementById('toggle-auth').onclick = handleToggle;
 };
 
-// Initial listener
 document.getElementById('toggle-auth').onclick = handleToggle;
 
-// Check local storage for "Remember Me" on load
 const savedUsername = localStorage.getItem('b_saved_username');
 if (savedUsername) {
   document.getElementById('username').value = savedUsername;
   document.getElementById('remember-user').checked = true;
 }
 
-// Email Opt-Out Logic
+// Email Opt-Out
 const noEmailCheckbox = document.getElementById('no-email');
 const emailInput = document.getElementById('email');
 if (noEmailCheckbox && emailInput) {
@@ -102,7 +98,7 @@ btnMain.addEventListener('click', async () => {
   }
 });
 
-// Play Button Logic (Launch Game from Selection Screen)
+// Game Launch
 if (btnPlay) {
   btnPlay.addEventListener('click', () => {
     const activeSlot = document.querySelector('.char-slot.active');
@@ -204,7 +200,7 @@ const heritageData = {
   }
 };
 
-// Dynamically locks/unlocks Affinities based on the Integrity Axis
+// Update Affinity Locks
 const updateAffinityLocks = () => {
   const currentClassItem = document.querySelector('#class-list .active');
   if (!currentClassItem) return;
@@ -233,7 +229,6 @@ const updateAffinityLocks = () => {
     }
   });
 
-  // If the current active affinity became locked, auto-switch to a valid one
   if (!hasValidActive) {
     if (firstValidItem) {
       firstValidItem.click();
@@ -276,7 +271,7 @@ const renderAffinities = (classKey) => {
     affinityList.appendChild(item);
   });
 
-  updateAffinityLocks(); // Applies locks and auto-selects the first valid item
+  updateAffinityLocks();
 };
 
 classItems.forEach(item => {
@@ -293,7 +288,6 @@ classItems.forEach(item => {
   });
 });
 
-// Height Slider Logic
 heightSlider.addEventListener('input', () => {
   const scaleY = parseFloat(heightSlider.value);
   
@@ -312,7 +306,7 @@ heightSlider.addEventListener('input', () => {
   heightDisplay.innerText = `${feet}'${inches}"`;
 });
 
-// --- ID Card / Finalize Logic ---
+// Finalize & ID Card
 const idCardName = document.getElementById('id-card-name');
 const finalizeNameInput = document.getElementById('char-name');
 if (finalizeNameInput && idCardName) {
@@ -353,7 +347,6 @@ if (idCardAlignment && idCardCity) {
   updateDeploymentWarning();
 }
 
-// Gender Selection Logic
 const genderItems = document.querySelectorAll('#gender-list .list-item');
 genderItems.forEach(item => {
   item.addEventListener('click', () => {
@@ -365,7 +358,6 @@ genderItems.forEach(item => {
   });
 });
 
-// Integrity Scrollbar Logic
 if (integrityScrollbar && synthPercent && mutPercent) {
   integrityScrollbar.addEventListener('input', (e) => {
     const val = parseInt(e.target.value, 10);
@@ -386,7 +378,6 @@ if (integrityScrollbar && synthPercent && mutPercent) {
 
     updateAffinityLocks();
     
-    // Re-render powerset columns to enforce Integrity requirements dynamically
     const activeArchItem = document.querySelector('#archetype-list .active');
     if (activeArchItem && typeof archetypesData !== 'undefined') {
       const arch = archetypesData.find(a => a.id === activeArchItem.dataset.id);
@@ -395,7 +386,6 @@ if (integrityScrollbar && synthPercent && mutPercent) {
   });
 }
 
-// Player Style Selection Logic
 const styleItems = document.querySelectorAll('#style-list .list-item');
 const styleSplash = document.getElementById('style-splash');
 const styleDescBox = document.getElementById('style-description');
@@ -467,14 +457,13 @@ const renderStyle = (styleKey) => {
     styleSkillsList.appendChild(item);
   });
 
-  // Equipment Population & Hover Logic
   const equipSlots = document.querySelectorAll('.equip-slot');
   equipSlots.forEach(slot => {
     const slotType = slot.dataset.slot;
     const equipItem = data.equipment && data.equipment[slotType];
 
     if (equipItem) {
-      slot.style.backgroundColor = 'rgba(0, 210, 255, 0.2)'; // Light up equipped slots
+      slot.style.backgroundColor = 'rgba(0, 210, 255, 0.2)';
       slot.style.borderColor = 'var(--accent-neon)';
       slot.style.cursor = 'pointer';
 
@@ -485,7 +474,7 @@ const renderStyle = (styleKey) => {
         if (equipDetailsBox) equipDetailsBox.innerHTML = defaultEquipText;
       };
     } else {
-      slot.style.backgroundColor = 'rgba(116, 185, 255, 0.1)'; // Dim empty slots
+      slot.style.backgroundColor = 'rgba(116, 185, 255, 0.1)';
       slot.style.borderColor = 'var(--text-dim)';
       slot.style.cursor = 'default';
       slot.onmouseenter = null;
@@ -503,7 +492,7 @@ styleItems.forEach(item => {
   });
 });
 
-// Customizer Navigation Logic
+// Customizer Navigation
 const customizerNavItems = Array.from(document.querySelectorAll('.customizer-nav .nav-item'));
 const stepPanels = document.querySelectorAll('.step-panel');
 const btnNextStep = document.getElementById('btn-next-step');
@@ -516,12 +505,10 @@ const navigateToStep = (index) => {
   currentStepIndex = index;
   const stepName = customizerNavItems[currentStepIndex].dataset.step;
 
-  // Update Nav Tabs
   customizerNavItems.forEach((item, i) => {
     item.classList.toggle('active', i === currentStepIndex);
   });
 
-  // Update Panels
   stepPanels.forEach(panel => {
     if (panel.id === `step-${stepName}`) {
       panel.style.display = 'flex';
@@ -532,7 +519,6 @@ const navigateToStep = (index) => {
     }
   });
 
-  // Toggle Next / Finalize Buttons
   if (currentStepIndex === customizerNavItems.length - 1) {
     btnNextStep.style.display = 'none';
     btnSaveChar.style.display = 'block';
@@ -542,7 +528,6 @@ const navigateToStep = (index) => {
   }
 };
 
-// Listeners for clicking Tabs directly or the Next button
 customizerNavItems.forEach((item, index) => {
   item.addEventListener('click', () => navigateToStep(index));
 });
@@ -563,14 +548,13 @@ if (btnCancelCreate) {
 }
 
 if (btnSaveChar) {
-  let pendingCharData = null; // Holds the character while waiting for the user to click 'Yes'
+  let pendingCharData = null;
   const confirmModal = document.getElementById('confirm-modal');
 
   btnSaveChar.addEventListener('click', async () => {
     const charName = document.getElementById('char-name').value.trim();
     if (!charName) return showModal("Input Error", "Character name cannot be empty.");
 
-    // Validate Name
     try {
       const response = await fetch('/check-char-name', {
         method: 'POST',
@@ -583,7 +567,6 @@ if (btnSaveChar) {
       return showModal("Error", "Could not check name availability with the server.");
     }
 
-    // Gather Data
     const activeArchItem = document.querySelector('#archetype-list .active');
     const activePowers = [];
     document.querySelectorAll('.powerset-col').forEach(col => {
@@ -607,7 +590,6 @@ if (btnSaveChar) {
       unspentSlots: unspentSlots
     };
 
-    // Show Prompt
     confirmModal.style.display = 'flex';
   });
 
@@ -623,7 +605,6 @@ if (btnSaveChar) {
       document.getElementById('character-creator-screen').style.display = 'none';
       document.getElementById('game-screen').style.display = 'block';
       
-      // Cache busting for newly finalized characters
       import(`./game/engine.js?v=${Date.now()}`).then(module => {
         if (window.currentGameEngine) window.currentGameEngine.stop();
         window.currentGameEngine = new module.GameEngine('game-canvas', newChar, currentAccount.uuid);
@@ -637,7 +618,7 @@ if (btnSaveChar) {
   };
 }
 
-// --- Archetype & Powerset Logic ---
+// Archetypes & Powersets
 const archetypeListEl = document.getElementById('archetype-list');
 const powersetColumnsContainer = document.getElementById('powerset-columns-container');
 const powerDescriptionBox = document.getElementById('power-description');
@@ -645,14 +626,12 @@ const btnSkipArchetype = document.getElementById('btn-skip-archetype');
 
 const archetypesData = [
   { id: 'civilian', name: 'Civilian', desc: 'No Archetype, choose later. Pick 3 powers from a single powerset, or not.', cols: [{ label: 'Primary Powerset', picks: 3 }] },
-  // Simple Archetypes
   { id: 'brute', name: 'Brute', desc: 'Melee Focus. High melee damage.', cols: [{ label: 'Primary (Melee)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
   { id: 'blaster', name: 'Blaster', desc: 'Ranged Focus. High ranged damage.', cols: [{ label: 'Primary (Ranged)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
   { id: 'tank', name: 'Tank', desc: 'Defense Focus. Avoidance and survival.', cols: [{ label: 'Primary (Defense)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
   { id: 'team_support', name: 'Team Support', desc: 'Support Focus. Team buffs.', cols: [{ label: 'Primary (Support)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
   { id: 'controller', name: 'Controller', desc: 'Control Focus. Crowd control and status effect dominance.', cols: [{ label: 'Primary (Control)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
   { id: 'hivemind_simple', name: 'Hivemind', desc: 'Neural Focus. Multitasking via summoned or linked units.', cols: [{ label: 'Primary (Neural)', picks: 2 }, { label: 'Secondary', picks: 1 }] },
-  // Complex Archetypes
   { id: 'super_tank', name: 'Super Tank', desc: 'Pure mitigation followed by avoidance.', cols: [{ label: 'Primary (Resistance)', picks: 2 }, { label: 'Secondary (Defense)', picks: 2 }] },
   { id: 'scrapper', name: 'Scrapper', desc: 'Balanced melee survival and output.', cols: [{ label: 'Primary (Melee)', picks: 2 }, { label: 'Secondary (Defense)', picks: 2 }] },
   { id: 'sentinel', name: 'Sentinel', desc: 'Durable ranged combatant.', cols: [{ label: 'Primary (Ranged)', picks: 2 }, { label: 'Secondary (Defense)', picks: 2 }] },
@@ -683,9 +662,9 @@ const loadPowersets = async () => {
 
   for (const item of files) {
     const paths = [
-      `/data/powersets/${item.file}`, // Primary: Express static data route
-      `../../server/data/powersets/${item.file}`, // Fallback: Live Server (from client/game)
-      `server/data/powersets/${item.file}` // Fallback: Live Server (from root)
+      `/data/powersets/${item.file}`,
+      `../../server/data/powersets/${item.file}`,
+      `server/data/powersets/${item.file}`
     ];
     
     let json = null;
@@ -805,7 +784,6 @@ const getAvailablePowersets = (label) => {
     if (combined.length === 0) combined = Object.values(rawPowersetsData).flat();
   }
   
-  // Filter based on the Powerset's Integrity Requirement rule!
   return combined.filter(ps => ps.check ? ps.check(integrityVal, activeClass) : true);
 };
 
@@ -936,10 +914,9 @@ const renderPowersetColumns = (arch) => {
 
     selectEl.addEventListener('change', (e) => {
       const selectedSet = availableSets.find(ps => ps.id === e.target.value);
-      if (selectedSet) renderPowers(selectedSet, []); // Don't preserve picks on manual set change
+      if (selectedSet) renderPowers(selectedSet, []);
     });
 
-    // Initial render
     const initialSet = availableSets.find(ps => ps.id === selectedValue);
     if (initialSet) {
       renderPowers(initialSet, activePowerNames);
@@ -965,27 +942,24 @@ const renderArchetypes = () => {
     });
     archetypeListEl.appendChild(item);
   });
-  renderPowersetColumns(archetypesData[0]); // Load the first one
+  renderPowersetColumns(archetypesData[0]);
   if (footerArchetype && archetypesData.length > 0) footerArchetype.innerText = archetypesData[0].name;
 };
 
 if (btnSkipArchetype) {
   btnSkipArchetype.addEventListener('click', () => {
-    // Select Civilian silently
     const civilianItem = Array.from(document.querySelectorAll('#archetype-list .list-item')).find(i => i.querySelector('h4').innerText === 'Civilian');
     if (civilianItem) civilianItem.click();
     
-    // Skip to next screen
     navigateToStep(currentStepIndex + 1);
   });
 }
 
-// Initialize the UI with the Standard classification
 renderAffinities('standard');
-renderStyle('standard'); // Initialize the Player Style UI
-loadPowersets(); // Replaces direct archetype load with asynchronous fetching!
+renderStyle('standard');
+loadPowersets();
 
-// Name validation logic
+// Name Validation
 const charNameInput = document.getElementById('char-name');
 const nameCheckIcon = document.querySelector('.name-check');
 
