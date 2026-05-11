@@ -32,7 +32,7 @@ export class InputManager {
       const key = e.key.toLowerCase();
       this.keys[key] = true;
       
-      if (key === 'control') eng.combat.triggerAttack();
+      if (key === 'control') eng.combat?.triggerAttack();
       
       if (['alt', 'control', 'shift', ' '].includes(key) || e.ctrlKey || e.altKey) {
         e.preventDefault();

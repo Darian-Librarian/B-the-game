@@ -90,7 +90,8 @@ export class ChatManager {
             } else {
               this.addMessage(this.sendChannel, this.engine.playerData.name, msg);
               this.engine.socket.emit('chat_message', { type: this.sendChannel, text: msg }); 
-              this.engine.player.chatBubble = { text: msg, timer: 4000 }; 
+              if (!this.engine.player.chatBubbles) this.engine.player.chatBubbles = [];
+              this.engine.player.chatBubbles.push({ text: msg, timer: 4000, opacity: 0 }); 
             }
             this.input.value = '';
           }
@@ -247,20 +248,95 @@ export class ChatManager {
       const emoteText = `*${msg.substring(1)}*`;
       this.addMessage('local', eng.playerData.name, emoteText);
       eng.socket.emit('chat_message', { type: 'local', text: emoteText });
-      eng.player.chatBubble = { text: emoteText, timer: 4000 };
+      if (!eng.player.chatBubbles) eng.player.chatBubbles = [];
+      eng.player.chatBubbles.push({ text: emoteText, timer: 4000, opacity: 0 });
     }
   }
 
-  drawBubble(ctx, x, y, text) {
+  wrapText(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = words[0];
+
+    for (let i = 1; i < words.length; i++) {
+      const word = words[i];
+      const width = ctx.measureText(currentLine + " " + word).width;
+      if (width < maxWidth) {
+        currentLine += " " + word;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    lines.push(currentLine);
+    return lines;
+  }
+
+  drawBubbles(ctx, x, y, bubbles) {
+    if (!bubbles || bubbles.length === 0) return;
+
     ctx.save();
     ctx.font = 'bold 12px monospace';
-    const metrics = ctx.measureText(text);
-    const w = metrics.width + 20; const h = 26; 
-    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#111'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(x - 6, y - 2); ctx.lineTo(x + 6, y - 2); ctx.lineTo(x, y + 8); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x - w / 2, y - h, w, h, 6); else ctx.rect(x - w / 2, y - h, w, h); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x - 5, y - 2); ctx.lineTo(x + 5, y - 2); ctx.lineTo(x, y + 6); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#111'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, x, y - h / 2);
+    const maxWidth = 180;
+    const lineHeight = 16;
+    const padding = 8;
+    const pointerHeight = 8;
+
+    let currentTargetY = 0;
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i];
+      if (!b.lines) {
+        b.lines = this.wrapText(ctx, b.text, maxWidth);
+        b.width = Math.max(...b.lines.map(l => ctx.measureText(l).width)) + padding * 2;
+        b.height = b.lines.length * lineHeight + padding * 2;
+      }
+      
+      b.targetY = currentTargetY;
+      currentTargetY += b.height + 5; 
+    }
+
+    for (let i = 0; i < bubbles.length; i++) {
+      const b = bubbles[i];
+      ctx.globalAlpha = Math.max(0, Math.min(1, b.opacity || 1));
+      
+      const bubbleY = y - (b.currentY || 0) - pointerHeight;
+      
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = '#111';
+      ctx.lineWidth = 2;
+
+      if (i === bubbles.length - 1) {
+        ctx.beginPath();
+        ctx.moveTo(x - 6, y - 2);
+        ctx.lineTo(x + 6, y - 2);
+        ctx.lineTo(x, y + 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x - 5, y - 2);
+        ctx.lineTo(x + 5, y - 2);
+        ctx.lineTo(x, y + 6);
+        ctx.closePath();
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x - b.width / 2, bubbleY - b.height, b.width, b.height, 6);
+      else ctx.rect(x - b.width / 2, bubbleY - b.height, b.width, b.height);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#111';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      b.lines.forEach((line, lineIndex) => {
+        const lineY = bubbleY - b.height + padding + (lineIndex * lineHeight) + (lineHeight / 2);
+        ctx.fillText(line, x, lineY);
+      });
+    }
     ctx.restore();
   }
 }

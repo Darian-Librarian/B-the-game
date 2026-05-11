@@ -6,6 +6,63 @@ export class UIManager {
     this.setupInventory();
     this.setupContextMenu();
     this.setupTradeUI();
+
+    this.makeDraggable('dev-panel', '.dev-panel-header');
+    this.makeDraggable('builder-panel', '.dev-panel-header');
+    this.makeDraggable('npc-manager-panel', '.dev-panel-header');
+    this.makeDraggable('npc-edit-modal', '.dev-panel-header');
+    this.makeDraggable('inventory-panel', '.dev-panel-header');
+    this.makeDraggable('trade-panel', '.dev-panel-header');
+  }
+
+  makeDraggable(panelId, headerSelector) {
+    const panel = document.getElementById(panelId);
+    if (!panel) return;
+    const header = panel.querySelector(headerSelector);
+    if (!header) return;
+
+    header.style.cursor = 'move';
+    header.style.userSelect = 'none';
+
+    let isDragging = false;
+    let startX, startY, initialLeft, initialTop;
+
+    header.addEventListener('mousedown', (e) => {
+      if (e.target.tagName === 'BUTTON') return; // Don't drag if clicking the X
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+
+      const rect = panel.getBoundingClientRect();
+      // Convert panel to absolute positioning without transforms for reliable dragging
+      if (panel.style.transform) {
+        panel.style.transform = 'none';
+        panel.style.left = rect.left + 'px';
+        panel.style.top = rect.top + 'px';
+      }
+      
+      initialLeft = panel.offsetLeft;
+      initialTop = panel.offsetTop;
+
+      const onMouseMove = (moveEvent) => {
+        if (!isDragging) return;
+        const dx = moveEvent.clientX - startX;
+        const dy = moveEvent.clientY - startY;
+        panel.style.left = `${initialLeft + dx}px`;
+        panel.style.top = `${initialTop + dy}px`;
+        panel.style.right = 'auto'; // Clear constraints
+        panel.style.bottom = 'auto';
+      };
+
+      const onMouseUp = () => {
+        isDragging = false;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
   }
 
   setupDevTools() {
@@ -36,6 +93,29 @@ export class UIManager {
       setupDevBtn('btn-dev-tile', 'showTile', '#ff4757');
       setupDevBtn('btn-dev-chunk', 'showChunk', '#ff4757');
 
+      const btnEditTarget = document.getElementById('btn-dev-edit-target');
+      if (btnEditTarget) {
+        btnEditTarget.onclick = () => {
+          if (eng.selectedTarget && eng.selectedTarget.type === 'npc') {
+            const npc = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
+            if (npc) {
+              document.getElementById('edit-npc-uuid').value = npc.uuid;
+              document.getElementById('edit-npc-name').value = npc.name;
+              document.getElementById('edit-npc-hp').value = Math.floor(npc.hp);
+              document.getElementById('edit-npc-maxhp').value = npc.maxHp;
+              document.getElementById('edit-npc-energy').value = Math.floor(npc.energy || 1000);
+              document.getElementById('edit-npc-x').value = Math.round(npc.x);
+              document.getElementById('edit-npc-y').value = Math.round(npc.y);
+              document.getElementById('edit-npc-z').value = Math.round(npc.z || 0);
+              document.getElementById('edit-npc-type').value = npc.type || 'idle';
+              document.getElementById('edit-npc-dir').value = npc.dir || 'down';
+              
+              document.getElementById('npc-edit-modal').style.display = 'flex';
+            }
+          }
+        };
+      }
+
       const btnNpcManager = document.getElementById('btn-dev-npc-manager');
       const npcPanel = document.getElementById('npc-manager-panel');
       if (btnNpcManager && npcPanel) {
@@ -45,12 +125,55 @@ export class UIManager {
         };
         document.getElementById('btn-close-npc-manager').onclick = () => npcPanel.style.display = 'none';
 
+        document.getElementById('btn-close-npc-edit').onclick = () => document.getElementById('npc-edit-modal').style.display = 'none';
+        
+        document.getElementById('btn-edit-npc-tp-me').onclick = () => {
+          document.getElementById('edit-npc-x').value = Math.round(eng.player.x);
+          document.getElementById('edit-npc-y').value = Math.round(eng.player.y);
+          document.getElementById('edit-npc-z').value = Math.round(eng.player.z || 0);
+          emitNpcUpdate();
+        };
+
+        const emitNpcUpdate = () => {
+          const uuid = document.getElementById('edit-npc-uuid').value;
+          if (!uuid) return;
+          const updates = {
+            name: document.getElementById('edit-npc-name').value,
+            hp: parseFloat(document.getElementById('edit-npc-hp').value),
+            maxHp: parseFloat(document.getElementById('edit-npc-maxhp').value),
+            energy: parseFloat(document.getElementById('edit-npc-energy').value),
+            x: parseFloat(document.getElementById('edit-npc-x').value),
+            y: parseFloat(document.getElementById('edit-npc-y').value),
+            z: parseFloat(document.getElementById('edit-npc-z').value),
+            type: document.getElementById('edit-npc-type').value,
+            dir: document.getElementById('edit-npc-dir').value
+          };
+          eng.socket.emit('edit_npc', { uuid, updates });
+        };
+
+        // Fire updates over the socket instantly as the developer types or selects!
+        ['edit-npc-name', 'edit-npc-hp', 'edit-npc-maxhp', 'edit-npc-energy', 'edit-npc-x', 'edit-npc-y', 'edit-npc-z'].forEach(id => {
+          document.getElementById(id).addEventListener('input', emitNpcUpdate);
+        });
+        ['edit-npc-type', 'edit-npc-dir'].forEach(id => {
+          document.getElementById(id).addEventListener('change', emitNpcUpdate);
+        });
+
+        document.getElementById('btn-save-npc-edit').onclick = () => document.getElementById('npc-edit-modal').style.display = 'none';
+
         eng.socket.on('npc_deleted', (uuid) => {
           const idx = eng.npcs.findIndex(n => n.uuid === uuid);
           if (idx !== -1) eng.npcs.splice(idx, 1);
           if (npcPanel.style.display === 'flex') this.renderNpcManager();
         });
         eng.socket.on('npc_spawned', () => {
+          if (npcPanel.style.display === 'flex') this.renderNpcManager();
+        });
+        eng.socket.on('npc_updated', (updatedNpc) => {
+          const idx = eng.npcs.findIndex(n => n.uuid === updatedNpc.uuid);
+          if (idx !== -1) {
+            Object.assign(eng.npcs[idx], updatedNpc);
+          }
           if (npcPanel.style.display === 'flex') this.renderNpcManager();
         });
       }
@@ -77,6 +200,7 @@ export class UIManager {
       const z = npc.z || 0;
 
       row.innerHTML = `
+        <button class="btn-edit btn-secondary" style="width: auto; height: auto; padding: 5px; border-color: #f39c12; color: #f39c12; font-weight: bold; margin-right: 5px; font-size: 0.9rem;" title="Edit NPC">✎</button>
         <div style="flex: 1.5; font-weight: bold; color: var(--accent-neon); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${npc.name}">${npc.name}</div>
         <div style="flex: 1.5; display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 0.85rem;">
           <span>X:${Math.round(npc.x)} Y:${Math.round(npc.y)} Z:${Math.round(z)}</span>
@@ -91,6 +215,21 @@ export class UIManager {
         </div>
         <button class="btn-del btn-secondary" style="width: auto; height: auto; padding: 5px 10px; border-color: #ff4757; color: #ff4757; font-weight: bold;">X</button>
       `;
+
+      row.querySelector('.btn-edit').onclick = () => {
+        document.getElementById('edit-npc-uuid').value = npc.uuid;
+        document.getElementById('edit-npc-name').value = npc.name;
+        document.getElementById('edit-npc-hp').value = Math.floor(npc.hp);
+        document.getElementById('edit-npc-maxhp').value = npc.maxHp;
+        document.getElementById('edit-npc-energy').value = Math.floor(npc.energy || 1000);
+        document.getElementById('edit-npc-x').value = Math.round(npc.x);
+        document.getElementById('edit-npc-y').value = Math.round(npc.y);
+        document.getElementById('edit-npc-z').value = Math.round(npc.z || 0);
+        document.getElementById('edit-npc-type').value = npc.type || 'idle';
+        document.getElementById('edit-npc-dir').value = npc.dir || 'down';
+        
+        document.getElementById('npc-edit-modal').style.display = 'flex';
+      };
 
       row.querySelector('.btn-tp').onclick = () => {
         this.engine.player.x = npc.x;
@@ -427,6 +566,19 @@ export class UIManager {
     
     if (epFill) epFill.style.width = `${(eng.player.energy / eng.player.maxEnergy) * 100}%`;
     if (epText) epText.innerText = `${Math.floor(eng.player.energy)} / ${eng.player.maxEnergy}`;
+
+    const btnEditTarget = document.getElementById('btn-dev-edit-target');
+    if (btnEditTarget) {
+      if (eng.selectedTarget && eng.selectedTarget.type === 'npc') {
+        btnEditTarget.disabled = false;
+        btnEditTarget.style.opacity = '1';
+        btnEditTarget.style.cursor = 'pointer';
+      } else {
+        btnEditTarget.disabled = true;
+        btnEditTarget.style.opacity = '0.5';
+        btnEditTarget.style.cursor = 'not-allowed';
+      }
+    }
 
     const targetWindow = document.getElementById('target-window');
     if (eng.selectedTarget && targetWindow) {

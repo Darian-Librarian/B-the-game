@@ -4,15 +4,32 @@ export class EntityManager {
   }
 
   update(dt) {
-    // Chat Bubble Timers
-    if (this.engine.player.chatBubble && this.engine.player.chatBubble.timer > 0) {
-      this.engine.player.chatBubble.timer -= dt;
-    }
-    for (let id in this.engine.otherPlayers) {
-      if (this.engine.otherPlayers[id].chatBubble && this.engine.otherPlayers[id].chatBubble.timer > 0) {
-        this.engine.otherPlayers[id].chatBubble.timer -= dt;
+    const updateBubbles = (entity) => {
+      // Backwards compatibility intercept for incoming socket data!
+      if (entity.chatBubble) {
+        if (!entity.chatBubbles) entity.chatBubbles = [];
+        entity.chatBubbles.push({ text: entity.chatBubble.text, timer: 4000, opacity: 0 });
+        delete entity.chatBubble;
       }
-    }
+      if (!entity.chatBubbles) return;
+      for (let i = entity.chatBubbles.length - 1; i >= 0; i--) {
+        const b = entity.chatBubbles[i];
+        b.timer -= dt;
+        
+        // Fade opacity
+        if (b.timer > 0 && b.opacity < 1) b.opacity = Math.min(1, b.opacity + dt / 150);
+        else if (b.timer <= 0) b.opacity -= dt / 300;
+        
+        // Drift Y Elevation
+        if (b.currentY === undefined) b.currentY = b.targetY || 0;
+        b.currentY += ((b.targetY || 0) - b.currentY) * 15 * (dt / 1000);
+        
+        if (b.opacity <= 0) entity.chatBubbles.splice(i, 1);
+      }
+    };
+
+    updateBubbles(this.engine.player);
+    for (let id in this.engine.otherPlayers) updateBubbles(this.engine.otherPlayers[id]);
 
     this.updatePlayer(dt);
     this.updateNpcs(dt);

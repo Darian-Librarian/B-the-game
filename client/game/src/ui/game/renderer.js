@@ -474,8 +474,8 @@ export class Renderer {
             }
           }
 
-          if (eng.player.chatBubble && eng.player.chatBubble.timer > 0) {
-            eng.chat.drawBubble(ctx, pos.x, pos.y - 206, eng.player.chatBubble.text);
+          if (eng.player.chatBubbles && eng.player.chatBubbles.length > 0) {
+            eng.chat.drawBubbles(ctx, pos.x, pos.y - 206, eng.player.chatBubbles);
           }
         }
       }
@@ -530,8 +530,8 @@ export class Renderer {
           }
           }
           
-          if (op.chatBubble && op.chatBubble.timer > 0) {
-            eng.chat.drawBubble(ctx, pos.x, pos.y - 206, op.chatBubble.text);
+          if (op.chatBubbles && op.chatBubbles.length > 0) {
+            eng.chat.drawBubbles(ctx, pos.x, pos.y - 206, op.chatBubbles);
           }
         }
       });
@@ -548,7 +548,7 @@ export class Renderer {
           if (npc.state === 'dead') npcState = 'death';
           else if (npc.hurtTimer > 0) npcState = 'hurt';
 
-          const img = eng.sprites[`${npcState}_down`];
+          const img = eng.sprites[`${npcState}_${npc.dir || 'down'}`];
           if (img && img.complete && img.naturalWidth > 0) {
             const fw = 96; const fh = 90;
             const yOffset = 35;
