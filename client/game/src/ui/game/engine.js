@@ -1,12 +1,12 @@
-import { ChatManager } from './chat.js?v=ui-settings';
-import { NetworkManager } from './network.js?v=ui-settings';
-import { UIManager } from './ui.js?v=ui-settings';
-import { InputManager } from './input.js?v=ui-settings';
-import { MinimapManager } from './minimap.js?v=ui-settings';
-import { Renderer } from './renderer.js?v=ui-settings';
-import { CombatManager } from './combat.js?v=ui-settings';
-import { EntityManager } from './entity_manager.js?v=ui-settings';
-import { MapOverlayManager } from './map_overlay.js?v=ui-settings';
+import { ChatManager } from './chat.js?v=init-order-fix';
+import { NetworkManager } from './network.js?v=init-order-fix';
+import { UIManager } from './ui.js?v=init-order-fix';
+import { InputManager } from './input.js?v=init-order-fix';
+import { MinimapManager } from './minimap.js?v=init-order-fix';
+import { Renderer } from './renderer.js?v=init-order-fix';
+import { CombatManager } from './combat.js?v=init-order-fix';
+import { EntityManager } from './entity_manager.js?v=init-order-fix';
+import { MapOverlayManager } from './map_overlay.js?v=init-order-fix';
 
 export class GameEngine {
   constructor(canvasId, playerData, accountUuid) {
@@ -107,15 +107,15 @@ export class GameEngine {
     // --- Multiplayer Networking ---
     this.otherPlayers = {};
 
+    this.network = new NetworkManager(this);
+    this.socket = this.network.socket;
     this.chat = new ChatManager(this);
     this.ui = new UIManager(this);
-    this.network = new NetworkManager(this);
     this.minimap = new MinimapManager(this);
     this.renderer = new Renderer(this);
     this.combat = new CombatManager(this);
     this.entityManager = new EntityManager(this);
     this.mapOverlay = new MapOverlayManager(this);
-    this.socket = this.network.socket;
 
     console.log("Game Engine successfully booted!", this.playerData);
     this.ui.update();
@@ -261,11 +261,25 @@ export class GameEngine {
     }
 
     for (let npc of this.npcs) {
-      if (npc.state !== 'dead' && Math.hypot(npc.x - nextX, npc.y - nextY) < 55) return true;
+      // Z-Check: Only collide if they are on roughly the same vertical floor
+      if (npc.state !== 'dead' && Math.abs((npc.z || 0) - (this.player.z || 0)) < 64) {
+        const nextDist = Math.hypot(npc.x - nextX, npc.y - nextY);
+        if (nextDist < 55) {
+          const currDist = Math.hypot(npc.x - this.player.x, npc.y - this.player.y);
+          // "Un-Stuck" Logic: Only block movement if we are moving CLOSER to the entity!
+          if (currDist >= 55 || nextDist < currDist) return true;
+        }
+      }
     }
     for (let id in this.otherPlayers) {
       const op = this.otherPlayers[id];
-      if (op.state !== 'death' && Math.hypot(op.x - nextX, op.y - nextY) < 55) return true;
+      if (op.state !== 'death' && Math.abs((op.z || 0) - (this.player.z || 0)) < 64) {
+        const nextDist = Math.hypot(op.x - nextX, op.y - nextY);
+        if (nextDist < 55) {
+          const currDist = Math.hypot(op.x - this.player.x, op.y - this.player.y);
+          if (currDist >= 55 || nextDist < currDist) return true;
+        }
+      }
     }
     return false;
   }
