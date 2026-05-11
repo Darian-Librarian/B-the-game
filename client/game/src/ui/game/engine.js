@@ -1,11 +1,12 @@
-import { ChatManager } from './chat.js?v=entity-manager';
-import { NetworkManager } from './network.js?v=entity-manager';
-import { UIManager } from './ui.js?v=entity-manager';
-import { InputManager } from './input.js?v=entity-manager';
-import { MinimapManager } from './minimap.js?v=entity-manager';
-import { Renderer } from './renderer.js?v=entity-manager';
-import { CombatManager } from './combat.js?v=entity-manager';
-import { EntityManager } from './entity_manager.js?v=entity-manager';
+import { ChatManager } from './chat.js?v=full-map-pip';
+import { NetworkManager } from './network.js?v=full-map-pip';
+import { UIManager } from './ui.js?v=full-map-pip';
+import { InputManager } from './input.js?v=full-map-pip';
+import { MinimapManager } from './minimap.js?v=full-map-pip';
+import { Renderer } from './renderer.js?v=dev-clip-fix';
+import { CombatManager } from './combat.js?v=full-map-pip';
+import { EntityManager } from './entity_manager.js?v=full-map-pip';
+import { MapOverlayManager } from './map_overlay.js?v=dev-clip-fix';
 
 export class GameEngine {
   constructor(canvasId, playerData, accountUuid) {
@@ -117,6 +118,7 @@ export class GameEngine {
     this.renderer = new Renderer(this);
     this.combat = new CombatManager(this);
     this.entityManager = new EntityManager(this);
+    this.mapOverlay = new MapOverlayManager(this);
     this.socket = this.network.socket;
 
     console.log("Game Engine successfully booted!", this.playerData);
@@ -151,9 +153,19 @@ export class GameEngine {
   getScreenPos(wx, wy, wz = 0) {
     const sx = (wx - wy) - (this.camera.x - this.camera.y);
     const sy = (wx + wy) * this.tilt - (this.camera.x + this.camera.y) * this.tilt;
+    let centerX = this.canvas.width / 2;
+    let centerY = this.canvas.height / 2;
+    
+    if (this.mapOverlay && this.mapOverlay.active) {
+       // Shift the 3D focal point to the top right corner when the Map is active!
+       const mmSize = 250;
+       centerX = this.canvas.width - mmSize / 2 - 20;
+       centerY = 70 + mmSize / 2;
+    }
+
     return {
-      x: Math.round(sx + this.canvas.width / 2),
-      y: Math.round(sy - wz + (this.camera.z || 0) + this.canvas.height / 2)
+      x: Math.round(sx + centerX),
+      y: Math.round(sy - wz + (this.camera.z || 0) + centerY)
     };
   }
 
@@ -208,6 +220,7 @@ export class GameEngine {
     if (this.syncTimer) clearInterval(this.syncTimer);
     if (this.network) this.network.disconnect();
     if (this.input) this.input.disconnect();
+    if (this.mapOverlay) this.mapOverlay.disconnect();
     window.removeEventListener('resize', this.handleResize);
     if (this.chatDropdownListener) document.removeEventListener('click', this.chatDropdownListener);
   }
@@ -322,7 +335,17 @@ export class GameEngine {
     if (dt > 100) dt = 16;
     this.lastTime = time;
     this.update(dt);
+    
+    if (this.mapOverlay && this.mapOverlay.active) {
+      this.mapOverlay.draw(this.ctx);
+    }
+    
     this.renderer.draw();
+    
+    if (this.mapOverlay && this.mapOverlay.active) {
+      this.mapOverlay.drawBorder(this.ctx);
+    }
+    
     this.reqId = requestAnimationFrame(this.loop);
   }
 }

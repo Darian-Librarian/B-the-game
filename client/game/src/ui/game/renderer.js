@@ -77,9 +77,25 @@ export class Renderer {
     const eng = this.engine;
     const ctx = eng.ctx;
 
-    ctx.fillStyle = '#0b0e14';
-    ctx.fillRect(0, 0, eng.canvas.width, eng.canvas.height);
-    
+    ctx.save();
+    // Wrap the main drawing logic to constrain it to the PIP window when Map Overlay is active
+    if (eng.mapOverlay && eng.mapOverlay.active) {
+      const mmSize = 250;
+      const pipX = eng.canvas.width - mmSize / 2 - 20;
+      const pipY = 70 + mmSize / 2;
+      const pipRadius = mmSize / 2;
+
+      ctx.beginPath();
+      ctx.arc(pipX, pipY, pipRadius, 0, Math.PI * 2);
+      ctx.clip();
+      
+      ctx.fillStyle = '#0b0e14';
+      ctx.fillRect(pipX - pipRadius, pipY - pipRadius, mmSize, mmSize);
+    } else {
+      ctx.fillStyle = '#0b0e14';
+      ctx.fillRect(0, 0, eng.canvas.width, eng.canvas.height);
+    }
+
     const drawIsoCircle = (wx, wy, wz, radius, color, fillAlpha) => {
       const pos = eng.getScreenPos(wx, wy, wz);
       ctx.save();
@@ -545,25 +561,6 @@ export class Renderer {
       ctx.restore();
     });
 
-    if (eng.clientSettings.showMinimap) {
-      eng.minimap.draw(ctx);
-    }
-
-    let overlayText = [];
-    if (eng.clientSettings.showCoords) overlayText.push(`X: ${Math.round(eng.player.x)} | Y: ${Math.round(eng.player.y)} | Z: ${Math.round(eng.player.z || 0)}`);
-    if (eng.clientSettings.showFPS) overlayText.push(`FPS: ${eng.fps}`);
-    if (eng.clientSettings.showPing) overlayText.push(`Ping: ${eng.ping}ms`);
-
-    if (overlayText.length > 0) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.fillRect(20, 100, 200, overlayText.length * 20 + 10);
-      ctx.fillStyle = '#00d2ff';
-      ctx.font = '14px monospace';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      overlayText.forEach((text, idx) => ctx.fillText(text, 30, 105 + idx * 20));
-    }
-
     if (eng.devOptions.showChunk) {
       const chunkSize = 1024;
       const cx = Math.floor(eng.player.x / chunkSize);
@@ -698,6 +695,28 @@ export class Renderer {
         if (ray.z > 0) drawMouseDot(0, true);
         drawMouseDot(zOff, false);
       }
+    }
+
+    ctx.restore(); // DROP THE PIP CLIPPING MASK HERE! After ALL 3D drawing is done!
+
+    // Disable the 2D Minimap if the 3D PIP window has taken its place!
+    if (eng.clientSettings.showMinimap && (!eng.mapOverlay || !eng.mapOverlay.active)) {
+      eng.minimap.draw(ctx);
+    }
+
+    let overlayText = [];
+    if (eng.clientSettings.showCoords) overlayText.push(`X: ${Math.round(eng.player.x)} | Y: ${Math.round(eng.player.y)} | Z: ${Math.round(eng.player.z || 0)}`);
+    if (eng.clientSettings.showFPS) overlayText.push(`FPS: ${eng.fps}`);
+    if (eng.clientSettings.showPing) overlayText.push(`Ping: ${eng.ping}ms`);
+
+    if (overlayText.length > 0) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.fillRect(20, 100, 200, overlayText.length * 20 + 10);
+      ctx.fillStyle = '#00d2ff';
+      ctx.font = '14px monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      overlayText.forEach((text, idx) => ctx.fillText(text, 30, 105 + idx * 20));
     }
   }
 }
