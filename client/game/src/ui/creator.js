@@ -1089,7 +1089,7 @@ if (btnGameMenu && gameDropdown) {
     });
   }
 
-  const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true };
+  const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, clickToMove: false };
   const savedSettingsStr = localStorage.getItem('b_client_settings');
   const savedSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
   
@@ -1124,6 +1124,7 @@ if (btnGameMenu && gameDropdown) {
   setupSettingToggle('row-toggle-baseplates', 'btn-toggle-baseplates', 'showBaseplates');
   setupSettingToggle('row-toggle-cam-jump', 'btn-toggle-cam-jump', 'cameraFollowsJump');
   setupSettingToggle('row-toggle-minimap', 'btn-toggle-minimap', 'showMinimap');
+  setupSettingToggle('row-toggle-click-move', 'btn-toggle-click-move', 'clickToMove');
 
   // Hotkeys
   document.addEventListener('keydown', (e) => {

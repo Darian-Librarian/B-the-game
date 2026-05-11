@@ -7,6 +7,18 @@ export class MapOverlayManager {
   }
 
   setupUI() {
+    const toggleMap = () => {
+      this.active = !this.active;
+      const chatInput = document.getElementById('chat-input');
+      if (chatInput) chatInput.blur();
+      
+      const controls = document.getElementById('map-controls');
+      if (controls) {
+        controls.style.display = this.active ? 'flex' : 'none';
+        if (this.active) this.updateScale();
+      }
+    };
+
     // Dynamically inject the M button beneath the I button
     const sideHud = document.querySelector('.game-side-hud');
     if (sideHud && !document.getElementById('btn-fullscreen-map')) {
@@ -15,14 +27,60 @@ export class MapOverlayManager {
       btn.className = 'btn-secondary';
       btn.style.cssText = 'width: 45px; height: 45px; font-weight: bold; background: rgba(0,0,0,0.8); border-color: #f39c12; color: #f39c12; border-radius: 4px; font-size: 1.2rem; cursor: pointer; transition: background 0.2s;';
       btn.innerText = 'M';
-      btn.onclick = () => {
-        this.active = !this.active;
-        const chatInput = document.getElementById('chat-input');
-        if (chatInput) chatInput.blur();
-      };
+      btn.onclick = toggleMap;
       btn.onmouseenter = () => btn.style.background = 'rgba(243, 156, 18, 0.2)';
       btn.onmouseleave = () => btn.style.background = 'rgba(0,0,0,0.8)';
       sideHud.appendChild(btn);
+    }
+
+    // Dynamically inject the Map Controls overlay
+    const gameScreen = document.getElementById('game-screen');
+    if (gameScreen && !document.getElementById('map-controls')) {
+      const controls = document.createElement('div');
+      controls.id = 'map-controls';
+      controls.style.cssText = 'position: absolute; bottom: 30px; right: 30px; display: none; flex-direction: column; align-items: flex-end; gap: 15px; z-index: 200; font-family: var(--font-mono); user-select: none; pointer-events: auto;';
+
+      // Zoom Buttons
+      const zoomGroup = document.createElement('div');
+      zoomGroup.style.cssText = 'display: flex; flex-direction: column; border: 2px solid #f39c12; border-radius: 4px; overflow: hidden; background: rgba(5, 7, 10, 0.9); box-shadow: 0 0 15px rgba(0,0,0,0.8);';
+
+      const btnIn = document.createElement('button');
+      btnIn.innerText = '+';
+      btnIn.style.cssText = 'width: 40px; height: 40px; background: transparent; color: #f39c12; border: none; border-bottom: 1px solid rgba(243, 156, 18, 0.5); font-weight: bold; cursor: pointer; font-size: 1.5rem; transition: background 0.2s;';
+      btnIn.onmouseenter = () => btnIn.style.background = 'rgba(243, 156, 18, 0.2)';
+      btnIn.onmouseleave = () => btnIn.style.background = 'transparent';
+      btnIn.onclick = () => { this.zoom = Math.min(this.zoom + 1, 16); this.updateScale(); };
+
+      const btnOut = document.createElement('button');
+      btnOut.innerText = '−';
+      btnOut.style.cssText = 'width: 40px; height: 40px; background: transparent; color: #f39c12; border: none; font-weight: bold; cursor: pointer; font-size: 1.5rem; transition: background 0.2s;';
+      btnOut.onmouseenter = () => btnOut.style.background = 'rgba(243, 156, 18, 0.2)';
+      btnOut.onmouseleave = () => btnOut.style.background = 'transparent';
+      btnOut.onclick = () => { this.zoom = Math.max(this.zoom - 1, 1); this.updateScale(); };
+
+      zoomGroup.appendChild(btnIn);
+      zoomGroup.appendChild(btnOut);
+
+      // Scale/Ruler Marker
+      const scaleBar = document.createElement('div');
+      scaleBar.style.cssText = 'display: flex; flex-direction: column; align-items: flex-end; color: #f39c12; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; font-size: 0.85rem; font-weight: bold;';
+      
+      const scaleLabel = document.createElement('span');
+      scaleLabel.id = 'map-scale-label';
+      scaleLabel.innerText = '100 ft';
+      scaleLabel.style.marginBottom = '4px';
+      scaleLabel.style.marginRight = '2px';
+
+      const scaleLine = document.createElement('div');
+      scaleLine.id = 'map-scale-line';
+      scaleLine.style.cssText = 'height: 8px; border-left: 2px solid #f39c12; border-right: 2px solid #f39c12; border-bottom: 2px solid #f39c12; width: 80px; transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: inset 0 -2px 0 rgba(0,0,0,0.5), 0 2px 0 rgba(0,0,0,0.5);';
+
+      scaleBar.appendChild(scaleLabel);
+      scaleBar.appendChild(scaleLine);
+
+      controls.appendChild(zoomGroup);
+      controls.appendChild(scaleBar);
+      gameScreen.appendChild(controls);
     }
 
     // Map Hotkey
@@ -30,7 +88,7 @@ export class MapOverlayManager {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       if (e.repeat) return; // Prevent rapid flickering if key is held!
       if (e.key.toLowerCase() === 'm') {
-        this.active = !this.active;
+        toggleMap();
       }
     };
     window.addEventListener('keydown', this.keydownListener);
@@ -43,8 +101,28 @@ export class MapOverlayManager {
       } else {
         this.zoom = Math.max(this.zoom - 1, 1);
       }
+      this.updateScale();
     };
     window.addEventListener('wheel', this.wheelListener);
+  }
+
+  updateScale() {
+    const line = document.getElementById('map-scale-line');
+    const label = document.getElementById('map-scale-label');
+    if (line && label) {
+      // Standard assumption: 1 Block (32x32) = 5 ft
+      let tiles = 20; // 100 ft default
+      let feet = 100;
+      
+      if (this.zoom >= 10) {
+        tiles = 10; feet = 50; // Map is super zoomed in, show 50ft ruler
+      } else if (this.zoom <= 2) {
+        tiles = 40; feet = 200; // Map is extremely zoomed out, show 200ft ruler
+      }
+      
+      line.style.width = `${tiles * this.zoom}px`;
+      label.innerText = `${feet} ft`;
+    }
   }
 
   disconnect() {
@@ -52,6 +130,8 @@ export class MapOverlayManager {
     window.removeEventListener('wheel', this.wheelListener);
     const btn = document.getElementById('btn-fullscreen-map');
     if (btn) btn.remove();
+    const controls = document.getElementById('map-controls');
+    if (controls) controls.remove();
   }
 
   draw(ctx) {

@@ -1,0 +1,43 @@
+{
+  "name": "Aedia",
+  "race": "Human",
+  "alignment": "hero",
+  "city": "atlas",
+  "bio": "",
+  "integrity": -100,
+  "archetype": "Hivemind",
+  "powers": [
+    "Drone Swarm Rank 2",
+    "Drone Swarm Rank 4",
+    "Automated Robotics Rank 2"
+  ],
+  "unspentSlots": 0,
+  "level": 1,
+  "created": 1778531442074,
+  "stats": {},
+  "position": {
+    "x": 0,
+    "y": 0
+  },
+  "inventory": [
+    {
+      "id": "rubber_chicken",
+      "name": "Rubber Chicken",
+      "qty": 1,
+      "icon": "🍗"
+    },
+    {
+      "id": "buttons",
+      "name": "Buttons",
+      "qty": 5,
+      "icon": "🔘"
+    },
+    {
+      "id": "slinky",
+      "name": "Slinky",
+      "qty": 1,
+      "icon": "🌀"
+    }
+  ],
+  "currency": 0
+}

@@ -390,6 +390,47 @@ export class Renderer {
       }
     }
 
+    if (eng.player.moveTarget) {
+      const tx = eng.player.moveTarget.x;
+      const ty = eng.player.moveTarget.y;
+      const tz = eng.getTerrainZ(tx, ty);
+      entitiesToDraw.push({
+        sortVal: getEntitySortVal({ x: tx, y: ty }) - 0.05,
+        isBlock: false,
+        draw: () => {
+          const pos = eng.getScreenPos(tx, ty, tz);
+          const t = performance.now() / 400; // Continuous rotation
+          
+          ctx.save();
+          ctx.translate(pos.x, pos.y);
+          ctx.scale(1, eng.tilt);
+          ctx.rotate(t);
+          
+          ctx.strokeStyle = '#00d2ff';
+          ctx.lineWidth = 2;
+          
+          // Outer Rotating Dashed Circle
+          ctx.setLineDash([8, 8]);
+          ctx.beginPath();
+          ctx.arc(0, 0, 16, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          
+          // Inner Converging Pulse Lines
+          const pulse = (performance.now() % 800) / 800; // Loops from 0.0 to 1.0
+          const dist = 24 - (pulse * 12);
+          ctx.globalAlpha = 1 - pulse; // Fades out as it collapses inward
+          for (let i = 0; i < 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(i * Math.PI / 2) * dist, Math.sin(i * Math.PI / 2) * dist);
+            ctx.lineTo(Math.cos(i * Math.PI / 2) * (dist - 6), Math.sin(i * Math.PI / 2) * (dist - 6));
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+      });
+    }
+
     entitiesToDraw.push({
       sortVal: getEntitySortVal(eng.player),
       isBlock: false,
@@ -534,6 +575,19 @@ export class Renderer {
       });
     });
 
+    if (eng.clientSettings.showBaseplates) {
+      const addBaseplate = (entity, color) => {
+        entitiesToDraw.push({
+          sortVal: getEntitySortVal(entity) - 0.08, // Draw baseplate strictly behind the entity!
+          isBlock: false,
+          draw: () => drawIsoCircle(entity.x, entity.y, entity.z || 0, 27.5, color, 0.2)
+        });
+      };
+      addBaseplate(eng.player, '#2ecc71');
+      Object.values(eng.otherPlayers).forEach(op => { if (op.state !== 'death') addBaseplate(op, '#3498db'); });
+      eng.npcs.forEach(npc => { if (npc.state !== 'dead') addBaseplate(npc, '#ff4757'); });
+    }
+
     entitiesToDraw.sort((a, b) => {
       if (a.sortVal === b.sortVal) return a.isBlock ? -1 : 1;
       return a.sortVal - b.sortVal;
@@ -609,16 +663,6 @@ export class Renderer {
 
     if (eng.devOptions.showMelee) {
       drawIsoCircle(eng.player.x, eng.player.y, eng.player.z || 0, 200, '#f39c12', 0.1);
-    }
-
-    if (eng.clientSettings.showBaseplates) {
-      drawIsoCircle(eng.player.x, eng.player.y, eng.player.z || 0, 55, '#2ecc71', 0.2);
-      Object.values(eng.otherPlayers).forEach(op => {
-        if (op.state !== 'death') drawIsoCircle(op.x, op.y, op.z || 0, 55, '#3498db', 0.2);
-      });
-      eng.npcs.forEach(npc => {
-        if (npc.state !== 'dead') drawIsoCircle(npc.x, npc.y, npc.z || 0, 55, '#ff4757', 0.2);
-      });
     }
 
     if (eng.devOptions.showHitboxes) {

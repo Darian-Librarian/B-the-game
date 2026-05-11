@@ -1,12 +1,12 @@
-import { ChatManager } from './chat.js?v=full-map-pip';
-import { NetworkManager } from './network.js?v=full-map-pip';
-import { UIManager } from './ui.js?v=full-map-pip';
-import { InputManager } from './input.js?v=full-map-pip';
-import { MinimapManager } from './minimap.js?v=full-map-pip';
-import { Renderer } from './renderer.js?v=dev-clip-fix';
-import { CombatManager } from './combat.js?v=full-map-pip';
-import { EntityManager } from './entity_manager.js?v=full-map-pip';
-import { MapOverlayManager } from './map_overlay.js?v=dev-clip-fix';
+import { ChatManager } from './chat.js?v=disable-map-click';
+import { NetworkManager } from './network.js?v=disable-map-click';
+import { UIManager } from './ui.js?v=disable-map-click';
+import { InputManager } from './input.js?v=disable-map-click';
+import { MinimapManager } from './minimap.js?v=disable-map-click';
+import { Renderer } from './renderer.js?v=disable-map-click';
+import { CombatManager } from './combat.js?v=disable-map-click';
+import { EntityManager } from './entity_manager.js?v=disable-map-click';
+import { MapOverlayManager } from './map_overlay.js?v=disable-map-click';
 
 export class GameEngine {
   constructor(canvasId, playerData, accountUuid) {
@@ -20,7 +20,7 @@ export class GameEngine {
     this.canvas.height = window.innerHeight;
 
     const savedSettingsStr = localStorage.getItem('b_client_settings');
-    const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true };
+    const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, clickToMove: false };
     this.clientSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
     this.tilt = 0.5;
     this.selectedTarget = null;
@@ -67,6 +67,7 @@ export class GameEngine {
       wasPressingShift: false,
       wasPressingSpace: false,
       nextAttack: 1,
+      moveTarget: null,
       hurtTimer: 0,
       respawnTimer: 0,
       hp: (this.playerData.stats && this.playerData.stats.hp > 10) ? this.playerData.stats.hp : 1000,
@@ -170,8 +171,17 @@ export class GameEngine {
   }
 
   getIsoRaycast(clientX, clientY) {
-    const sx = clientX - (this.canvas.width / 2);
-    const sy = clientY - (this.canvas.height / 2) - (this.camera.z || 0);
+    let centerX = this.canvas.width / 2;
+    let centerY = this.canvas.height / 2;
+    
+    if (this.mapOverlay && this.mapOverlay.active) {
+       const mmSize = 250;
+       centerX = this.canvas.width - mmSize / 2 - 20;
+       centerY = 70 + mmSize / 2;
+    }
+
+    const sx = clientX - centerX;
+    const sy = clientY - centerY - (this.camera.z || 0);
     
     let hitGx = 0, hitGy = 0, hitZ = 0;
     
@@ -194,7 +204,14 @@ export class GameEngine {
         }
       }
     }
-    return { gx: hitGx, gy: hitGy, z: hitZ };
+    
+    const finalSy = sy + (hitZ * 32);
+    const finalA = sx + this.camera.x - this.camera.y;
+    const finalB = (finalSy / this.tilt) + this.camera.x + this.camera.y;
+    const exactX = (finalA + finalB) / 2;
+    const exactY = (finalB - finalA) / 2;
+
+    return { gx: hitGx, gy: hitGy, z: hitZ, exactX, exactY };
   }
 
   updateSelectionArea() {

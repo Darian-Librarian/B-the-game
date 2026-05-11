@@ -60,6 +60,7 @@ export class InputManager {
       if (ctxMenu) ctxMenu.style.display = 'none';
 
       if (e.button === 0) { // Left Click
+
         if (eng.editMode) {
           // Elevation Drag
           if (this.keys['shift'] && eng.selectedTiles.length > 0) {
@@ -104,6 +105,15 @@ export class InputManager {
 
         eng.selectedTarget = clickedTarget;
         eng.ui.update();
+
+        // Click to Move Logic (V-Key Force Move or Default Setting)
+        if (!eng.mapOverlay || !eng.mapOverlay.active) {
+          if (this.keys['v'] || (eng.clientSettings.clickToMove && !clickedTarget && !eng.editMode)) {
+            const ray = eng.getIsoRaycast(this.mousePos.x, this.mousePos.y);
+            eng.player.moveTarget = { x: ray.exactX, y: ray.exactY, sprint: !!this.keys['shift'], timer: 15 };
+            return;
+          }
+        }
       } else if (e.button === 2) {
         e.preventDefault();
         
