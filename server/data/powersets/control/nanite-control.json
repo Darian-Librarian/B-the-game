@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -100,
+      "maxIntegrity": -1,
+      "Powersets": [
+        {
+          "id": "nanite-control",
+          "name": "Nanite Control",
+          "desc": "Deploy swarms of microscopic machines to lock down enemies, hack their tech, and manipulate their biological functions.",
+          "powers": [
+            { "id": "nanite-net", "name": "Nanite Net", "desc": "Ranged, Foe Immobilize, -Speed" },
+            { "id": "system-override", "name": "System Override", "desc": "Ranged, Foe Confuse/Hack" },
+            { "id": "statis-field", "name": "Stasis Field", "desc": "Ranged, Foe Hold" },
+            { "id": "micro-swarm", "name": "Micro-Swarm", "desc": "Targeted AoE, Minor DoT(Energy), Foe -To Hit" },
+            { "id": "mass-override", "name": "Mass Override", "desc": "Targeted AoE, Foe Confuse/Hack" },
+            { "id": "emp-burst", "name": "EMP Burst", "desc": "PBAoE, DMG(Energy), Foe Hold/Stun" },
+            { "id": "nanite-infestation", "name": "Nanite Infestation", "desc": "Targeted AoE, Foe Sleep, -DEF" }
+          ]
+        }
+      ]
+    }
+  ]
+}

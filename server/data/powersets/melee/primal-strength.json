@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": 1,
+      "maxIntegrity": 100,
+      "Powersets": [
+        {
+          "id": "primal-strength",
+          "name": "Primal Strength",
+          "desc": "Rely on heavily mutated musculature to deliver devastating blows that knock enemies off their feet.",
+          "powers": [
+            { "id": "jab", "name": "Jab", "desc": "Melee, Fast DMG(Smash)" },
+            { "id": "punch", "name": "Punch", "desc": "Melee, DMG(Smash), Foe Knockdown" },
+            { "id": "haymaker", "name": "Haymaker", "desc": "Melee, High DMG(Smash), Foe Knockback" },
+            { "id": "hand-clap", "name": "Hand Clap", "desc": "PBAoE, Foe Disorient/Knockback, No DMG" },
+            { "id": "knockout-blow", "name": "Knockout Blow", "desc": "Melee, Extreme DMG(Smash), Foe Hold" },
+            { "id": "rage", "name": "Rage", "desc": "Self ++++DMG, ++To-Hit, -DEF Crash on fade" },
+            { "id": "foot-stomp", "name": "Foot Stomp", "desc": "PBAoE Melee, Superior DMG(Smash), Foe Knockdown" }
+          ]
+        }
+      ]
+    }
+  ]
+}

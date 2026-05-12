@@ -1,0 +1,28 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "dual-pistols",
+          "name": "Dual Pistols",
+          "desc": "Master of akimbo pistols. Use Swap Ammo to change damage types and effects mid-battle.",
+          "minIntegrity": -100,
+          "maxIntegrity": 100,
+          "powers": [
+            { "id": "pistols", "name": "Pistols", "desc": "Ranged, Minor DMG(Lethal/Special), Foe -DEF" },
+            { "id": "dual-wield", "name": "Dual Wield", "desc": "Ranged, Moderate DMG(Lethal/Special), Foe Knockback/Special" },
+            { "id": "empty-clips", "name": "Empty Clips", "desc": "Ranged (Cone), Moderate DMG(Lethal/Special), Foe -Def, Knockdown/Special" },
+            { "id": "swap-ammo", "name": "Swap Ammo", "desc": "Change Secondary Damage/Effects" },
+            { "id": "bullet-rain", "name": "Bullet Rain", "desc": "Ranged (Targeted AoE), Moderate DMG(Lethal/Special), Knockback/Special" },
+            { "id": "suppressive-fire", "name": "Suppressive Fire", "desc": "Ranged, Minor DMG(Lethal/Special), Foe Disorient/Special" },
+            { "id": "executioners-shot", "name": "Executioner's Shot", "desc": "High DMG(Lethal/Special), Foe -Def, Knockback/Special" },
+            { "id": "piercing-rounds", "name": "Piercing Rounds", "desc": "Narrow Ranged (Cone), Superior DMG(Lethal/Special), Foe -Res(All)/Special" },
+            { "id": "hail-of-bullets", "name": "Hail of Bullets", "desc": "PBAoE, Superior DMG(Lethal/Special), Self +Def(Melee, Ranged, AoE), Foe Knockdown/Special" }
+          ]
+        }
+      ]
+    }
+  ]
+}

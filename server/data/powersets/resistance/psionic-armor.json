@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "IntegrityRequirement": "",
+      "Powersets": [
+        {
+          "id": "psionic-armor",
+          "name": "Psionic Armor",
+          "desc": "Mental barriers and psionic resilience. High resistance to esoteric and mental damage types.",
+          "powers": [
+            { "id": "psychic-wall", "name": "Psychic Wall", "desc": "Toggle: Self +Res(Smash, Lethal, Psi)" },
+            { "id": "psionic-shield", "name": "Psionic Shield", "desc": "Toggle: Self +Res(Fire, Cold, Energy, Neg, Toxic, End Drain)" },
+            { "id": "impenetrable-mind", "name": "Impenetrable Mind", "desc": "Toggle: Self +Res(Psi, Disorient, Hold, Immob, Sleep, Fear, Confuse, Knockback)" },
+            { "id": "consume-psyche", "name": "Consume Psyche", "desc": "PBAoE Foe -Regen, -Heal, -Rec; Self +Regen, +Rec" },
+            { "id": "impose-presence", "name": "Impose Presence", "desc": "Toggle: Self +DEF(Melee, Ranged), +To Hit, Foe -Rech" },
+            { "id": "psychokinetic-barrier", "name": "Psychokinetic Barrier", "desc": "Self +Absorb, +Max HP, +Regen, +Res(-Regen, -Rec, -Rech, -End)" },
+            { "id": "precognition", "name": "Precognition", "desc": "Auto: Self +DEF(Melee, Ranged, AoE, Psi), Res(-Def), +Perception" },
+            { "id": "aura-of-insanity", "name": "Aura of Insanity", "desc": "Toggle: PBAoE Foe Confuse, Disorient, Sleep, Hold, Fear, DoT(Psi), Special" },
+            { "id": "memento-mori", "name": "Memento Mori", "desc": "Self Rez, +Max HP, Special" }
+          ]
+        }
+      ]
+    }
+  ]
+}

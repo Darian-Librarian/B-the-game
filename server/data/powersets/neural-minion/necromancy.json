@@ -1,0 +1,22 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "necromancy",
+          "name": "Necromancy",
+          "desc": "Raise the dead to fight for you. Your undead minions will overwhelm your foes.",
+          "powers": [
+            { "id": "zombie-horde", "name": "Zombie Horde", "desc": "Summon 1 to 3 Zombies depending on your level." },
+            { "id": "enchant-undead", "name": "Enchant Undead", "desc": "Equip your undead with weapons and armor." },
+            { "id": "grave-knight", "name": "Grave Knight", "desc": "Summon 1 or 2 Grave Knights depending on your level." },
+            { "id": "dark-empowerment", "name": "Dark Empowerment", "desc": "Empower your undead with dark magic." },
+            { "id": "lich", "name": "Lich", "desc": "Summon a powerful Lich." }
+          ]
+        }
+      ]
+    }
+  ]
+}

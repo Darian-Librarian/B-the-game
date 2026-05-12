@@ -1,0 +1,19 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -100,
+      "maxIntegrity": 100,
+      "Powersets": [
+        {
+          "id": "inherited",
+          "name": "Inherited",
+          "desc": "Basic abilities intrinsic to your manifestation in the city.",
+          "powers": [
+            { "id": "brawl", "name": "Brawl", "desc": "Melee, Minor DMG(Smash)" },
+            { "id": "sprint", "name": "Sprint", "desc": "Toggle: Self +Speed" }
+          ]
+        }
+      ]
+    }
+  ]
+}

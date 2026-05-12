@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": 1,
+      "maxIntegrity": 100,
+      "Powersets": [
+        {
+          "id": "nature-affinity",
+          "name": "Nature Affinity",
+          "desc": "Manipulating rapid biological growth, pheromones, and enzymes to empower allies and rot enemies.",
+          "powers": [
+            { "id": "corrosive-enzymes", "name": "Corrosive Enzymes", "desc": "Ranged, Foe -DMG, -Res" },
+            { "id": "regrowth", "name": "Regrowth", "desc": "Ranged (Cone), Heal (Allies), +Regeneration" },
+            { "id": "spore-cloud", "name": "Spore Cloud", "desc": "Toggle: Ranged (Targeted AoE), Foe -To-Hit, -DMG, -Regeneration" },
+            { "id": "lifegiving-spores", "name": "Lifegiving Spores", "desc": "Toggle: PBAoE, Allies Heal over Time, +Endurance" },
+            { "id": "wild-growth", "name": "Wild Growth", "desc": "PBAoE, Allies +Res(All), +Res(Status Effects)" },
+            { "id": "entangling-aura", "name": "Entangling Aura", "desc": "Toggle: PBAoE, Foe Hold" },
+            { "id": "wild-bastion", "name": "Wild Bastion", "desc": "PBAoE, Allies +Absorb, +Regeneration" },
+            { "id": "rebirth", "name": "Rebirth", "desc": "Revive Fallen Ally, PBAoE Heal" },
+            { "id": "overgrowth", "name": "Overgrowth", "desc": "PBAoE, Allies +DMG, +To-Hit, +Max HP" }
+          ]
+        }
+      ]
+    }
+  ]
+}

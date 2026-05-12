@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "earth-armor",
+          "name": "Earth Armor",
+          "desc": "Channel the elemental power of earth to encase yourself in impenetrable stone and crystal.",
+          "powers": [
+            { "id": "rock-armor", "name": "Rock Armor", "desc": "Toggle: Self +DEF(Smash, Lethal)" },
+            { "id": "stone-skin", "name": "Stone Skin", "desc": "Auto: Self +Res(Smash, Lethal)" },
+            { "id": "earths-embrace", "name": "Earth's Embrace", "desc": "Self +Max HP, +Res(Toxic)" },
+            { "id": "mud-pots", "name": "Mud Pots", "desc": "Toggle: PBAoE, DoT(Fire), Foe -SPD" },
+            { "id": "rooted", "name": "Rooted", "desc": "Toggle: Self +Res(Knockback, Status), +Regen, -SPD" },
+            { "id": "brimstone-armor", "name": "Brimstone Armor", "desc": "Toggle: Self +Res(Fire, Cold)" },
+            { "id": "crystal-armor", "name": "Crystal Armor", "desc": "Toggle: Self +Res(Energy, Negative), +DEF(Energy, Negative)" },
+            { "id": "granite-armor", "name": "Granite Armor", "desc": "Toggle: Self +++++Res(All), +++++DEF(All), -DMG, -SPD, -Recharge" }
+          ]
+        }
+      ]
+    }
+  ]
+}

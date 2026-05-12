@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -100,
+      "maxIntegrity": -1,
+      "Powersets": [
+        {
+          "id": "thermal-radiation",
+          "name": "Thermal Radiation",
+          "desc": "Projecting thermal waves to shield allies in plasma and melt enemy armor.",
+          "powers": [
+            { "id": "warmth", "name": "Warmth", "desc": "PBAoE, Moderate Heal (Allies)" },
+            { "id": "fire-shield", "name": "Fire Shield", "desc": "Ranged, Ally +Res(Smash, Lethal, Fire)" },
+            { "id": "cauterize", "name": "Cauterize", "desc": "Ranged, Heal (Ally)" },
+            { "id": "plasma-shield", "name": "Plasma Shield", "desc": "Ranged, Ally +Res(Energy, Negative, Cold)" },
+            { "id": "thaw", "name": "Thaw", "desc": "Ranged, Ally +Res(Status Effects), Removes Cold Effects" },
+            { "id": "forge", "name": "Forge", "desc": "Ranged, Ally +DMG, +To-Hit" },
+            { "id": "heat-exhaustion", "name": "Heat Exhaustion", "desc": "Ranged, Foe -DMG, -Endurance, -Recovery" },
+            { "id": "melt-armor", "name": "Melt Armor", "desc": "Ranged (Targeted AoE), Foe -Res, -DEF" },
+            { "id": "power-of-the-sun", "name": "Power of the Sun", "desc": "Ranged, Foe -To-Hit, -DEF, DoT(Fire)" }
+          ]
+        }
+      ]
+    }
+  ]
+}

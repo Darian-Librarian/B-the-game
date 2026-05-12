@@ -1,0 +1,28 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "dual-blades",
+          "name": "Dual Blades",
+          "desc": "Master of fighting with a blade in each hand, striking in combinations with unique secondary effects.",
+          "minIntegrity": -100,
+          "maxIntegrity": 100,
+          "powers": [
+            { "id": "nimble-slash", "name": "Nimble Slash", "desc": "Melee, DoT(Lethal)" },
+            { "id": "power-slice", "name": "Power Slice", "desc": "Melee, DoT(Lethal)" },
+            { "id": "ablating-strike", "name": "Ablating Strike", "desc": "Melee, DoT(Lethal), Foe -DEF" },
+            { "id": "typhoons-edge", "name": "Typhoon's Edge", "desc": "PBAoE Melee, DoT(Lethal)" },
+            { "id": "blinding-feint", "name": "Blinding Feint", "desc": "Melee, DMG(Lethal), Self +DMG, +To-Hit" },
+            { "id": "taunt", "name": "Taunt", "desc": "Ranged(Targeted AoE), Foe Taunt" },
+            { "id": "vengeful-slice", "name": "Vengeful Slice", "desc": "Melee, DoT(Lethal), Foe Knockdown" },
+            { "id": "sweeping-strike", "name": "Sweeping Strike", "desc": "Melee (Cone), DMG(Lethal)" },
+            { "id": "one-thousand-cuts", "name": "One Thousand Cuts", "desc": "Melee (Cone), DoT(Lethal), Foe Knockdown" }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "dark-blast",
+          "name": "Dark Blast",
+          "desc": "Summons the powers of the Netherworld to defeat your foes. The draining effects of most of these powers can reduce your targets' chance to hit.",
+          "powers": [
+            { "id": "dark-blast", "name": "Dark Blast", "desc": "Ranged, DMG(Neg), Foe -To Hit" },
+            { "id": "gloom", "name": "Gloom", "desc": "Ranged, DoT(Neg), Foe -To Hit" },
+            { "id": "umbral-torrent", "name": "Umbral Torrent", "desc": "Ranged (Cone), DMG(Neg), Foe -To Hit, Knockback" },
+            { "id": "aim", "name": "Aim", "desc": "Self +To Hit, +DMG" },
+            { "id": "moonbeam", "name": "Moonbeam", "desc": "Sniper, DMG(Neg), Foe -To Hit, Self +Range" },
+            { "id": "tenebrous-tentacles", "name": "Tenebrous Tentacles", "desc": "Ranged (Cone), DoT(Neg), Foe Immob, -To Hit" },
+            { "id": "abyssal-gaze", "name": "Abyssal Gaze", "desc": "Ranged, DoT(Neg), Foe Hold, -To Hit" },
+            { "id": "life-drain", "name": "Life Drain", "desc": "Ranged, DMG(Neg), Foe -To Hit, Self +HP" },
+            { "id": "blackstar", "name": "Blackstar", "desc": "PBAoE, DMG(Neg), Foe -To Hit" }
+          ]
+        }
+      ]
+    }
+  ]
+}

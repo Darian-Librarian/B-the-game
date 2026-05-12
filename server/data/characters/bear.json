@@ -1,0 +1,47 @@
+{
+  "name": "Bear",
+  "race": "Human",
+  "alignment": "hero",
+  "city": "atlas",
+  "bio": "",
+  "integrity": 0,
+  "archetype": "Civilian",
+  "powers": [
+    "Brawl"
+  ],
+  "powersets": [
+    "inherited"
+  ],
+  "unspentPowerPicks": 3,
+  "unspentPowersetPicks": [
+    "any"
+  ],
+  "level": 1,
+  "created": 1778589384580,
+  "stats": {},
+  "position": {
+    "x": 31.08576203783393,
+    "y": -314.9571748142455
+  },
+  "inventory": [
+    {
+      "id": "rubber_chicken",
+      "name": "Rubber Chicken",
+      "qty": 1,
+      "icon": "🍗"
+    },
+    {
+      "id": "buttons",
+      "name": "Buttons",
+      "qty": 5,
+      "icon": "🔘"
+    },
+    {
+      "id": "slinky",
+      "name": "Slinky",
+      "qty": 1,
+      "icon": "🌀"
+    }
+  ],
+  "currency": 0
+}

@@ -599,6 +599,50 @@ export class Renderer {
       eng.npcs.forEach(npc => { if (npc.state !== 'dead') addBaseplate(npc, '#ff4757'); });
     }
 
+    if (eng.devOptions.showMelee) {
+      let facingAngle = 0;
+      if (eng.player.dir === 'up') facingAngle = -Math.PI * 0.75;
+      else if (eng.player.dir === 'down') facingAngle = Math.PI * 0.25;
+      else if (eng.player.dir === 'left') facingAngle = Math.PI * 0.75;
+      else if (eng.player.dir === 'right') facingAngle = -Math.PI * 0.25;
+
+      const fov = Math.PI / 3;
+
+      const checkHit = (tx, ty, tz) => {
+        const pz = eng.player.z || 0;
+        tz = tz || 0;
+        if (Math.abs(pz - tz) > 48) return false; 
+        const dist = Math.hypot(tx - eng.player.x, ty - eng.player.y);
+        if (dist > 200) return false;
+        const angleToTarget = Math.atan2(ty - eng.player.y, tx - eng.player.x);
+        let angleDiff = angleToTarget - facingAngle;
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+        if (Math.abs(angleDiff) > fov) return false; 
+        const steps = Math.ceil(dist / 16);
+        for (let i = 1; i <= steps; i++) {
+          const sampleX = eng.player.x + ((tx - eng.player.x) * (i / steps));
+          const sampleY = eng.player.y + ((ty - eng.player.y) * (i / steps));
+          const terrainZ = eng.getTerrainZ(sampleX, sampleY);
+          if (terrainZ >= pz + 64 && terrainZ >= tz + 64) return false; 
+        }
+        return true;
+      };
+
+      const addMeleeBaseplate = (entity) => {
+        if (checkHit(entity.x, entity.y, entity.z)) {
+          entitiesToDraw.push({
+            sortVal: getEntitySortVal(entity) - 0.09, // Draw behind the normal baseplates (-0.08)
+            isBlock: false,
+            draw: () => drawIsoCircle(entity.x, entity.y, entity.z || 0, 35, '#f39c12', 0.4)
+          });
+        }
+      };
+
+      Object.values(eng.otherPlayers).forEach(op => { if (op.state !== 'death') addMeleeBaseplate(op); });
+      eng.npcs.forEach(npc => { if (npc.state !== 'dead') addMeleeBaseplate(npc); });
+    }
+
     entitiesToDraw.sort((a, b) => {
       if (a.sortVal === b.sortVal) return a.isBlock ? -1 : 1;
       return a.sortVal - b.sortVal;
@@ -674,6 +718,29 @@ export class Renderer {
 
     if (eng.devOptions.showMelee) {
       drawIsoCircle(eng.player.x, eng.player.y, eng.player.z || 0, 200, '#f39c12', 0.1);
+      
+      let facingAngle = 0;
+      if (eng.player.dir === 'up') facingAngle = -Math.PI * 0.75;
+      else if (eng.player.dir === 'down') facingAngle = Math.PI * 0.25;
+      else if (eng.player.dir === 'left') facingAngle = Math.PI * 0.75;
+      else if (eng.player.dir === 'right') facingAngle = -Math.PI * 0.25;
+
+      const fov = Math.PI / 3;
+      const pos = eng.getScreenPos(eng.player.x, eng.player.y, eng.player.z || 0);
+      
+      ctx.save();
+      ctx.transform(1, eng.tilt, -1, eng.tilt, pos.x, pos.y);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, 200, facingAngle - fov, facingAngle + fov);
+      ctx.closePath();
+      ctx.strokeStyle = '#e74c3c';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = '#e74c3c';
+      ctx.fill();
+      ctx.restore();
     }
 
     if (eng.devOptions.showHitboxes) {
@@ -696,6 +763,17 @@ export class Renderer {
       drawTileHighlight(eng.player.x, eng.player.y, 'rgba(46, 204, 113, 0.2)', '#2ecc71', '#2ecc71', eng.player.z || 0, false);
     }
 
+    if (eng.devOptions.showEntityTile) {
+      const drawEntTile = (entity, colorHex, colorRgbaBase) => {
+        if ((entity.z || 0) > 0) {
+          drawTileHighlight(entity.x, entity.y, `${colorRgbaBase}0.05)`, `${colorRgbaBase}0.4)`, `${colorRgbaBase}0.8)`, 0, true); 
+        }
+        drawTileHighlight(entity.x, entity.y, `${colorRgbaBase}0.2)`, colorHex, colorHex, entity.z || 0, false);
+      };
+      eng.npcs.forEach(npc => { if (npc.state !== 'dead') drawEntTile(npc, '#ff4757', 'rgba(255, 71, 87, '); });
+      Object.values(eng.otherPlayers).forEach(op => { if (op.state !== 'death') drawEntTile(op, '#3498db', 'rgba(52, 152, 219, '); });
+    }
+
     if (eng.devOptions.showPlayerPos) {
       const drawPosDot = (z, isBase) => {
         const pPos = eng.getScreenPos(eng.player.x, eng.player.y, z);
@@ -715,6 +793,36 @@ export class Renderer {
 
       if ((eng.player.z || 0) > 0) drawPosDot(0, true);
       drawPosDot(eng.player.z || 0, false);
+    }
+
+    if (eng.devOptions.showEntityPos) {
+      const drawPosDot = (entity, z, isBase, colorHex, colorRgbaBase) => {
+        const pPos = eng.getScreenPos(entity.x, entity.y, z);
+        ctx.fillStyle = isBase ? `${colorRgbaBase}0.4)` : colorHex;
+        ctx.fillRect(pPos.x - 2, pPos.y - 2, 4, 4);
+        
+        ctx.fillStyle = isBase ? 'rgba(255, 255, 255, 0.5)' : '#fff';
+        ctx.font = 'bold 12px monospace';
+        ctx.textAlign = 'left';
+        ctx.lineJoin = 'round';
+        const dispZ = isBase ? 0 : Math.round(z);
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        ctx.lineWidth = 3;
+        ctx.strokeText(`X:${Math.round(entity.x)} Y:${Math.round(entity.y)} Z:${dispZ}`, pPos.x + 10, pPos.y);
+        ctx.fillText(`X:${Math.round(entity.x)} Y:${Math.round(entity.y)} Z:${dispZ}`, pPos.x + 10, pPos.y);
+      };
+      eng.npcs.forEach(npc => {
+        if (npc.state !== 'dead') {
+          if ((npc.z || 0) > 0) drawPosDot(npc, 0, true, '#ff4757', 'rgba(255, 71, 87, ');
+          drawPosDot(npc, npc.z || 0, false, '#ff4757', 'rgba(255, 71, 87, ');
+        }
+      });
+      Object.values(eng.otherPlayers).forEach(op => {
+        if (op.state !== 'death') {
+          if ((op.z || 0) > 0) drawPosDot(op, 0, true, '#3498db', 'rgba(52, 152, 219, ');
+          drawPosDot(op, op.z || 0, false, '#3498db', 'rgba(52, 152, 219, ');
+        }
+      });
     }
 
     if (eng.devOptions.showMousePos || eng.devOptions.showTile) {
@@ -749,6 +857,76 @@ export class Renderer {
         
         if (ray.z > 0) drawMouseDot(0, true);
         drawMouseDot(ray.z * 32, false);
+      }
+    }
+
+    if ((eng.devOptions.showDistToNPC || eng.devOptions.showDistNpcToMouse) && eng.selectedTarget && eng.selectedTarget.type === 'npc') {
+      const npc = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
+      if (npc && npc.state !== 'dead') {
+        const npcPos = eng.getScreenPos(npc.x, npc.y, npc.z || 0);
+
+        if (eng.devOptions.showDistToNPC) {
+          const p = eng.player;
+          const pPos = eng.getScreenPos(p.x, p.y, p.z || 0);
+          const dx = npc.x - p.x;
+          const dy = npc.y - p.y;
+          const dz = (npc.z || 0) - (p.z || 0);
+          const dist3D = Math.hypot(Math.hypot(dx, dy), dz);
+          const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+          ctx.save();
+          ctx.strokeStyle = '#f1c40f';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(pPos.x, pPos.y);
+          ctx.lineTo(npcPos.x, npcPos.y);
+          ctx.stroke();
+
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 12px monospace';
+          ctx.textAlign = 'center';
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#000';
+          const midX = (pPos.x + npcPos.x) / 2;
+          const midY = (pPos.y + npcPos.y) / 2;
+          const text = `Dist: ${Math.round(dist3D)} | XYZ: ${Math.round(dx)}, ${Math.round(dy)}, ${Math.round(dz)} | Ang: ${Math.round(angle)}°`;
+          ctx.strokeText(text, midX, midY - 10);
+          ctx.fillText(text, midX, midY - 10);
+          ctx.restore();
+        }
+
+        if (eng.devOptions.showDistNpcToMouse) {
+          const ray = eng.getIsoRaycast(eng.input.mousePos.x, eng.input.mousePos.y);
+          const mouseZ = ray.z * 32;
+          const mPos = eng.getScreenPos(ray.exactX, ray.exactY, mouseZ);
+          const dx = ray.exactX - npc.x;
+          const dy = ray.exactY - npc.y;
+          const dz = mouseZ - (npc.z || 0);
+          const dist3D = Math.hypot(Math.hypot(dx, dy), dz);
+          const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+          ctx.save();
+          ctx.strokeStyle = '#e74c3c';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(npcPos.x, npcPos.y);
+          ctx.lineTo(mPos.x, mPos.y);
+          ctx.stroke();
+
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 12px monospace';
+          ctx.textAlign = 'center';
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#000';
+          const midX = (npcPos.x + mPos.x) / 2;
+          const midY = (npcPos.y + mPos.y) / 2;
+          const text = `Dist: ${Math.round(dist3D)} | XYZ: ${Math.round(dx)}, ${Math.round(dy)}, ${Math.round(dz)} | Ang: ${Math.round(angle)}°`;
+          ctx.strokeText(text, midX, midY - 10);
+          ctx.fillText(text, midX, midY - 10);
+          ctx.restore();
+        }
       }
     }
 

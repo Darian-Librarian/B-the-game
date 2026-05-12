@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "fire-control",
+          "name": "Fire Control",
+          "desc": "Summon roaring flames and choking smoke to entrap and burn your enemies.",
+          "powers": [
+            { "id": "ring-of-fire", "name": "Ring of Fire", "desc": "Ranged, Foe Immobilize, DoT(Fire)" },
+            { "id": "char", "name": "Char", "desc": "Ranged, Foe Hold, DoT(Fire)" },
+            { "id": "fire-trap", "name": "Fire Trap", "desc": "Location AoE, Foe Immobilize, DoT(Fire)" },
+            { "id": "smoke", "name": "Smoke", "desc": "Targeted AoE, Foe -Perception, -To Hit" },
+            { "id": "cinders", "name": "Cinders", "desc": "PBAoE, Foe Hold, DoT(Fire)" },
+            { "id": "flashfire", "name": "Flashfire", "desc": "Targeted AoE, Foe Disorient, DoT(Fire)" },
+            { "id": "fire-imps", "name": "Fire Imps", "desc": "Summon fiery imps to burn your foes." }
+          ]
+        }
+      ]
+    }
+  ]
+}

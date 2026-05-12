@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": 1,
+      "maxIntegrity": 100,
+      "Powersets": [
+        {
+          "id": "nature-armor",
+          "name": "Nature Armor",
+          "desc": "Mutate your body to manifest defensive flora, thick bark, and rejuvenating spores to survive extreme combat.",
+          "powers": [
+            { "id": "barkskin", "name": "Barkskin", "desc": "Toggle, Self +Res(Smash, Lethal), +Def(Smash, Lethal)" },
+            { "id": "spore-cloud", "name": "Spore Cloud", "desc": "Toggle, PBAoE Foe -To Hit, -Damage" },
+            { "id": "photosynthesis", "name": "Photosynthesis", "desc": "Auto, Self +Regeneration, +Recovery (Increased in daylight)" },
+            { "id": "wild-growth", "name": "Wild Growth", "desc": "Self Heal, PBAoE Ally Heal, +Res(Toxic)" },
+            { "id": "thorns", "name": "Thorns", "desc": "Toggle, Self Damage Aura(Lethal/Toxic)" },
+            { "id": "earths-blessing", "name": "Earth's Blessing", "desc": "Auto, Self +Max HP, +Res(Knockback, Status)" },
+            { "id": "avatar-of-nature", "name": "Avatar of Nature", "desc": "Self ++++Max HP, ++++Regen, +Res(All Damage), PBAoE Ally +Heal" }
+          ]
+        }
+      ]
+    }
+  ]
+}

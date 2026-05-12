@@ -1,0 +1,28 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "assault-rifle",
+          "name": "Assault Rifle",
+          "desc": "A state-of-the-art piece of hardware equipped with an impressive arsenal of munitions and firing modes.",
+          "minIntegrity": -100,
+          "maxIntegrity": 100,
+          "powers": [
+            { "id": "burst", "name": "Burst", "desc": "Ranged, DoT(Lethal), Foe -DEF" },
+            { "id": "slug", "name": "Slug", "desc": "Ranged, DMG(Lethal), Foe Knockback" },
+            { "id": "buckshot", "name": "Buckshot", "desc": "Ranged (Cone), DMG(Lethal), Foe Knockback" },
+            { "id": "m30-grenade", "name": "M30 Grenade", "desc": "Ranged (Targeted AoE), DMG(Fire/Lethal), Foe Knockback" },
+            { "id": "beanbag", "name": "Beanbag", "desc": "Ranged, DMG(Smash), Foe Disorient" },
+            { "id": "sniper-rifle", "name": "Sniper Rifle", "desc": "Sniper, DMG(Lethal), Foe Knockback, Self +Range (Blaster only)" },
+            { "id": "flamethrower", "name": "Flamethrower", "desc": "Ranged (Cone), DoT(Fire)" },
+            { "id": "ignite", "name": "Ignite", "desc": "Ranged, Location AoE, DoT(Fire)" },
+            { "id": "full-auto", "name": "Full Auto", "desc": "Ranged (Cone), DoT(Lethal)" }
+          ]
+        }
+      ]
+    }
+  ]
+}

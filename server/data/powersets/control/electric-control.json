@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "electric-control",
+          "name": "Electric Control",
+          "desc": "Unleash currents of high-voltage electricity to chain-stun foes and drain their energy.",
+          "powers": [
+            { "id": "tesla-cage", "name": "Tesla Cage", "desc": "Ranged, Foe Hold, -Endurance" },
+            { "id": "chain-fences", "name": "Chain Fences", "desc": "Targeted AoE, Foe Immobilize, -Endurance" },
+            { "id": "jolting-chain", "name": "Jolting Chain", "desc": "Chain Attack, Foe Knockdown, -Endurance" },
+            { "id": "conductive-aura", "name": "Conductive Aura", "desc": "PBAoE, Foe Sleep, -Endurance" },
+            { "id": "synaptic-overload", "name": "Synaptic Overload", "desc": "Chain Attack, Foe Confuse, -Endurance" },
+            { "id": "emp-field", "name": "EMP Field", "desc": "PBAoE, Foe Hold, Drain Endurance, Self -Endurance Crash" },
+            { "id": "gremlins", "name": "Gremlins", "desc": "Summon unpredictable electric entities." }
+          ]
+        }
+      ]
+    }
+  ]
+}

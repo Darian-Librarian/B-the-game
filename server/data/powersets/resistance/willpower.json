@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "willpower",
+          "name": "Willpower",
+          "desc": "You rely on sheer willpower to push through pain and adversity, gaining balanced defenses and regeneration.",
+          "powers": [
+            { "id": "high-pain-tolerance", "name": "High Pain Tolerance", "desc": "Auto, Self +Max HP, +Res(Smash, Lethal, Toxic)" },
+            { "id": "mind-over-body", "name": "Mind Over Body", "desc": "Toggle, Self +Res(Smash, Lethal, Psionic)" },
+            { "id": "indomitable-will", "name": "Indomitable Will", "desc": "Toggle, Self +Def(Psionic), +Res(Disorient, Hold, Sleep, Immobilize, Fear, Confuse)" },
+            { "id": "rise-to-the-challenge", "name": "Rise to the Challenge", "desc": "Toggle, PBAoE Foe -To Hit, Self +Regen (increases with more foes)" },
+            { "id": "quick-recovery", "name": "Quick Recovery", "desc": "Auto, Self +Recovery" },
+            { "id": "heightened-senses", "name": "Heightened Senses", "desc": "Toggle, Self +Def(Smash, Lethal, Fire, Cold, Energy, Negative)" },
+            { "id": "strength-of-will", "name": "Strength of Will", "desc": "Self ++++Res(All Damage except Psionic), ++++Res(Status), -Endurance Crash on fade" }
+          ]
+        }
+      ]
+    }
+  ]
+}

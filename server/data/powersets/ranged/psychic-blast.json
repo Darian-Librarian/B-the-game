@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": 1,
+      "maxIntegrity": 100,
+      "Powersets": [
+        {
+          "id": "psychic-blast",
+          "name": "Psychic Blast",
+          "desc": "Offensive long-range Psionic powers. Less effective against mindless creatures like machines.",
+          "powers": [
+            { "id": "dominate-will", "name": "Dominate Will", "desc": "Ranged, DMG(Psi), Foe Sleep" },
+            { "id": "mental-blast", "name": "Mental Blast", "desc": "Ranged, DMG(Psi), Foe -Rech" },
+            { "id": "telekinetic-blast", "name": "Telekinetic Blast", "desc": "Ranged, DMG(Psi/Smash), Foe Knockback" },
+            { "id": "psionic-darts", "name": "Psionic Darts", "desc": "Ranged (Cone), DMG(Psi), Foe -Rech" },
+            { "id": "psychic-focus", "name": "Psychic Focus", "desc": "Self +To Hit, +DMG" },
+            { "id": "psionic-lance", "name": "Psionic Lance", "desc": "Sniper, DMG(Psi), Foe -Rech, Self +Range" },
+            { "id": "psionic-tornado", "name": "Psionic Tornado", "desc": "Ranged (Targeted AoE), DMG(Psi), Foe Knockup, -Rech" },
+            { "id": "scramble-minds", "name": "Scramble Minds", "desc": "Ranged, DMG(Psi), Foe Disorient" },
+            { "id": "psychic-wail", "name": "Psychic Wail", "desc": "PBAoE, DMG(Psi), Foe Disorient, -Rech" }
+          ]
+        }
+      ]
+    }
+  ]
+}

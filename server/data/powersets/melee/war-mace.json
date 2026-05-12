@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "war-mace",
+          "name": "War Mace",
+          "desc": "Wield a heavy bludgeoning weapon to crush your foes, inflicting high smash damage and disorienting strikes.",
+          "powers": [
+            { "id": "bash", "name": "Bash", "desc": "Melee, DMG(Smash), Foe Disorient" },
+            { "id": "pulverize", "name": "Pulverize", "desc": "Melee, DMG(Smash), Foe Disorient" },
+            { "id": "jawbreaker", "name": "Jawbreaker", "desc": "Melee, High DMG(Smash), Foe Knockup" },
+            { "id": "build-up", "name": "Build Up", "desc": "Self +DMG, +To-Hit" },
+            { "id": "clobber", "name": "Clobber", "desc": "Melee, Extreme DMG(Smash), Foe Hold" },
+            { "id": "whirling-mace", "name": "Whirling Mace", "desc": "PBAoE Melee, DMG(Smash), Foe Knockdown" },
+            { "id": "shatter", "name": "Shatter", "desc": "Melee, Superior DMG(Smash), Foe Disorient" },
+            { "id": "crowd-control", "name": "Crowd Control", "desc": "PBAoE Melee, DMG(Smash), Foe Knockdown/Disorient" }
+          ]
+        }
+      ]
+    }
+  ]
+}

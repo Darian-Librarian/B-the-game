@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "IntegrityRequirement": "0% Integrity / 100% Purity",
+      "Powersets": [
+        {
+          "id": "energy-melee",
+          "name": "Energy Melee",
+          "desc": "Focused power attacks that utilize pure energy to power blows and often Disorient opponents.",
+          "powers": [
+            { "id": "barrage", "name": "Barrage", "desc": "Melee, Moderate DMG(Smash/Energy), Foe Disorient, Special" },
+            { "id": "energy-punch", "name": "Energy Punch", "desc": "Melee, Moderate DMG(Smash/Energy), Foe Disorient" },
+            { "id": "bone-smasher", "name": "Bone Smasher", "desc": "Melee, High DMG(Smash/Energy), Foe Disorient" },
+            { "id": "build-up", "name": "Build Up", "desc": "Self +DMG, +To-Hit" },
+            { "id": "whirling-hands", "name": "Whirling Hands", "desc": "PBAoE Melee, Moderate DMG(Smash/Energy)" },
+            { "id": "taunt", "name": "Taunt", "desc": "Ranged (Targeted AoE), Foe Taunt" },
+            { "id": "total-focus", "name": "Total Focus", "desc": "Melee, Extreme DMG(Smash/Energy), Foe Disorient, +Energy Focus" },
+            { "id": "power-crash", "name": "Power Crash", "desc": "Melee (Cone), Moderate DMG (Smash/Energy), Foe Disorient, Special" },
+            { "id": "energy-transfer", "name": "Energy Transfer", "desc": "Melee, Extreme DMG(Energy), Foe Disorient, Self -HP, Special" }
+          ]
+        }
+      ]
+    }
+  ]
+}

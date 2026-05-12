@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -100,
+      "maxIntegrity": -1,
+      "Powersets": [
+        {
+          "id": "force-field",
+          "name": "Force Field",
+          "desc": "High-wattage energy barriers and kinetic repulsion fields.",
+          "powers": [
+            { "id": "deflection-shield", "name": "Deflection Shield", "desc": "Ranged, Ally +DEF(Smash, Lethal, Melee)" },
+            { "id": "insulation-shield", "name": "Insulation Shield", "desc": "Ranged, Ally +DEF(Fire, Cold, Energy, Negative)" },
+            { "id": "personal-force-field", "name": "Personal Force Field", "desc": "Toggle: Self +DEF(All), -DMG, Intangible" },
+            { "id": "force-bolt", "name": "Force Bolt", "desc": "Ranged, Minor DMG(Smash), Foe Knockback" },
+            { "id": "dispersion-bubble", "name": "Dispersion Bubble", "desc": "Toggle: PBAoE, Allies +DEF(All), +Res(Status Effects)" },
+            { "id": "repulsion-bomb", "name": "Repulsion Bomb", "desc": "Ranged (Targeted AoE), Foe Knockback, Disorient" },
+            { "id": "repulsion-field", "name": "Repulsion Field", "desc": "Toggle: PBAoE, Foe Knockback" },
+            { "id": "force-bubble", "name": "Force Bubble", "desc": "Toggle: PBAoE, Foe Repel, -To-Hit" },
+            { "id": "detention-field", "name": "Detention Field", "desc": "Ranged, Foe Hold, Intangible" }
+          ]
+        }
+      ]
+    }
+  ]
+}

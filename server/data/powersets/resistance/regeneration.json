@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": 1,
+      "maxIntegrity": 100,
+      "Powersets": [
+        {
+          "id": "regeneration",
+          "name": "Regeneration",
+          "desc": "Your mutated biological structure allows you to heal from wounds at an incredible rate.",
+          "powers": [
+            { "id": "fast-healing", "name": "Fast Healing", "desc": "Auto, Self +Regeneration" },
+            { "id": "reconstruction", "name": "Reconstruction", "desc": "Self Heal, +Res(Toxic)" },
+            { "id": "quick-recovery", "name": "Quick Recovery", "desc": "Auto, Self +Recovery" },
+            { "id": "dull-pain", "name": "Dull Pain", "desc": "Self +Max HP, Heal" },
+            { "id": "integration", "name": "Integration", "desc": "Toggle, Self +Regeneration, +Res(Knockback, Disorient, Hold, Sleep, Immobilize)" },
+            { "id": "resilience", "name": "Resilience", "desc": "Auto, Self +Res(All Damage), +Max HP" },
+            { "id": "instant-healing", "name": "Instant Healing", "desc": "Toggle, Self ++++Regeneration" }
+          ]
+        }
+      ]
+    }
+  ]
+}

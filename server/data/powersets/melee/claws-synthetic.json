@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -100,
+      "maxIntegrity": -1,
+      "Powersets": [
+        {
+          "id": "cybernetic-claws",
+          "name": "Cybernetic Claws",
+          "desc": "Manufactured attachable claws. High-speed mechanical tearing with bleeding effects.",
+          "powers": [
+            { "id": "swipe", "name": "Swipe", "desc": "Melee, DMG(Lethal), Minor DoT(Lethal)" },
+            { "id": "slash", "name": "Slash", "desc": "Melee, DMG(Lethal), Minor DoT(Lethal)" },
+            { "id": "strike", "name": "Strike", "desc": "Melee, DMG(Lethal), Minor DoT(Lethal)" },
+            { "id": "spin", "name": "Spin", "desc": "PBAoE Melee, DMG(Lethal), Minor DoT(Lethal)" },
+            { "id": "follow-up", "name": "Follow Up", "desc": "Melee, DMG(Lethal), Self +DMG, +To-Hit" },
+            { "id": "focus", "name": "Focus", "desc": "Self +DMG, +To-Hit" },
+            { "id": "eviscerate", "name": "Eviscerate", "desc": "Melee, High DMG(Lethal), Moderate DoT(Lethal)" },
+            { "id": "shockwave", "name": "Shockwave", "desc": "Ranged (Cone), DMG(Lethal/Energy), Foe Knockdown" },
+            { "id": "assassinate", "name": "Assassinate", "desc": "Sniper Melee, Extreme DMG(Lethal)" }
+          ]
+        }
+      ]
+    }
+  ]
+}

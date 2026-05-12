@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "IntegrityRequirement": "0% Integrity / 100% Purity",
+      "Powersets": [
+        {
+          "id": "claws",
+          "name": "Claws",
+          "desc": "Lightweight blades with a reduced Endurance cost and faster attack rate than other melee sets.",
+          "powers": [
+            { "id": "swipe", "name": "Swipe", "desc": "Melee, DMG(Lethal)" },
+            { "id": "strike", "name": "Strike", "desc": "Melee, DMG(Lethal)" },
+            { "id": "slash", "name": "Slash", "desc": "Melee, DoT(Lethal), Foe -DEF(All)" },
+            { "id": "spin", "name": "Spin", "desc": "PBAoE, DMG(Lethal)" },
+            { "id": "follow-up", "name": "Follow Up", "desc": "Melee, DMG(Lethal), Self +DMG, +To-Hit" },
+            { "id": "taunt", "name": "Taunt", "desc": "Ranged (Targeted AoE), Foe Taunt" },
+            { "id": "focus", "name": "Focus", "desc": "Ranged, DMG(Lethal), Foe Knockdown" },
+            { "id": "eviscerate", "name": "Eviscerate", "desc": "Melee (Cone), DMG(Lethal), Foe -DEF" },
+            { "id": "shockwave", "name": "Shockwave", "desc": "Melee (Cone), DMG(Lethal), Foe Knockback" }
+          ]
+        }
+      ]
+    }
+  ]
+}

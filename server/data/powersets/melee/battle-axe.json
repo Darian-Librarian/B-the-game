@@ -1,0 +1,28 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "battle-axe",
+          "name": "Battle Axe",
+          "desc": "A slow but powerful weapon with a bonus to hit and a tendency to send foes flying with lethal attacks.",
+          "minIntegrity": -100,
+          "maxIntegrity": 100,
+          "powers": [
+            { "id": "beheader", "name": "Beheader", "desc": "Melee, DMG(Lethal), Foe Knockdown, -DEF" },
+            { "id": "chop", "name": "Chop", "desc": "Melee, DMG(Lethal), Foe Knockdown, -DEF" },
+            { "id": "gash", "name": "Gash", "desc": "Melee, DMG(Lethal), Foe Knockdown" },
+            { "id": "build-up", "name": "Build Up", "desc": "Self +DMG, +To-Hit" },
+            { "id": "pendulum", "name": "Pendulum", "desc": "Melee (Targeted AoE), DMG(Lethal), Foe Knockdown" },
+            { "id": "taunt", "name": "Taunt", "desc": "Ranged (Targeted AoE), Foe Taunt" },
+            { "id": "swoop", "name": "Swoop", "desc": "Melee, DMG(Lethal), Foe Knockup" },
+            { "id": "axe-cyclone", "name": "Axe Cyclone", "desc": "PBAoE, DMG(Lethal), Foe Knockdown" },
+            { "id": "cleave", "name": "Cleave", "desc": "Melee (Cone), DMG(Lethal), Foe Knockdown" }
+          ]
+        }
+      ]
+    }
+  ]
+}

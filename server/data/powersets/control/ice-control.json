@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "ice-control",
+          "name": "Ice Control",
+          "desc": "Freeze enemies in their tracks and create hazardous patches of slick ice.",
+          "powers": [
+            { "id": "chilblain", "name": "Chilblain", "desc": "Ranged, Foe Immobilize, DoT(Cold), -Speed" },
+            { "id": "block-of-ice", "name": "Block of Ice", "desc": "Ranged, Foe Hold, DoT(Cold), -Speed" },
+            { "id": "frostbite", "name": "Frostbite", "desc": "Targeted AoE, Foe Immobilize, -Speed" },
+            { "id": "arctic-air", "name": "Arctic Air", "desc": "Toggle: PBAoE, Foe -Speed, -Recharge, Confuse" },
+            { "id": "shiver", "name": "Shiver", "desc": "Ranged (Cone), Foe -Speed, -Recharge" },
+            { "id": "glacier", "name": "Glacier", "desc": "PBAoE, Foe Hold, DoT(Cold)" },
+            { "id": "jack-frost", "name": "Jack Frost", "desc": "Summon an icy entity to freeze your enemies." }
+          ]
+        }
+      ]
+    }
+  ]
+}

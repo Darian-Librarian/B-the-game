@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -100,
+      "maxIntegrity": -1,
+      "Powersets": [
+        {
+          "id": "tactical-crossbow",
+          "name": "Tactical Crossbow",
+          "desc": "High-tension mechanical crossbow firing specialized tactical bolts. Bleed and Piercing pass through multiple enemies.",
+          "powers": [
+            { "id": "snap-shot", "name": "Quick Bolt", "desc": "Ranged, DMG(Lethal)" },
+            { "id": "aimed-shot", "name": "Aimed Bolt", "desc": "Ranged, DMG(Lethal)" },
+            { "id": "fistful-of-arrows", "name": "Spread Fire", "desc": "Ranged (Cone), DMG(Lethal)" },
+            { "id": "blazing-arrow", "name": "Incendiary Bolt", "desc": "Ranged, DMG(Lethal), DoT(Fire)" },
+            { "id": "aim", "name": "Targeting Calibration", "desc": "Self +To-Hit, +DMG" },
+            { "id": "explosive-arrow", "name": "Explosive Bolt", "desc": "Ranged (Targeted AoE), DMG(Fire/Lethal), Foe Knockback" },
+            { "id": "ranged-shot", "name": "Sniper Bolt", "desc": "Sniper, DMG(Lethal), Self +Range" },
+            { "id": "stunning-shot", "name": "Concussion Bolt", "desc": "Ranged Disorient, DMG(Smash)" },
+            { "id": "rain-of-arrows", "name": "Hail of Bolts", "desc": "Ranged (Location AoE), DoT(Lethal)" }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -100,
+      "maxIntegrity": 100,
+      "Powersets": [
+        {
+          "id": "b-fu-reflexes",
+          "name": "B-Fu Reflexes",
+          "desc": "Mastery of martial redirection and circular movement. Your momentum directly increases your dodge chance.",
+          "powers": [
+            { "id": "focused-fighting", "name": "Focused Fighting", "desc": "Toggle: Self +DEF(Melee), +Res(Confuse, DEF Debuff)" },
+            { "id": "focused-senses", "name": "Focused Senses", "desc": "Toggle: Self +DEF(Ranged), +Res(DEF Debuff), +Perception" },
+            { "id": "agile", "name": "Agile", "desc": "Auto: Self +DEF(Ranged), +Res(All DMG, DEF Debuff, Special)" },
+            { "id": "practiced-brawler", "name": "Practiced Brawler", "desc": "Self +Res(Disorient, Hold, Sleep, Immob, Knockback)" },
+            { "id": "dodge", "name": "Dodge", "desc": "Auto: Self +DEF(Melee), +Res(All DMG, DEF Debuff, Special)" },
+            { "id": "evasion", "name": "Evasion", "desc": "Toggle: Self +DEF(vs. AoE), +Res(DEF Debuff)" },
+            { "id": "lucky", "name": "Lucky", "desc": "Auto: Self +DEF(vs. AoE), +Res(All DMG, DEF Debuff, Special)" },
+            { "id": "quickness", "name": "Quickness", "desc": "Auto: Self +Rech, +SPD, +Res(Slow)" },
+            { "id": "elude", "name": "Elude", "desc": "Self +DEF, +Res(DEF Debuff), +Rec, +SPD, +Special" }
+          ]
+        }
+      ]
+    }
+  ]
+}

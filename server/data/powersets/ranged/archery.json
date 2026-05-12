@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "primal-archery",
+          "name": "Primal Archery",
+          "desc": "Traditional and mystical bows firing physical and ethereal arrows. Bleed and Piercing pass through multiple enemies.",
+          "powers": [
+            { "id": "snap-shot", "name": "Snap Shot", "desc": "Ranged, DMG(Lethal)" },
+            { "id": "aimed-shot", "name": "Aimed Shot", "desc": "Ranged, DMG(Lethal)" },
+            { "id": "fistful-of-arrows", "name": "Fistful of Arrows", "desc": "Ranged (Cone), DMG(Lethal)" },
+            { "id": "blazing-arrow", "name": "Blazing Arrow", "desc": "Ranged, DMG(Lethal), DoT(Fire)" },
+            { "id": "aim", "name": "Aim", "desc": "Self +To-Hit, +DMG" },
+            { "id": "explosive-arrow", "name": "Explosive Arrow", "desc": "Ranged (Targeted AoE), DMG(Fire/Lethal), Foe Knockback" },
+            { "id": "ranged-shot", "name": "Ranged Shot", "desc": "Sniper, DMG(Lethal), Self +Range (Blaster only)" },
+            { "id": "stunning-shot", "name": "Stunning Shot", "desc": "Ranged Disorient, DMG(Smash)" },
+            { "id": "rain-of-arrows", "name": "Rain of Arrows", "desc": "Ranged (Location AoE), DoT(Lethal)" }
+          ]
+        }
+      ]
+    }
+  ]
+}

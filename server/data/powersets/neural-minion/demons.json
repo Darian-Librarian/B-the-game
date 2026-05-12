@@ -1,0 +1,22 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "demon-summoning",
+          "name": "Demon Summoning",
+          "desc": "Summon demons from the netherworld to do your bidding.",
+          "powers": [
+            { "id": "summon-demonlings", "name": "Summon Demonlings", "desc": "Summon 1 to 3 Demonlings depending on your level." },
+            { "id": "enchant-demon", "name": "Enchant Demon", "desc": "Equip your demons with hellish weapons and armor." },
+            { "id": "summon-demons", "name": "Summon Demons", "desc": "Summon 1 or 2 Demons depending on your level." },
+            { "id": "abyssal-empowerment", "name": "Abyssal Empowerment", "desc": "Empower your demons with ultimate abyssal powers." },
+            { "id": "summon-demon-prince", "name": "Summon Demon Prince", "desc": "Summon a powerful Demon Prince." }
+          ]
+        }
+      ]
+    }
+  ]
+}

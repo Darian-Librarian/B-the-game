@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": 1,
+      "maxIntegrity": 100,
+      "Powersets": [
+        {
+          "id": "marine-affinity",
+          "name": "Marine Affinity",
+          "desc": "Calling upon the restorative and crashing forces of the deep ocean.",
+          "powers": [
+            { "id": "soothing-wave", "name": "Soothing Wave", "desc": "Ranged (Cone), Heal (Allies)" },
+            { "id": "toroidal-sweep", "name": "Toroidal Sweep", "desc": "Ranged (Cone), Foe -DMG, -To-Hit" },
+            { "id": "whitecap", "name": "Whitecap", "desc": "Ranged (Targeted AoE), Foe Knockback, Disorient" },
+            { "id": "tidal-forces", "name": "Tidal Forces", "desc": "PBAoE, Allies +DMG, +To-Hit, +Recharge" },
+            { "id": "brine", "name": "Brine", "desc": "Location AoE, Foe -Res, -DEF" },
+            { "id": "shoal-armor", "name": "Shoal Armor", "desc": "Ranged, Ally +DEF, +Res(Status Effects)" },
+            { "id": "barrier-reef", "name": "Barrier Reef", "desc": "Location AoE, Allies +Absorb, Foe -SPD" },
+            { "id": "shifting-tides", "name": "Shifting Tides", "desc": "Toggle: Ranged, Ally +Endurance, Foe -Endurance" },
+            { "id": "leviathans-call", "name": "Leviathan's Call", "desc": "Revive Fallen Ally, +Absorb" }
+          ]
+        }
+      ]
+    }
+  ]
+}

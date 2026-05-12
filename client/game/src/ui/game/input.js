@@ -32,8 +32,27 @@ export class InputManager {
       const key = e.key.toLowerCase();
       this.keys[key] = true;
       
-      if (key === 'control') eng.combat?.triggerAttack();
       
+      const powerKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+      if (powerKeys.includes(key)) {
+        e.preventDefault();
+        const slotIndex = powerKeys.indexOf(key);
+        const powers = eng.playerData.powers || [];
+        const powerName = powers[slotIndex];
+        if (powerName) {
+           if (powerName === 'Brawl') eng.combat?.triggerAttack();
+        }
+      }
+
+      if (key === 'p') {
+        e.preventDefault();
+        const pPanel = document.getElementById('powers-panel');
+        if (pPanel) {
+          pPanel.style.display = pPanel.style.display === 'none' ? 'flex' : 'none';
+          if (pPanel.style.display === 'flex') eng.ui.renderPowersUI();
+        }
+      }
+
       if (['alt', 'control', 'shift', ' '].includes(key) || e.ctrlKey || e.altKey) {
         e.preventDefault();
       }
@@ -120,21 +139,34 @@ export class InputManager {
           return this.mousePos.x >= pos.x - 30 && this.mousePos.x <= pos.x + 30 && this.mousePos.y >= pos.y - 145 && this.mousePos.y <= pos.y + 35;
         };
         
-        for (let id in eng.otherPlayers) { 
-          if (eng.otherPlayers[id].state !== 'death' && checkHitbox(eng.otherPlayers[id])) { clickedTarget = { type: 'player', id: id }; break; } 
+        for (let npc of eng.npcs) { 
+          if (npc.state !== 'dead' && checkHitbox(npc)) { clickedTarget = { type: 'npc', id: npc.uuid }; break; } 
+        }
+        if (!clickedTarget) {
+          for (let id in eng.otherPlayers) { 
+            if (eng.otherPlayers[id].state !== 'death' && checkHitbox(eng.otherPlayers[id])) { clickedTarget = { type: 'player', id: id }; break; } 
+          }
         }
         
-        if (clickedTarget && clickedTarget.type === 'player') {
-          eng.contextTarget = clickedTarget.id;
+        if (clickedTarget) {
+          eng.contextTarget = clickedTarget;
           
           let menuX = e.clientX;
           let menuY = e.clientY;
           if (menuX + 150 > window.innerWidth) menuX = window.innerWidth - 150;
           if (menuY + 60 > window.innerHeight) menuY = window.innerHeight - 60;
           
-          ctxMenu.style.left = `${menuX}px`;
-          ctxMenu.style.top = `${menuY}px`;
-          ctxMenu.style.display = 'flex';
+          if (ctxMenu) {
+            const btnTrade = document.getElementById('ctx-btn-trade');
+            const btnTalk = document.getElementById('ctx-btn-talk');
+            
+            if (btnTrade) btnTrade.style.display = clickedTarget.type === 'player' ? 'block' : 'none';
+            if (btnTalk) btnTalk.style.display = clickedTarget.type === 'npc' ? 'block' : 'none';
+  
+            ctxMenu.style.left = `${menuX}px`;
+            ctxMenu.style.top = `${menuY}px`;
+            ctxMenu.style.display = 'flex';
+          }
         }
       } 
     };

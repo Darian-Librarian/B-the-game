@@ -1,0 +1,22 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "ninjas",
+          "name": "Ninjas",
+          "desc": "Call upon the lethal skills of ninja assassins to defeat your enemies.",
+          "powers": [
+            { "id": "call-genin", "name": "Call Genin", "desc": "Summon 1 to 3 Genin depending on your level." },
+            { "id": "train-ninjas", "name": "Train Ninjas", "desc": "Provide your ninjas with better weapons and skills." },
+            { "id": "call-jounin", "name": "Call Jounin", "desc": "Summon 1 or 2 Jounin depending on your level." },
+            { "id": "kuji-in-retsu", "name": "Kuji-In Retsu", "desc": "Empower your ninjas with advanced mystical arts." },
+            { "id": "call-oni", "name": "Call Oni", "desc": "Summon a powerful Oni." }
+          ]
+        }
+      ]
+    }
+  ]
+}

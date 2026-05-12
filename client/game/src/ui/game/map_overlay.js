@@ -29,7 +29,12 @@ export class MapOverlayManager {
       btn.onclick = toggleMap;
       btn.onmouseenter = () => btn.style.background = 'rgba(243, 156, 18, 0.2)';
       btn.onmouseleave = () => btn.style.background = 'rgba(0,0,0,0.8)';
-      sideHud.appendChild(btn);
+      const btnPowers = document.getElementById('btn-powers');
+      if (btnPowers) {
+        sideHud.insertBefore(btn, btnPowers);
+      } else {
+        sideHud.appendChild(btn);
+      }
     }
 
     const gameScreen = document.getElementById('game-screen');

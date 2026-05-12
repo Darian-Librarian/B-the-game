@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -100,
+      "maxIntegrity": -1,
+      "Powersets": [
+        {
+          "id": "electrical-affinity",
+          "name": "Electrical Affinity",
+          "desc": "Directing electrical currents to jump-start allies and short-circuit enemies.",
+          "powers": [
+            { "id": "shock", "name": "Shock", "desc": "Ranged, DMG(Energy), Foe -Endurance" },
+            { "id": "rejuvenating-circuit", "name": "Rejuvenating Circuit", "desc": "Ranged Chain, Heal (Allies)" },
+            { "id": "defibrillate", "name": "Defibrillate", "desc": "PBAoE, Revive Allies, Foe -Endurance, Sleep" },
+            { "id": "energizing-circuit", "name": "Energizing Circuit", "desc": "Ranged Chain, +Endurance (Allies)" },
+            { "id": "faraday-cage", "name": "Faraday Cage", "desc": "Location AoE, Allies +Res(All but Toxic), +Res(Status Effects)" },
+            { "id": "empowering-circuit", "name": "Empowering Circuit", "desc": "Ranged Chain, Allies +DMG, +To-Hit" },
+            { "id": "discharge", "name": "Discharge", "desc": "PBAoE, Foe -Endurance, -Recovery" },
+            { "id": "amp-up", "name": "Amp Up", "desc": "Ranged, Ally +Recharge, +Special Effects" },
+            { "id": "insulating-circuit", "name": "Insulating Circuit", "desc": "Ranged Chain, +Absorb (Allies)" }
+          ]
+        }
+      ]
+    }
+  ]
+}

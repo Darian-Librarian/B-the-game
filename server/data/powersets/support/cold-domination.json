@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "cold-domination",
+          "name": "Cold Domination",
+          "desc": "Mastery over thermodynamic energy to shield allies with ice and drastically slow enemy systems.",
+          "powers": [
+            { "id": "infrigidate", "name": "Infrigidate", "desc": "Ranged, Foe -SPD, -Recharge, -DEF" },
+            { "id": "ice-shield", "name": "Ice Shield", "desc": "Ranged, Ally +DEF(Smash, Lethal, Fire, Cold)" },
+            { "id": "frostwork", "name": "Frostwork", "desc": "Ranged, Ally +Max HP, +Res(Toxic)" },
+            { "id": "snow-storm", "name": "Snow Storm", "desc": "Location AoE, Foe -SPD, -Recharge" },
+            { "id": "benumb", "name": "Benumb", "desc": "Ranged, Foe -DMG, -Regeneration" },
+            { "id": "glacial-shield", "name": "Glacial Shield", "desc": "Ranged, Ally +DEF(Energy, Negative)" },
+            { "id": "sleet", "name": "Sleet", "desc": "Location AoE, DoT(Cold), Foe -DEF, -Res, Knockdown" },
+            { "id": "heat-loss", "name": "Heat Loss", "desc": "Location AoE, Foe -Endurance, -Recovery, Allies +Endurance, +Recovery" },
+            { "id": "arctic-fog", "name": "Arctic Fog", "desc": "Toggle: PBAoE, Allies +DEF(All), +Res(Fire, Cold, Slow), Stealth" }
+          ]
+        }
+      ]
+    }
+  ]
+}

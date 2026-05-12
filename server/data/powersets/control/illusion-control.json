@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "illusion-control",
+          "name": "Illusion Control",
+          "desc": "Deceive your enemies with powerful mental illusions, turning them against each other and summoning phantom fighters.",
+          "powers": [
+            { "id": "blind", "name": "Blind", "desc": "Ranged, Foe Sleep, -To Hit" },
+            { "id": "deceive", "name": "Deceive", "desc": "Ranged, Foe Confuse" },
+            { "id": "spectral-wounds", "name": "Spectral Wounds", "desc": "Ranged, High DMG(Psionic), Heal target after delay" },
+            { "id": "flash", "name": "Flash", "desc": "PBAoE, Foe Hold/Blind" },
+            { "id": "phantom-army", "name": "Phantom Army", "desc": "Summon invincible phantom decoys." },
+            { "id": "spectral-terror", "name": "Spectral Terror", "desc": "Summon an entity that terrifies enemies." },
+            { "id": "phantasm", "name": "Phantasm", "desc": "Summon a powerful flying illusion to fight alongside you." }
+          ]
+        }
+      ]
+    }
+  ]
+}

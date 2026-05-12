@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "IntegrityRequirement": "0% Integrity / 100% Purity",
+      "Powersets": [
+        {
+          "id": "ice-blast",
+          "name": "Ice Blast",
+          "desc": "Uses the power of ice to Slow foe attacks and movement.",
+          "powers": [
+            { "id": "ice-bolt", "name": "Ice Bolt", "desc": "Ranged, DMG(Cold), Foe -Rech, -SPD" },
+            { "id": "ice-blast", "name": "Ice Blast", "desc": "Ranged, DMG(Cold), Foe -Rech, -SPD" },
+            { "id": "frost-breath", "name": "Frost Breath", "desc": "Close (Cone), DoT(Cold), Foe -Rech, -SPD" },
+            { "id": "aim", "name": "Aim", "desc": "Self +To Hit, +DMG" },
+            { "id": "freeze-ray", "name": "Freeze Ray", "desc": "Ranged, DoT(Cold), Foe Hold" },
+            { "id": "ice-storm", "name": "Ice Storm", "desc": "Ranged (Location AoE), DoT(Cold), Foe -Rech, -SPD" },
+            { "id": "bitter-ice-blast", "name": "Bitter Ice Blast", "desc": "Ranged, DMG(Cold), Foe -Rech, -SPD, -To Hit" },
+            { "id": "bitter-freeze-ray", "name": "Bitter Freeze Ray", "desc": "Ranged, DMG(Cold), Foe Hold" },
+            { "id": "blizzard", "name": "Blizzard", "desc": "Ranged (Location AoE), DoT(Cold/Lethal), Foe -To Hit, -SPD, -Rech, Knockdown" }
+          ]
+        }
+      ]
+    }
+  ]
+}

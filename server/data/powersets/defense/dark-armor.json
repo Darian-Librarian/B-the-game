@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "dark-armor",
+          "name": "Dark Armor",
+          "desc": "Enshroud yourself in dark energy to drain the life and accuracy from those who attack you.",
+          "powers": [
+            { "id": "dark-embrace", "name": "Dark Embrace", "desc": "Toggle: Self +Res(Smash, Lethal, Negative, Toxic)" },
+            { "id": "death-shroud", "name": "Death Shroud", "desc": "Toggle: PBAoE, DoT(Negative)" },
+            { "id": "murky-cloud", "name": "Murky Cloud", "desc": "Toggle: Self +Res(Fire, Cold, Energy, Negative)" },
+            { "id": "obsidian-shield", "name": "Obsidian Shield", "desc": "Toggle: Self +Res(Psionic, Status Effects)" },
+            { "id": "dark-regeneration", "name": "Dark Regeneration", "desc": "PBAoE, DMG(Negative), Self +HP" },
+            { "id": "cloak-of-darkness", "name": "Cloak of Darkness", "desc": "Toggle: Self +DEF(All), Stealth" },
+            { "id": "cloak-of-fear", "name": "Cloak of Fear", "desc": "Toggle: PBAoE Foe Fear, -To Hit" },
+            { "id": "oppressive-gloom", "name": "Oppressive Gloom", "desc": "Toggle: PBAoE Foe Disorient, Self -HP over time" }
+          ]
+        }
+      ]
+    }
+  ]
+}

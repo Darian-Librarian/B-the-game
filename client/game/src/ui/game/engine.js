@@ -1,12 +1,12 @@
-import { ChatManager } from './chat.js?v=trainer-npc';
-import { NetworkManager } from './network.js?v=trainer-npc';
-import { UIManager } from './ui.js?v=trainer-npc';
-import { InputManager } from './input.js?v=trainer-npc';
-import { MinimapManager } from './minimap.js?v=trainer-npc';
-import { Renderer } from './renderer.js?v=trainer-npc';
-import { CombatManager } from './combat.js?v=trainer-npc';
-import { EntityManager } from './entity_manager.js?v=trainer-npc';
-import { MapOverlayManager } from './map_overlay.js?v=trainer-npc';
+import { ChatManager } from './chat.js?v=cf-bypass-2';
+import { NetworkManager } from './network.js?v=cf-bypass-2';
+import { UIManager } from './ui.js?v=cf-bypass-2';
+import { InputManager } from './input.js?v=cf-bypass-2';
+import { MinimapManager } from './minimap.js?v=cf-bypass-2';
+import { Renderer } from './renderer.js?v=cf-bypass-2';
+import { CombatManager } from './combat.js?v=cf-bypass-2';
+import { EntityManager } from './entity_manager.js?v=cf-bypass-2';
+import { MapOverlayManager } from './map_overlay.js?v=cf-bypass-2';
 
 export class GameEngine {
   constructor(canvasId, playerData, accountUuid) {
@@ -32,6 +32,7 @@ export class GameEngine {
     this.elevationStartY = 0;
     this.elevationOriginalZ = {};
     this.mapData = {};
+    this.powersetsData = {};
     this.permissions = {};
     this.noclip = false;
     
@@ -67,7 +68,6 @@ export class GameEngine {
       nextAttack: 1,
       moveTarget: null,
       hurtTimer: 0,
-      activeTrainer: null,
       respawnTimer: 0,
       hp: (this.playerData.stats && this.playerData.stats.hp > 10) ? this.playerData.stats.hp : 1000,
       maxHp: 1000,
@@ -100,7 +100,7 @@ export class GameEngine {
 
     // --- Developer Tools Setup ---
     const savedDev = localStorage.getItem('b_dev_options');
-    this.devOptions = savedDev ? JSON.parse(savedDev) : { showPlayerPos: false, showPlayerTile: false, showMousePos: false, showMelee: false, showHitboxes: false, showTile: false, showChunk: false };
+    this.devOptions = savedDev ? JSON.parse(savedDev) : { showPlayerPos: false, showPlayerTile: false, showEntityPos: false, showEntityTile: false, showMousePos: false, showMelee: false, showHitboxes: false, showTile: false, showChunk: false, showDistToNPC: false, showDistNpcToMouse: false };
     this.editMode = false;
 
     this.floatingTexts = [];
@@ -117,6 +117,8 @@ export class GameEngine {
     this.combat = new CombatManager(this);
     this.entityManager = new EntityManager(this);
     this.mapOverlay = new MapOverlayManager(this);
+
+    this.loadPowersets();
 
     console.log("Game Engine successfully booted!", this.playerData);
     this.ui.update();
@@ -144,6 +146,30 @@ export class GameEngine {
     this.lastTime = performance.now();
     this.loop = this.loop.bind(this);
     this.reqId = requestAnimationFrame(this.loop);
+  }
+
+  async loadPowersets() {
+        try {
+      const res = await fetch('/api/powersets');
+            if (res.ok) {
+                const json = await res.json();
+        for (const [catKey, powersetsList] of Object.entries(json)) {
+          powersetsList.forEach(ps => {
+                        const id = ps.Id || ps.id;
+                        if (id && !this.powersetsData[id]) {
+                            this.powersetsData[id] = {
+                                id: id,
+                                name: ps.Name || ps.name,
+                category: catKey,
+                                powers: (ps.Powers || ps.powers || []).map((p, i) => ({ id: p.Id || p.id || `${id}-p${i+1}`, name: p.Name || p.name || `Power ${i+1}`, desc: p.Description || p.desc || p.Focus || '' }))
+                            };
+                        }
+                    });
+        }
+            }
+        } catch (e) {
+      console.warn('Failed to load powersets from API:', e);
+        }
   }
 
   getScreenPos(wx, wy, wz = 0) {
@@ -344,16 +370,6 @@ export class GameEngine {
     this.lastTime = time;
     this.update(dt);
     
-    if (this.activeTrainer) {
-        const dist = Math.hypot(this.player.x - this.activeTrainer.x, this.player.y - this.activeTrainer.y);
-        if (dist > 320) { 
-            this.activeTrainer = null;
-            const tModal = document.getElementById('trainer-dialog-modal');
-            if (tModal) tModal.style.display = 'none';
-            this.chat.addMessage('system', 'System', 'You walked too far away and the conversation ended.');
-        }
-    }
-
     if (this.mapOverlay && this.mapOverlay.active) {
       this.mapOverlay.draw(this.ctx);
     }

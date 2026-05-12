@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "IntegrityRequirement": "0% Integrity / 100% Purity",
+      "Powersets": [
+        {
+          "id": "electrical-melee",
+          "name": "Electrical Melee",
+          "desc": "Channel electricity through your fists to pummel foes while draining their Endurance and halting Recovery.",
+          "powers": [
+            { "id": "charged-brawl", "name": "Charged Brawl", "desc": "Melee, DMG(Smash/Energy), Target Sleep, -End" },
+            { "id": "havoc-punch", "name": "Havoc Punch", "desc": "Melee, DMG(Smash/Energy), Foe Sleep, -End" },
+            { "id": "jacobs-ladder", "name": "Jacobs Ladder", "desc": "Melee (Cone), DMG(Energy), Foe Sleep, -End" },
+            { "id": "build-up", "name": "Build Up", "desc": "Self +DMG, +To Hit" },
+            { "id": "thunder-strike", "name": "Thunder Strike", "desc": "Melee (AoE), DMG(Energy), Foe Disorient, Knockback, -End" },
+            { "id": "taunt", "name": "Taunt", "desc": "Ranged (Targeted AoE), Foe Taunt" },
+            { "id": "chain-induction", "name": "Chain Induction", "desc": "Melee, DMG(Energy), Foe -End +Special" },
+            { "id": "lightning-clap", "name": "Lightning Clap", "desc": "Melee AoE, Foe Damage, Disorient, Knockdown" },
+            { "id": "lightning-rod", "name": "Lightning Rod", "desc": "PBAoE, Foe Knockback; Self Teleport;" }
+          ]
+        }
+      ]
+    }
+  ]
+}

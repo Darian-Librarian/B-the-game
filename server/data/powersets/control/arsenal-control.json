@@ -1,0 +1,23 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "arsenal-control",
+          "name": "Arsenal Control",
+          "desc": "Deploy traps, gas, and tactical armaments to control the battlefield and hinder your enemies.",
+          "powers": [
+            { "id": "tranquilizer-dart", "name": "Tranquilizer Dart", "desc": "Ranged, Foe Sleep" },
+            { "id": "cryo-freeze-ray", "name": "Cryo-Freeze Ray", "desc": "Ranged, Foe Hold" },
+            { "id": "tear-gas", "name": "Tear Gas", "desc": "Location AoE, Foe Hold/Stun, -To Hit" },
+            { "id": "flashbang", "name": "Flashbang", "desc": "Targeted AoE, Foe Disorient/Confuse" },
+            { "id": "liquid-nitrogen", "name": "Liquid Nitrogen", "desc": "Location AoE, Foe Immobilize, -Speed" },
+            { "id": "tri-cannon", "name": "Tri-Cannon", "desc": "Summon a persistent automated turret." }
+          ]
+        }
+      ]
+    }
+  ]
+}

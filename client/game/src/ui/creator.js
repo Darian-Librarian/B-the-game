@@ -65,7 +65,8 @@ btnMain.addEventListener('click', async () => {
   const user = document.getElementById('username').value.trim();
   const pass = document.getElementById('password').value;
   let email = document.getElementById('email').value.trim();
-  const noEmail = document.getElementById('no-email').checked;
+  const noEmailCheckboxEl = document.getElementById('no-email');
+  const noEmail = noEmailCheckboxEl ? noEmailCheckboxEl.checked : false;
 
   if (!user || !pass) return showModal("Input Error", "Username and Password are required.");
 
@@ -241,12 +242,12 @@ const updateAffinityLocks = () => {
 };
 
 const renderAffinities = (classKey) => {
-  affinityList.innerHTML = '';
+  if (affinityList) affinityList.innerHTML = '';
   const data = heritageData[classKey];
   if (!data) return;
 
-  heritageSplash.src = data.splash;
-  heritageDescBox.innerHTML = `<p>${data.description}</p>`;
+  if (heritageSplash) heritageSplash.src = data.splash;
+  if (heritageDescBox) heritageDescBox.innerHTML = `<p>${data.description}</p>`;
 
   data.affinities.forEach((affinity, index) => {
     const item = document.createElement('div');
@@ -439,12 +440,12 @@ const styleData = {
 };
 
 const renderStyle = (styleKey) => {
-  styleSkillsList.innerHTML = '';
+  if (styleSkillsList) styleSkillsList.innerHTML = '';
   const data = styleData[styleKey];
   if (!data) return;
 
-  styleSplash.src = data.splash;
-  styleDescBox.innerHTML = `<p>${data.description}</p>`;
+  if (styleSplash) styleSplash.src = data.splash;
+  if (styleDescBox) styleDescBox.innerHTML = `<p>${data.description}</p>`;
 
   data.skills.forEach(skill => {
     const item = document.createElement('div');
@@ -454,7 +455,7 @@ const renderStyle = (styleKey) => {
       <h4>${skill.name}</h4>
       <p>${skill.desc}</p>
     `;
-    styleSkillsList.appendChild(item);
+    if (styleSkillsList) styleSkillsList.appendChild(item);
   });
 
   const equipSlots = document.querySelectorAll('.equip-slot');
@@ -569,15 +570,43 @@ if (btnSaveChar) {
 
     const activeArchItem = document.querySelector('#archetype-list .active');
     const activePowers = [];
+    const activePowersets = [];
     document.querySelectorAll('.powerset-col').forEach(col => {
-      col.querySelectorAll('.power-item.active').forEach(item => activePowers.push(item.innerText));
+      const select = col.querySelector('.powerset-dropdown');
+      const activeItems = col.querySelectorAll('.power-item.active');
+      if (select && select.value !== '' && activeItems.length > 0) activePowersets.push(select.value);
+      activeItems.forEach(item => activePowers.push(item.innerText));
     });
 
-    let unspentSlots = 0;
+    let unspentPowerPicks = 0;
     document.querySelectorAll('.picks-display').forEach(display => {
       const match = display.innerText.match(/\d+/);
-      if (match) unspentSlots += parseInt(match[0], 10);
+      if (match) unspentPowerPicks += parseInt(match[0], 10);
     });
+
+    let unspentPowersetPicks = [];
+    if (activeArchItem && typeof archetypesData !== 'undefined') {
+      const arch = archetypesData.find(a => a.id === activeArchItem.dataset.id);
+      document.querySelectorAll('.powerset-col').forEach((col, index) => {
+        const select = col.querySelector('.powerset-dropdown');
+        const activeItems = col.querySelectorAll('.power-item.active');
+        if (select && (select.value === '' || activeItems.length === 0)) {
+            if (arch && arch.cols && arch.cols[index]) {
+                const label = arch.cols[index].label;
+                const match = label.match(/\(([^)]+)\)/);
+                if (match) {
+                    let types = match[1].toLowerCase().split('/');
+                    types = types.map(t => t.trim() === 'neural' ? 'neural-minion' : t.trim());
+                    unspentPowersetPicks.push(types.join('/'));
+                } else {
+                    unspentPowersetPicks.push("any");
+                }
+            } else {
+                unspentPowersetPicks.push("any");
+            }
+        }
+      });
+    }
 
     pendingCharData = {
       name: charName,
@@ -587,7 +616,9 @@ if (btnSaveChar) {
       integrity: parseInt(document.getElementById('integrity-scrollbar').value, 10),
       archetype: activeArchItem ? activeArchItem.querySelector('h4').innerText : 'Civilian',
       powers: activePowers,
-      unspentSlots: unspentSlots
+      powersets: activePowersets,
+      unspentPowerPicks: unspentPowerPicks,
+      unspentPowersetPicks: unspentPowersetPicks
     };
 
     confirmModal.style.display = 'flex';
@@ -649,92 +680,38 @@ const archetypesData = [
 let rawPowersetsData = { Melee: [], Ranged: [], Defense: [], Resistance: [], Support: [], Control: [], Neural: [] };
 
 const loadPowersets = async () => {
-  const files = [
-    { key: 'Melee', file: 'melee.json', root: 'MeleePowersets' },
-    { key: 'Ranged', file: 'ranged.json', root: 'RangedPowersets' },
-    { key: 'Defense', file: 'defense.json', root: 'DefensePowersets' },
-    { key: 'Resistance', file: 'resistance.json', root: 'ResistancePowersets' },
-    { key: 'Support', file: 'support.json', root: 'SupportPowersets' },
-    { key: 'Control', file: 'control.json', root: 'ControlPowersets' },
-    { key: 'Neural', file: 'neural-minion-powersets.json', root: 'NeuralMinionPowersets' },
-    { key: 'Neural', file: 'neural.json', root: 'NeuralPowersets' } // Fallback filename
-  ];
-
-  for (const item of files) {
-    const paths = [
-      `/data/powersets/${item.file}`,
-      `../../server/data/powersets/${item.file}`,
-      `server/data/powersets/${item.file}`
-    ];
+  try {
+    const res = await fetch('/api/powersets');
+    if (!res.ok) throw new Error("Failed to fetch powersets API");
+    const json = await res.json();
     
-    let json = null;
-    for (const p of paths) {
-      try {
-        const res = await fetch(p);
-        if (res.ok) {
-          json = await res.json();
-          break;
-        }
-      } catch (e) {}
-    }
-
-    if (!json) {
-      console.warn(`Failed to load ${item.file}`);
-      continue;
-    }
-
-    try {
-      let categories = [];
-      if (json[item.root] && json[item.root].Categories) categories = json[item.root].Categories;
-      else if (json.Categories) categories = json.Categories;
-      else if (json.categories) categories = json.categories;
-      else if (Array.isArray(json)) categories = [{ Powersets: json }];
-      else categories = [{ Powersets: Object.values(json).flat() }];
-
-      categories.forEach(cat => {
-        let reqCheck = () => true;
-        const reqStr = (cat.IntegrityRequirement || cat.integrityRequirement || '').toLowerCase();
+    for (const [catKey, powersetsList] of Object.entries(json)) {
+      if (!rawPowersetsData[catKey]) rawPowersetsData[catKey] = [];
+      
+      powersetsList.forEach(ps => {
+        if (!ps.Id && !ps.id) return;
         
-        if (reqStr.includes('0% integrity') || reqStr.includes('purity') || reqStr.includes('baseline') || reqStr.includes('pure')) {
-          reqCheck = (v) => v >= -70 && v <= 70;
-        } else if (reqStr.includes('synthetic exclusive') || reqStr.includes('synthetic')) {
-          reqCheck = (v) => v < 0;
-        } else if (reqStr.includes('mutated exclusive') || reqStr.includes('mutation') || reqStr.includes('mutated')) {
-          reqCheck = (v) => v > 0;
-        } else if (reqStr.includes('hybrid') || reqStr.includes('mixed')) {
-          reqCheck = (v, heritageClass) => heritageClass === 'hybrid';
-        } else if (reqStr !== '') {
-          reqCheck = () => false;
-        }
-
-        let powersets = cat.Powersets || cat.powersets || [];
-        if (!Array.isArray(powersets)) {
-          if (Array.isArray(cat)) powersets = cat;
-          else powersets = [cat];
-        }
-
-        powersets.forEach(ps => {
-          if (!ps.Id && !ps.id) return;
+        let reqCheck = () => true;
+        
+        if (ps.minIntegrity !== undefined && ps.maxIntegrity !== undefined) {
+          reqCheck = (v) => v >= ps.minIntegrity && v <= ps.maxIntegrity;
+        } else if (ps.requiresHeritage) {
+          reqCheck = (v, heritageClass) => heritageClass === ps.requiresHeritage;
+        } else {
+          const reqStr = (ps.Requirement || ps.requirement || ps.IntegrityRequirement || ps.integrityRequirement || '').toLowerCase();
           
-          let psReqStr = (ps.Requirement || ps.requirement || ps.IntegrityRequirement || ps.integrityRequirement || '').toLowerCase();
-          let finalCheck = reqCheck;
-
-          if (psReqStr) {
-            let specificCheck = () => true;
-            if (psReqStr.includes('0% integrity') || psReqStr.includes('purity') || psReqStr.includes('baseline') || psReqStr.includes('pure')) {
-              specificCheck = (v) => v >= -70 && v <= 70;
-            } else if (psReqStr.includes('synthetic exclusive') || psReqStr.includes('synthetic')) {
-              specificCheck = (v) => v < 0;
-            } else if (psReqStr.includes('mutated exclusive') || psReqStr.includes('mutation') || psReqStr.includes('mutated')) {
-              specificCheck = (v) => v > 0;
-            } else if (psReqStr.includes('hybrid') || psReqStr.includes('mixed')) {
-              specificCheck = (v, h) => h === 'hybrid';
-            } else {
-              specificCheck = () => false;
-            }
-            
-            finalCheck = (v, h) => reqCheck(v, h) && specificCheck(v, h);
+          if (reqStr.includes('0% integrity') || reqStr.includes('purity') || reqStr.includes('baseline') || reqStr.includes('pure')) {
+            reqCheck = (v) => v >= -70 && v <= 70;
+          } else if (reqStr.includes('synthetic exclusive') || reqStr.includes('synthetic')) {
+            reqCheck = (v) => v < 0;
+          } else if (reqStr.includes('mutated exclusive') || reqStr.includes('mutation') || reqStr.includes('mutated')) {
+            reqCheck = (v) => v > 0;
+          } else if (reqStr.includes('hybrid') || reqStr.includes('mixed')) {
+            reqCheck = (v, heritageClass) => heritageClass === 'hybrid';
+          } else if (reqStr !== '') {
+            reqCheck = () => false;
           }
+        }
 
           let powers = [];
           if (ps.Powers && Array.isArray(ps.Powers)) {
@@ -745,18 +722,17 @@ const loadPowersets = async () => {
             powers = Array.from({ length: 6 }, (_, i) => ({ id: `${ps.Id || ps.id}-p${i+1}`, name: `${ps.Name || ps.name} Rank ${i+1}`, desc: `Unlocks Rank ${i+1} capabilities of the ${ps.Name || ps.name} skillset.` }));
           }
 
-          rawPowersetsData[item.key].push({
-            id: ps.Id || ps.id,
-            name: ps.Name || ps.name,
-            desc: ps.Focus || ps.Theme || ps.desc || ps.description || '',
-            check: finalCheck,
-            powers: powers
-          });
+        rawPowersetsData[catKey].push({
+          id: ps.Id || ps.id,
+          name: ps.Name || ps.name || 'Unnamed',
+          desc: ps.Focus || ps.Theme || ps.desc || ps.description || '',
+          check: reqCheck,
+          powers: powers
         });
       });
-    } catch (err) {
-      console.error(`Error parsing ${item.file}:`, err);
     }
+  } catch (err) {
+    console.error("Error loading powersets:", err);
   }
   
   if (Object.values(rawPowersetsData).flat().length === 0) {
@@ -807,15 +783,18 @@ const renderPowersetColumns = (arch) => {
     let availableSets = getAvailablePowersets(col.label);
     
     let prevSelection = currentSelections[colIndex];
-    let selectedValue = prevSelection ? prevSelection.value : '';
+    let selectedValue = prevSelection ? prevSelection.value : undefined;
     let activePowerNames = prevSelection ? prevSelection.activePowers : [];
 
-    if (!selectedValue || !availableSets.find(ps => ps.id === selectedValue)) {
+    if (selectedValue === undefined || (selectedValue !== '' && !availableSets.find(ps => ps.id === selectedValue))) {
       selectedValue = availableSets.length > 0 ? availableSets[0].id : '';
       activePowerNames = [];
     }
 
-    let optionsHtml = availableSets.map(ps => `<option value="${ps.id}" ${ps.id === selectedValue ? 'selected' : ''}>${ps.name}</option>`).join('');
+    let optionsHtml = `<option value="">-- None --</option>` + availableSets
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map(ps => `<option value="${ps.id}" ${ps.id === selectedValue ? 'selected' : ''}>${ps.name}</option>`)
+      .join('');
 
     colDiv.innerHTML = `
       <div class="powerset-header">
@@ -835,6 +814,11 @@ const renderPowersetColumns = (arch) => {
       let currentPicks = col.picks - preservedPicks.length;
       picksDisplay.innerText = `Picks Remaining: ${currentPicks}`;
       powerDescriptionBox.innerHTML = `<p>Select A Power To View Its Details.</p>`;
+
+      if (!set) {
+        listDiv.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 20px; font-family: var(--font-mono); font-size: 0.85rem;">No Powerset Selected.<br><br>You will retain this powerset pick for later.</div>`;
+        return;
+      }
 
       const powerItems = [];
       
@@ -914,7 +898,7 @@ const renderPowersetColumns = (arch) => {
 
     selectEl.addEventListener('change', (e) => {
       const selectedSet = availableSets.find(ps => ps.id === e.target.value);
-      if (selectedSet) renderPowers(selectedSet, []);
+      renderPowers(selectedSet || null, []);
     });
 
     const initialSet = availableSets.find(ps => ps.id === selectedValue);
@@ -927,7 +911,7 @@ const renderPowersetColumns = (arch) => {
 };
 
 const renderArchetypes = () => {
-  if(!archetypeListEl) return;
+  if (!archetypeListEl) return;
   archetypeListEl.innerHTML = '';
   archetypesData.forEach((arch, index) => {
     const item = document.createElement('div');
@@ -1011,6 +995,12 @@ if (btnGameMenu && gameDropdown) {
     document.getElementById('game-screen').style.display = 'none';
     document.getElementById('selection-screen').style.display = 'flex';
     gameDropdown.style.display = 'none';
+    
+    const trainerModal = document.getElementById('trainer-dialog-modal');
+    if (trainerModal) trainerModal.style.display = 'none';
+    
+    const powerbar = document.getElementById('powerbar-container');
+    if (powerbar) powerbar.style.display = 'none';
   });
 
   document.getElementById('btn-logout').addEventListener('click', () => {
@@ -1019,6 +1009,12 @@ if (btnGameMenu && gameDropdown) {
     document.getElementById('game-screen').style.display = 'none';
     document.getElementById('creation-screen').style.display = 'block';
     gameDropdown.style.display = 'none';
+
+    const trainerModal = document.getElementById('trainer-dialog-modal');
+    if (trainerModal) trainerModal.style.display = 'none';
+
+    const powerbar = document.getElementById('powerbar-container');
+    if (powerbar) powerbar.style.display = 'none';
   });
 
   document.getElementById('btn-edit-id').addEventListener('click', () => {

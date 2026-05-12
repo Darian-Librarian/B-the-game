@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": 1,
+      "maxIntegrity": 100,
+      "Powersets": [
+        {
+          "id": "pain-enduring",
+          "name": "Pain Enduring",
+          "desc": "A visceral mastery of suffering. Redirecting and mitigating pain to keep allies functional far beyond their normal limits.",
+          "powers": [
+            { "id": "nullify-pain", "name": "Nullify Pain", "desc": "PBAoE, Moderate Heal (Allies)" },
+            { "id": "share-pain", "name": "Share Pain", "desc": "Ranged, Extreme Heal (Ally), Self -HP" },
+            { "id": "soothe", "name": "Soothe", "desc": "Ranged, Moderate Heal (Ally)" },
+            { "id": "enforce-morale", "name": "Enforce Morale", "desc": "Ranged, Ally +Res(Status Effects), Removes Fear/Confuse" },
+            { "id": "conduit-of-pain", "name": "Conduit of Pain", "desc": "Revive Fallen Ally, Self +DMG, +Recharge, +Recovery" },
+            { "id": "painbringer", "name": "Painbringer", "desc": "Ranged, Ally +DMG, +Recharge, +Regeneration, +Recovery" },
+            { "id": "anguishing-cry", "name": "Anguishing Cry", "desc": "PBAoE, Foe -Res, -DEF" },
+            { "id": "world-of-pain", "name": "World of Pain", "desc": "PBAoE, Allies +DMG, +To-Hit, +Res(All)" },
+            { "id": "suppress-pain", "name": "Suppress Pain", "desc": "PBAoE, +Regeneration (Allies)" }
+          ]
+        }
+      ]
+    }
+  ]
+}

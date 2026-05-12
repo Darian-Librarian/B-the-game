@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "mind-control",
+          "name": "Mind Control",
+          "desc": "Use psionic abilities to dominate the minds of your enemies, mesmerizing or terrifying them to control the battlefield.",
+          "powers": [
+            { "id": "mesmerize", "name": "Mesmerize", "desc": "Ranged, Foe Sleep" },
+            { "id": "levitate", "name": "Levitate", "desc": "Ranged, DMG(Smash), Foe Knockup" },
+            { "id": "dominate", "name": "Dominate", "desc": "Ranged, DMG(Psionic), Foe Hold" },
+            { "id": "confuse", "name": "Confuse", "desc": "Ranged, Foe Confuse" },
+            { "id": "mass-hypnosis", "name": "Mass Hypnosis", "desc": "Targeted AoE, Foe Sleep" },
+            { "id": "telekenesis", "name": "Telekinesis", "desc": "Ranged (AoE), Foe Repel/Immob" },
+            { "id": "terrify", "name": "Terrify", "desc": "Ranged (Cone), Foe Fear" },
+            { "id": "mass-confusion", "name": "Mass Confusion", "desc": "Targeted AoE, Foe Confuse" }
+          ]
+        }
+      ]
+    }
+  ]
+}

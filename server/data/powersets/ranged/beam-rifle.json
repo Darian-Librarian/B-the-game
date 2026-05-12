@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -100,
+      "maxIntegrity": -1,
+      "Powersets": [
+        {
+          "id": "beam-rifle",
+          "name": "Beam Rifle",
+          "desc": "High-tech energy blasts with disintegration effects.",
+          "powers": [
+            { "id": "single-shot", "name": "Single Shot", "desc": "Ranged, DMG(Energy), Foe Knockdown, Special" },
+            { "id": "charged-shot", "name": "Charged Shot", "desc": "Ranged, DMG(Energy), Foe Knockdown, Special" },
+            { "id": "cutting-beam", "name": "Cutting Beam", "desc": "Ranged (Cone), DMG(Energy), Foe -Def(All), Special" },
+            { "id": "disintegrate", "name": "Disintegrate", "desc": "Ranged, DoT(Energy), Foe -Regen, Special" },
+            { "id": "aim", "name": "Aim", "desc": "Self +To-hit, +DMG" },
+            { "id": "lancer-shot", "name": "Lancer Shot", "desc": "DMG(Energy), Foe Stun, Special" },
+            { "id": "penetrating-ray", "name": "Penetrating Ray", "desc": "Sniper, Dmg(Energy), Foe Knockdown, Special, Self +Range (Blaster only)" },
+            { "id": "piercing-beam", "name": "Piercing Beam", "desc": "Narrow Ranged (Cone), DMG(Energy), Foes -Res, Special" },
+            { "id": "overcharge", "name": "Overcharge", "desc": "Ranged (Targeted AoE), DMG(Energy), Foe DoT (Energy), -Def(All), Disorient, Special" }
+          ]
+        }
+      ]
+    }
+  ]
+}

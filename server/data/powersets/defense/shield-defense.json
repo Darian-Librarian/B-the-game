@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -100,
+      "maxIntegrity": 100,
+      "Powersets": [
+        {
+          "id": "shield-defense",
+          "name": "Shield Defense",
+          "desc": "Mastery of using a physical or energy shield to deflect attacks and protect nearby allies.",
+          "powers": [
+            { "id": "deflection", "name": "Deflection", "desc": "Auto: Self +DEF(Melee, Lethal, Smashing)" },
+            { "id": "battle-agility", "name": "Battle Agility", "desc": "Auto: Self +DEF(Ranged, AoE)" },
+            { "id": "true-grit", "name": "True Grit", "desc": "Auto: Self +Max HP, +Res(Toxic, Negative, Status)" },
+            { "id": "active-defense", "name": "Active Defense", "desc": "Toggle: Self +Res(Status Effects), +DEF" },
+            { "id": "against-all-odds", "name": "Against All Odds", "desc": "Toggle: PBAoE Foe -DMG, Self +DMG" },
+            { "id": "phalanx-fighting", "name": "Phalanx Fighting", "desc": "Auto: Self +DEF(All) per nearby ally" },
+            { "id": "shield-charge", "name": "Shield Charge", "desc": "Location AoE, Extreme DMG(Smash), Foe Knockdown" },
+            { "id": "one-with-the-shield", "name": "One with the Shield", "desc": "Self +++++Res(All DMG), +++++Res(Status), Crash" }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "ice-armor",
+          "name": "Ice Armor",
+          "desc": "Protect yourself with layers of frost and drain the heat from your enemies to slow their attacks.",
+          "powers": [
+            { "id": "chilling-embrace", "name": "Chilling Embrace", "desc": "Toggle: PBAoE Foe -SPD, -Recharge, -DMG" },
+            { "id": "ice-shield", "name": "Ice Shield", "desc": "Toggle: Self +DEF(Smash, Lethal)" },
+            { "id": "hoarfrost", "name": "Hoarfrost", "desc": "Self +Max HP, Heal" },
+            { "id": "wet-ice", "name": "Wet Ice", "desc": "Toggle: Self +Res(Status Effects), +DEF" },
+            { "id": "glacial-armor", "name": "Glacial Armor", "desc": "Toggle: Self +DEF(Energy, Negative)" },
+            { "id": "energy-absorption", "name": "Energy Absorption", "desc": "PBAoE, Foe -Endurance, -Recharge, Self +DEF, +Endurance" },
+            { "id": "icicles", "name": "Icicles", "desc": "Toggle: PBAoE, Minor DoT(Lethal)" },
+            { "id": "hibernate", "name": "Hibernate", "desc": "Toggle: Self Invincible, +++++Regen, +++++Recovery, Cannot act" }
+          ]
+        }
+      ]
+    }
+  ]
+}

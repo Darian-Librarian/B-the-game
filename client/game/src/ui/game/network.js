@@ -128,6 +128,19 @@ export class NetworkManager {
        eng.ui.openTrade(data.partnerName);
     });
 
+    this.socket.on('player_data_updated', (newCharData) => {
+      Object.assign(eng.playerData, newCharData);
+      const powersPanel = document.getElementById('powers-panel');
+      if (powersPanel && powersPanel.style.display === 'flex') {
+          eng.ui.renderPowersUI();
+      }
+      const trainerModal = document.getElementById('trainer-dialog-modal');
+      if (trainerModal && trainerModal.style.display === 'flex') {
+          eng.ui.openTrainerUI(eng.activeTrainer);
+      }
+      if (eng.ui.updatePowerbar) eng.ui.updatePowerbar();
+    });
+
     this.socket.on('player_took_damage', (data) => {
       if (data.targetId === this.socket.id) {
         eng.player.hp = data.hp; eng.lastEmit.hp = data.hp;

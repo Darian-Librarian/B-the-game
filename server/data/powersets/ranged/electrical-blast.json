@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "electrical-blast",
+          "name": "Electrical Blast",
+          "desc": "Drains foe Endurance and halts recovery. Can Shock targets to transfer Endurance back to you.",
+          "powers": [
+            { "id": "charged-bolts", "name": "Charged Bolts", "desc": "Ranged, DMG(Energy), Foe -End" },
+            { "id": "lightning-bolt", "name": "Lightning Bolt", "desc": "Ranged, DMG(Energy), Foe -End" },
+            { "id": "ball-lightning", "name": "Ball Lightning", "desc": "Ranged (Targeted AoE), DoT(Energy), Foe -End" },
+            { "id": "short-circuit", "name": "Short Circuit", "desc": "PBAoE, DoT(Energy), Foe -End, -Rec" },
+            { "id": "charge-up", "name": "Charge Up", "desc": "Self +To-Hit, +DMG, +End Mod" },
+            { "id": "zapp", "name": "Zapp", "desc": "Sniper, DMG(Energy), Foe -End" },
+            { "id": "tesla-cage", "name": "Tesla Cage", "desc": "Ranged Chain, DMG(Energy), Foe Hold, -End, -Rec" },
+            { "id": "voltaic-sentinel", "name": "Voltaic Sentinel", "desc": "Toggle: Summon Sentinel: Ranged, DMG(Energy), Foe -End" },
+            { "id": "thunderous-blast", "name": "Thunderous Blast", "desc": "Ranged (Targeted AoE), DMG(Energy/Smashing), Foe -End, -Rec" }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": 1,
+      "maxIntegrity": 100,
+      "Powersets": [
+        {
+          "id": "beast-mastery",
+          "name": "Beast Mastery",
+          "desc": "Command a pack of fierce beasts to tear your enemies apart.",
+          "powers": [
+            { "id": "summon-wolves", "name": "Summon Wolves", "desc": "Summon 1 to 3 Wolves depending on your level." },
+            { "id": "train-beasts", "name": "Train Beasts", "desc": "Provide your beasts with advanced combat training and abilities." },
+            { "id": "summon-lions", "name": "Summon Lions", "desc": "Summon 1 or 2 Lions depending on your level." },
+            { "id": "tame-beasts", "name": "Tame Beasts", "desc": "Further upgrade your beasts with ultimate feral abilities." },
+            { "id": "summon-dire-wolf", "name": "Summon Dire Wolf", "desc": "Summon a powerful Alpha Dire Wolf to lead the pack." }
+          ]
+        }
+      ]
+    }
+  ]
+}

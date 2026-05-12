@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "fiery-aura",
+          "name": "Fiery Aura",
+          "desc": "Engulf yourself in roaring flames to burn nearby enemies while protecting yourself from harm.",
+          "powers": [
+            { "id": "blazing-aura", "name": "Blazing Aura", "desc": "Toggle, PBAoE Minor DoT(Fire)" },
+            { "id": "fire-shield", "name": "Fire Shield", "desc": "Toggle, Self +Res(Fire, Smash, Lethal)" },
+            { "id": "healing-flames", "name": "Healing Flames", "desc": "Self Heal, +Res(Toxic)" },
+            { "id": "temperature-protection", "name": "Temperature Protection", "desc": "Auto, Self +Res(Fire, Cold), +Res(Slow)" },
+            { "id": "consume", "name": "Consume", "desc": "PBAoE Foe -Endurance, Self +Endurance" },
+            { "id": "plasma-shield", "name": "Plasma Shield", "desc": "Toggle, Self +Res(Energy, Negative, Status)" },
+            { "id": "burn", "name": "Burn", "desc": "Location AoE (at feet), Foe High DoT(Fire), Foe Fear" }
+          ]
+        }
+      ]
+    }
+  ]
+}

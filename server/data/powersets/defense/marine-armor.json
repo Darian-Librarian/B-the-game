@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": 1,
+      "maxIntegrity": 100,
+      "Powersets": [
+        {
+          "id": "marine-armor",
+          "name": "Marine Armor",
+          "desc": "Utilize biological water manipulation to create crushing pressure fields and rapidly regenerate your cells.",
+          "powers": [
+            { "id": "liquid-armor", "name": "Liquid Armor", "desc": "Toggle: Self +DEF(Smash, Lethal), +Res(Fire)" },
+            { "id": "shifting-tides", "name": "Shifting Tides", "desc": "Auto: Self +Regen, +Recovery" },
+            { "id": "crushing-depths", "name": "Crushing Depths", "desc": "Toggle: PBAoE, Foe -SPD, -DEF" },
+            { "id": "water-barrier", "name": "Water Barrier", "desc": "Toggle: Self +Res(Energy, Negative, Toxic, Status Effects)" },
+            { "id": "tidal-aura", "name": "Tidal Aura", "desc": "PBAoE, Foe Knockdown, Self Heal" },
+            { "id": "submerge", "name": "Submerge", "desc": "Toggle: Self Stealth, +DEF(All), +SPD(Water)" },
+            { "id": "cleansing-wave", "name": "Cleansing Wave", "desc": "Self Removes all Debuffs and Status Effects, Minor Heal" },
+            { "id": "tsunami-shield", "name": "Tsunami Shield", "desc": "Toggle: PBAoE Foe Knockback, Self +Res(All DMG)" }
+          ]
+        }
+      ]
+    }
+  ]
+}

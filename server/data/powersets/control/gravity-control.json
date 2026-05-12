@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "gravity-control",
+          "name": "Gravity Control",
+          "desc": "Manipulate localized gravity to crush foes, lift them helplessly into the air, or create miniature singularities.",
+          "powers": [
+            { "id": "crush", "name": "Crush", "desc": "Ranged, Foe Immobilize, DoT(Smash), -Speed" },
+            { "id": "lift", "name": "Lift", "desc": "Ranged, Foe Hold (Levitate), DMG(Smash)" },
+            { "id": "gravity-distortion", "name": "Gravity Distortion", "desc": "Ranged, Foe Hold" },
+            { "id": "propel", "name": "Propel", "desc": "Ranged, DMG(Smash), Foe Knockback" },
+            { "id": "crushing-field", "name": "Crushing Field", "desc": "Targeted AoE, Foe Immobilize, -Speed" },
+            { "id": "dimension-shift", "name": "Dimension Shift", "desc": "Targeted AoE, Foe Hold/Phase" },
+            { "id": "singularity", "name": "Singularity", "desc": "Summon a gravitational singularity to control enemies." }
+          ]
+        }
+      ]
+    }
+  ]
+}

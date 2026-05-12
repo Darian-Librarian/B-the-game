@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "empathy",
+          "name": "Empathy",
+          "desc": "Traditional restorative medicine and emotional support. Highly effective at keeping allies alive and fighting.",
+          "powers": [
+            { "id": "healing-aura", "name": "Healing Aura", "desc": "PBAoE, Minor Heal (Allies)" },
+            { "id": "heal-other", "name": "Heal Other", "desc": "Ranged, Moderate Heal (Ally)" },
+            { "id": "absorb-pain", "name": "Absorb Pain", "desc": "Ranged, Extreme Heal (Ally), Self -HP" },
+            { "id": "resurrect", "name": "Resurrect", "desc": "Revive Fallen Ally" },
+            { "id": "clear-mind", "name": "Clear Mind", "desc": "Ranged, Ally +Res(Status Effects)" },
+            { "id": "fortitude", "name": "Fortitude", "desc": "Ranged, Ally +DEF, +To-Hit, +DMG" },
+            { "id": "recovery-aura", "name": "Recovery Aura", "desc": "PBAoE, +Recovery (Allies)" },
+            { "id": "regeneration-aura", "name": "Regeneration Aura", "desc": "PBAoE, +Regeneration (Allies)" },
+            { "id": "adrenaline-boost", "name": "Adrenaline Boost", "desc": "Ranged, Ally +Recharge, +Recovery, +Regeneration" }
+          ]
+        }
+      ]
+    }
+  ]
+}

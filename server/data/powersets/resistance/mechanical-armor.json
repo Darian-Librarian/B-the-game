@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -100,
+      "maxIntegrity": -1,
+      "Powersets": [
+        {
+          "id": "mechanical-armor",
+          "name": "Mechanical Armor",
+          "desc": "Equip modular robotic plating and technological shielding to defend yourself from incoming threats.",
+          "powers": [
+            { "id": "deflection-shield", "name": "Deflection Shield", "desc": "Toggle, Self +Def(Smash, Lethal)" },
+            { "id": "ablative-plating", "name": "Ablative Plating", "desc": "Auto, Self +Res(Smash, Lethal), +Max HP" },
+            { "id": "reactive-armor", "name": "Reactive Armor", "desc": "Toggle, Self +Res(Fire, Cold, Energy, Negative)" },
+            { "id": "nanite-repair", "name": "Nanite Repair", "desc": "Self Heal, +Regeneration" },
+            { "id": "emp-shield", "name": "EMP Shield", "desc": "Toggle, Self +Res(Energy, Psionic, EMP), +Status Protection" },
+            { "id": "power-routing", "name": "Power Routing", "desc": "Auto, Self +Recovery, +Res(Endurance Drain)" },
+            { "id": "fortress-mode", "name": "Fortress Mode", "desc": "Toggle, Self ++++Res(All Damage), -Speed, -Recharge" }
+          ]
+        }
+      ]
+    }
+  ]
+}

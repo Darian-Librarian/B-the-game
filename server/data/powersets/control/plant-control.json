@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": 1,
+      "maxIntegrity": 100,
+      "Powersets": [
+        {
+          "id": "plant-control",
+          "name": "Plant Control",
+          "desc": "Harness the primal forces of nature to summon roots, vines, and spores to ensnare and pacify your foes. Requires a biological connection to the earth.",
+          "powers": [
+            { "id": "entangle", "name": "Entangle", "desc": "Ranged, Foe Immobilize" },
+            { "id": "spores", "name": "Spores", "desc": "Ranged (Targeted AoE), Foe Sleep" },
+            { "id": "strangler", "name": "Strangler", "desc": "Ranged, DMG(Smash), Foe Hold" },
+            { "id": "roots", "name": "Roots", "desc": "Targeted AoE, Foe Immobilize, -Speed" },
+            { "id": "vines", "name": "Vines", "desc": "Targeted AoE, Foe Hold" },
+            { "id": "carrion-creepers", "name": "Carrion Creepers", "desc": "Location AoE, Minor DoT(Toxic), Foe Knockdown/Immob" },
+            { "id": "fly-trap", "name": "Fly Trap", "desc": "Summon a mutated carnivorous plant to fight for you." }
+          ]
+        }
+      ]
+    }
+  ]
+}

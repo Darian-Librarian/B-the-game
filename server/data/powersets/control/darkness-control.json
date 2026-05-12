@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "darkness-control",
+          "name": "Darkness Control",
+          "desc": "Manipulate shadows and negative energy to terrify, blind, and entrap your enemies.",
+          "powers": [
+            { "id": "dark-grasp", "name": "Dark Grasp", "desc": "Ranged, Foe Hold, -To Hit" },
+            { "id": "shadow-field", "name": "Shadow Field", "desc": "Location AoE, Foe Immobilize, -To Hit" },
+            { "id": "living-shadows", "name": "Living Shadows", "desc": "Ranged (Cone), Foe Fear, -To Hit" },
+            { "id": "fearsome-stare", "name": "Fearsome Stare", "desc": "Ranged (Cone), Foe Fear, -To Hit" },
+            { "id": "heart-of-darkness", "name": "Heart of Darkness", "desc": "PBAoE, Foe Disorient, -To Hit" },
+            { "id": "haunt", "name": "Haunt", "desc": "Summon uncontrollable shades to terrorize foes." },
+            { "id": "umbra-beast", "name": "Umbra Beast", "desc": "Summon a shadowy beast to fight for you." }
+          ]
+        }
+      ]
+    }
+  ]
+}

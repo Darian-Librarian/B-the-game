@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "giant-weapons",
+          "name": "Giant Weapons",
+          "desc": "Wield impossibly massive weapons that require incredible momentum to swing, dealing catastrophic damage to multiple foes at once.",
+          "powers": [
+            { "id": "crushing-blow", "name": "Crushing Blow", "desc": "Melee, DMG(Smash/Lethal), Foe Knockdown, Builds Momentum" },
+            { "id": "titan-sweep", "name": "Titan Sweep", "desc": "Melee (Cone), DMG(Smash/Lethal), Foe Knockdown, Builds Momentum" },
+            { "id": "momentum-shift", "name": "Momentum Shift", "desc": "Self +DMG, +To-Hit, Instantly Grants Momentum" },
+            { "id": "follow-through", "name": "Follow Through", "desc": "Melee (Cone), High DMG(Smash/Lethal), Foe Knockdown, Requires Momentum" },
+            { "id": "rending-flurry", "name": "Rending Flurry", "desc": "PBAoE Melee, High DMG(Lethal), Foe Knockdown, Requires Momentum" },
+            { "id": "whirling-smash", "name": "Whirling Smash", "desc": "PBAoE Melee, Extreme DMG(Smash), Foe Knockup, Requires Momentum" },
+            { "id": "arc-of-destruction", "name": "Arc of Destruction", "desc": "Melee (Cone), Superior DMG(Smash/Lethal), Foe Knockback, Requires Momentum" }
+          ]
+        }
+      ]
+    }
+  ]
+}

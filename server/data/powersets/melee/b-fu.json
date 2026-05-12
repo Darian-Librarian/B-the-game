@@ -1,0 +1,45 @@
+{
+  "B-FuPowers": {
+    "Metadata": {
+      "Description": "Martial Arts, High-Mobility Strikes. Momentum Increases Dodge Chance.",
+      "GoverningLogic": "Focused on agility, evasion, and quick, precise strikes."
+    },
+    "minIntegrity": -100,
+    "maxIntegrity": 100,
+    "Powers": [
+      {
+        "id": "quick-strike",
+        "name": "Quick Strike",
+        "desc": "Melee, Light DMG(Smash/Energy), Foe -DMG, Knockdown"
+      },
+      {
+        "id": "body-blow",
+        "name": "Body Blow",
+        "desc": "Melee, Moderate DMG(Smash/Energy), Foe Disorient"
+      },
+      {
+        "id": "smashing-blow",
+        "name": "Smashing Blow",
+        "desc": "Melee, High DMG(Smash/Energy), Foe Disorient"
+      },
+      {
+        "id": "power-siphon",
+        "name": "Power Siphon",
+        "desc": "Self: +To Hit, +Special"
+      },
+      {
+        "id": "repulsing-torrent",
+        "name": "Repulsing Torrent",
+        "desc": "Ranged (Cone), Moderate DMG(Energy/Smash), Foe Knockback"
+      },
+      { "id": "taunt", "name": "Taunt", "desc": "Ranged (Targeted AoE), Foe Taunt" },
+      { "id": "burst", "name": "Burst", "desc": "PBAoE Melee, Moderate DMG(Smash/Energy), Foe Knockdown" },
+      { "id": "focused-burst", "name": "Focused Burst", "desc": "Ranged, High DMG(Smash/Energy), Foe Knockdown" },
+      {
+        "id": "concentrated-strike",
+        "name": "Concentrated Strike",
+        "desc": "Melee, Extreme DMG(Energy/Smash), Foe Disorient"
+      }
+    ]
+  }
+}

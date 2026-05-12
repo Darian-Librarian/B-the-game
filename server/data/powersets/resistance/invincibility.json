@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -100,
+      "maxIntegrity": -1,
+      "Powersets": [
+        {
+          "id": "invincibility",
+          "name": "Invincibility",
+          "desc": "Employ highly advanced cybernetics, defensive force fields, and fortified chassis to become a synthetic juggernaut.",
+          "powers": [
+            { "id": "temp-invulnerability", "name": "Temp Invulnerability", "desc": "Toggle, Self +Res(Smash, Lethal)" },
+            { "id": "resist-physical-damage", "name": "Resist Physical Damage", "desc": "Auto, Self +Res(Smash, Lethal), +Def(Smash, Lethal)" },
+            { "id": "unyielding", "name": "Unyielding", "desc": "Toggle, Self +Res(All Damage except Psionic, Knockback, Hold, Sleep, Immobilize, Disorient)" },
+            { "id": "invincibility-aura", "name": "Invincibility", "desc": "Toggle, PBAoE Foe -To Hit, Self +To Hit, +Def (increases with more foes)" },
+            { "id": "tough-hide", "name": "Tough Hide", "desc": "Auto, Self +Def(Melee, Smash, Lethal), -Def Debuff" },
+            { "id": "resist-elements", "name": "Resist Elements", "desc": "Auto, Self +Res(Fire, Cold, Toxic, Energy, Negative)" },
+            { "id": "unstoppable", "name": "Unstoppable", "desc": "Self ++++Res(All Damage except Psionic), ++++Res(Status), -Endurance Crash on fade" }
+          ]
+        }
+      ]
+    }
+  ]
+}

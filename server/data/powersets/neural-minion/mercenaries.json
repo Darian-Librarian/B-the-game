@@ -1,0 +1,22 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "mercenaries",
+          "name": "Mercenaries",
+          "desc": "Call in highly trained soldiers equipped with conventional weaponry.",
+          "powers": [
+            { "id": "soldiers", "name": "Soldiers", "desc": "Summon 1 to 3 Soldiers depending on your level." },
+            { "id": "equip-mercenary", "name": "Equip Mercenary", "desc": "Provide your mercenaries with better weapons and gear." },
+            { "id": "spec-ops", "name": "Spec Ops", "desc": "Summon 1 or 2 Spec Ops depending on your level." },
+            { "id": "tactical-upgrade", "name": "Tactical Upgrade", "desc": "Upgrade your mercenaries with advanced tactical equipment." },
+            { "id": "commando", "name": "Commando", "desc": "Summon a heavy weapons Commando." }
+          ]
+        }
+      ]
+    }
+  ]
+}

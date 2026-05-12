@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "IntegrityRequirement": "0% Integrity / 100% Purity",
+      "Powersets": [
+        {
+          "id": "radiation-blast",
+          "name": "Radiation Blast",
+          "desc": "Irradiate your foes with high-energy particle blasts. The sickening effects of these powers lower the target's defense.",
+          "powers": [
+            { "id": "neutrino-bolt", "name": "Neutrino Bolt", "desc": "Ranged, DMG(Energy), Foe -DEF" },
+            { "id": "x-ray-beam", "name": "X-Ray Beam", "desc": "Ranged, DMG(Energy), Foe -DEF" },
+            { "id": "irradiate", "name": "Irradiate", "desc": "PBAoE, DoT(Energy), Foe -DEF" },
+            { "id": "electron-haze", "name": "Electron Haze", "desc": "Ranged (Cone), DMG(Energy), Foe -DEF, Knockback" },
+            { "id": "aim", "name": "Aim", "desc": "Self +ToHit, +DMG" },
+            { "id": "proton-volley", "name": "Proton Volley", "desc": "Sniper, DoT(Energy), Foe -DEF, Self +Range" },
+            { "id": "cosmic-burst", "name": "Cosmic Burst", "desc": "Ranged, DMG(Energy), Foe Disorient, -DEF" },
+            { "id": "neutron-bomb", "name": "Neutron Bomb", "desc": "Ranged (Targeted AoE), DMG(Energy), Foe -DEF" },
+            { "id": "atomic-blast", "name": "Atomic Blast", "desc": "PBAoE, DMG(Energy/Smash), Foe Hold, -DEF" }
+          ]
+        }
+      ]
+    }
+  ]
+}

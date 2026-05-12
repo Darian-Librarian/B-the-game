@@ -4,15 +4,19 @@ export class UIManager {
     this.setupDevTools();
     this.setupBuilderTools();
     this.setupInventory();
+    this.setupPowersUI();
     this.setupContextMenu();
     this.setupTradeUI();
+    this.setupPowerbar();
 
     this.makeDraggable('dev-panel', '.dev-panel-header');
     this.makeDraggable('builder-panel', '.dev-panel-header');
     this.makeDraggable('npc-manager-panel', '.dev-panel-header');
     this.makeDraggable('npc-edit-modal', '.dev-panel-header');
     this.makeDraggable('inventory-panel', '.dev-panel-header');
+    this.makeDraggable('powers-panel', '.dev-panel-header');
     this.makeDraggable('trade-panel', '.dev-panel-header');
+    this.makeDraggable('trainer-dialog-modal', '.dev-panel-header');
   }
 
   makeDraggable(panelId, headerSelector) {
@@ -28,12 +32,13 @@ export class UIManager {
     let startX, startY, initialLeft, initialTop;
 
     header.addEventListener('mousedown', (e) => {
-      if (e.target.tagName === 'BUTTON') return;
+      if (e.target.tagName === 'BUTTON') return; // Don't drag if clicking the X
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
 
       const rect = panel.getBoundingClientRect();
+      // Convert panel to absolute positioning without transforms for reliable dragging
       if (panel.style.transform) {
         panel.style.transform = 'none';
         panel.style.left = rect.left + 'px';
@@ -49,7 +54,7 @@ export class UIManager {
         const dy = moveEvent.clientY - startY;
         panel.style.left = `${initialLeft + dx}px`;
         panel.style.top = `${initialTop + dy}px`;
-        panel.style.right = 'auto';
+        panel.style.right = 'auto'; // Clear constraints
         panel.style.bottom = 'auto';
       };
 
@@ -64,14 +69,168 @@ export class UIManager {
     });
   }
 
+  setupPowerbar() {
+    let container = document.getElementById('powerbar-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'powerbar-container';
+        
+        const gameScreen = document.getElementById('game-screen');
+        if (gameScreen) {
+            const scaler = gameScreen.querySelector('.screen-scaler');
+            if (scaler) scaler.appendChild(container);
+            else gameScreen.appendChild(container);
+        } else {
+            document.body.appendChild(container);
+        }
+    }
+    container.style.cssText = 'position: absolute; bottom: 75px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 999999; padding: 10px; background: rgba(5, 7, 10, 0.85); border: 2px solid #333; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.8); pointer-events: auto;';
+
+    container.innerHTML = '';
+    this.powerSlots = [];
+    const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
+    
+    for (let i = 0; i < 10; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'powerbar-slot';
+        slot.style.cssText = 'width: 44px; height: 44px; background: rgba(0, 0, 0, 0.7); border: 2px solid #444; border-radius: 4px; position: relative; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; box-shadow: inset 0 0 10px rgba(0,0,0,0.8);';
+        
+        const keyLabel = document.createElement('span');
+        keyLabel.innerText = keys[i];
+        keyLabel.style.cssText = 'position: absolute; top: 2px; left: 4px; font-size: 0.75rem; font-weight: bold; color: #888; font-family: var(--font-mono, monospace); text-shadow: 1px 1px 0 #000;';
+        
+        const iconOrName = document.createElement('div');
+        iconOrName.style.cssText = 'color: #fff; font-size: 0.7rem; font-family: var(--font-header, sans-serif); text-align: center; line-height: 1.1; pointer-events: none; padding: 0 2px; word-wrap: break-word; overflow: hidden; max-height: 30px; text-shadow: 1px 1px 0 #000;';
+        
+        slot.appendChild(keyLabel);
+        slot.appendChild(iconOrName);
+        container.appendChild(slot);
+        
+        slot.onmouseenter = () => {
+            const powers = this.engine.playerData.powers || [];
+            const powerName = powers[i];
+            if (powerName) slot.style.background = 'rgba(52, 152, 219, 0.4)';
+        };
+        slot.onmouseleave = () => slot.style.background = 'rgba(0, 0, 0, 0.7)';
+        
+        slot.onclick = () => {
+            const powers = this.engine.playerData.powers || [];
+            const powerName = powers[i];
+            if (powerName) {
+                if (powerName === 'Brawl') this.engine.combat?.triggerAttack();
+            }
+        };
+
+        this.powerSlots.push({ element: slot, iconEl: iconOrName });
+    }
+    this.updatePowerbar();
+  }
+
+  updatePowerbar() {
+      if (!this.powerSlots) return;
+      const powers = this.engine.playerData.powers || [];
+      
+      for (let i = 0; i < 10; i++) {
+          const slotData = this.powerSlots[i];
+          const powerName = powers[i];
+          if (powerName) {
+              const words = powerName.split(' ');
+              let displayTxt = powerName;
+              if (displayTxt.length > 8) {
+                  displayTxt = words.map(w => w[0]).join('').toUpperCase();
+                  if (words.length === 1) displayTxt = displayTxt.substring(0, 6) + '..';
+              }
+              slotData.iconEl.innerText = displayTxt;
+              slotData.element.style.borderColor = 'var(--accent-neon, #3498db)';
+              slotData.element.title = powerName;
+          } else {
+              slotData.iconEl.innerText = '';
+              slotData.element.style.borderColor = '#444';
+              slotData.element.title = 'Empty Slot';
+          }
+      }
+  }
+
+  setupPowersUI() {
+    const btnPowers = document.getElementById('btn-powers');
+    const powersPanel = document.getElementById('powers-panel');
+    if (btnPowers && powersPanel) {
+      btnPowers.onclick = (e) => {
+        e.stopPropagation();
+        powersPanel.style.display = powersPanel.style.display === 'none' ? 'flex' : 'none';
+        if (powersPanel.style.display === 'flex') this.renderPowersUI();
+      };
+      const btnClose = document.getElementById('btn-close-powers');
+      if (btnClose) btnClose.onclick = () => powersPanel.style.display = 'none';
+    }
+  }
+
+  renderPowersUI() {
+    const pd = this.engine.playerData;
+    const level = pd.level || 1;
+    
+    const elLevel = document.getElementById('powers-level-text');
+    const elLearned = document.getElementById('powersets-learned-text');
+    const elPicks = document.getElementById('powers-picks-text');
+    const elSets = document.getElementById('powersets-picks-text');
+    const elSlots = document.getElementById('powers-slots-text');
+    const listContainer = document.getElementById('powers-list-container');
+    
+    if (!listContainer) return;
+
+    const totalPowerPicks = pd.unspentPowerPicks !== undefined ? pd.unspentPowerPicks : 0;
+    const totalPowersetPicks = pd.unspentPowersetPicks !== undefined ? pd.unspentPowersetPicks : 0;
+    const learnedSetsCount = pd.powersets ? pd.powersets.length : 0;
+    const totalEnhancementSlots = Math.ceil(level / 2) * 2;
+    
+    if (elLevel) elLevel.innerText = level;
+    if (elPicks) elPicks.innerText = totalPowerPicks;
+    if (elSets) elSets.innerText = totalPowersetPicks;
+    if (elSlots) elSlots.innerText = totalEnhancementSlots;
+    if (elLearned) elLearned.innerText = learnedSetsCount;
+    
+    listContainer.innerHTML = '';
+    const powers = pd.powers || [];
+    
+    if (powers.length === 0) {
+      listContainer.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 20px; font-family: var(--font-mono); font-size: 0.9rem;">No powers selected.</div>`;
+    } else {
+      powers.forEach(pName => {
+        const pDiv = document.createElement('div');
+        pDiv.style.cssText = 'background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); padding: 10px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono);';
+        pDiv.innerHTML = `
+          <span style="color: var(--accent-neon); font-weight: bold; font-size: 0.95rem;">${pName}</span>
+          <div style="display: flex; gap: 5px;">
+            <div style="width: 14px; height: 14px; background: rgba(52, 152, 219, 0.1); border: 1px solid #3498db; border-radius: 50%;" title="Enhancement Slot (Empty)"></div>
+            <div style="width: 14px; height: 14px; background: rgba(52, 152, 219, 0.1); border: 1px solid #3498db; border-radius: 50%;" title="Enhancement Slot (Empty)"></div>
+          </div>
+        `;
+        listContainer.appendChild(pDiv);
+      });
+    }
+  }
+
   setupDevTools() {
     const eng = this.engine;
     const devPanel = document.getElementById('dev-panel');
     if (devPanel) {
       document.getElementById('btn-close-dev').onclick = () => devPanel.style.display = 'none';
 
-      const setupDevBtn = (id, prop, color) => {
-        const btn = document.getElementById(id);
+      const setupDevBtn = (id, prop, color, labelText) => {
+        let btn = document.getElementById(id);
+        if (!btn && devPanel) {
+           btn = document.createElement('button');
+           btn.id = id;
+           btn.className = 'btn-secondary';
+           btn.innerText = labelText || id;
+           btn.style.cssText = 'width: 100%; margin-top: 5px;';
+           const referenceNode = document.getElementById('btn-dev-mouse');
+           if (referenceNode && referenceNode.parentNode) {
+               referenceNode.parentNode.insertBefore(btn, referenceNode.nextSibling);
+           } else {
+               devPanel.appendChild(btn);
+           }
+        }
         if (btn) {
           btn.style.borderColor = eng.devOptions[prop] ? color : '';
           btn.style.color = eng.devOptions[prop] ? color : '';
@@ -84,13 +243,17 @@ export class UIManager {
         }
       };
 
-      setupDevBtn('btn-dev-player', 'showPlayerPos', '#ff4757');
-      setupDevBtn('btn-dev-player-tile', 'showPlayerTile', '#ff4757');
-      setupDevBtn('btn-dev-mouse', 'showMousePos', '#ff4757');
-      setupDevBtn('btn-dev-melee', 'showMelee', '#ff4757');
-      setupDevBtn('btn-dev-hitbox', 'showHitboxes', '#ff4757');
-      setupDevBtn('btn-dev-tile', 'showTile', '#ff4757');
-      setupDevBtn('btn-dev-chunk', 'showChunk', '#ff4757');
+      setupDevBtn('btn-dev-player', 'showPlayerPos', '#ff4757', 'Toggle Player Pos');
+      setupDevBtn('btn-dev-player-tile', 'showPlayerTile', '#ff4757', 'Toggle Player Tile');
+      setupDevBtn('btn-dev-entity', 'showEntityPos', '#ff4757', 'Toggle Entity Pos');
+      setupDevBtn('btn-dev-entity-tile', 'showEntityTile', '#ff4757', 'Toggle Entity Tile');
+      setupDevBtn('btn-dev-mouse', 'showMousePos', '#ff4757', 'Toggle Mouse Pos');
+      setupDevBtn('btn-dev-melee', 'showMelee', '#ff4757', 'Toggle Melee Range');
+      setupDevBtn('btn-dev-hitbox', 'showHitboxes', '#ff4757', 'Toggle Hitboxes');
+      setupDevBtn('btn-dev-tile', 'showTile', '#ff4757', 'Toggle Tile Grids');
+      setupDevBtn('btn-dev-chunk', 'showChunk', '#ff4757', 'Toggle Chunk Grids');
+      setupDevBtn('btn-dev-dist-npc', 'showDistToNPC', '#f1c40f', 'Dist: Player to NPC');
+      setupDevBtn('btn-dev-dist-mouse', 'showDistNpcToMouse', '#f1c40f', 'Dist: NPC to Mouse');
 
       const btnEditTarget = document.getElementById('btn-dev-edit-target');
       if (btnEditTarget) {
@@ -142,7 +305,7 @@ export class UIManager {
             hp: parseFloat(document.getElementById('edit-npc-hp').value),
             maxHp: parseFloat(document.getElementById('edit-npc-maxhp').value),
             energy: energyVal,
-            maxEnergy: energyVal,
+            maxEnergy: energyVal, // Sync max energy automatically!
             x: parseFloat(document.getElementById('edit-npc-x').value),
             y: parseFloat(document.getElementById('edit-npc-y').value),
             z: parseFloat(document.getElementById('edit-npc-z').value),
@@ -152,6 +315,7 @@ export class UIManager {
           eng.socket.emit('edit_npc', { uuid, updates });
         };
 
+        // Fire updates over the socket instantly as the developer types or selects!
         ['edit-npc-name', 'edit-npc-hp', 'edit-npc-maxhp', 'edit-npc-energy', 'edit-npc-x', 'edit-npc-y', 'edit-npc-z'].forEach(id => {
           document.getElementById(id).addEventListener('input', emitNpcUpdate);
         });
@@ -545,9 +709,25 @@ export class UIManager {
     const btnTrade = document.getElementById('ctx-btn-trade');
     if (btnTrade) {
       btnTrade.onclick = () => {
-        if (this.engine.contextTarget) {
-          this.engine.socket.emit('trade_request', this.engine.contextTarget);
-          this.engine.chat.addMessage('system', 'System', `Trade request sent to ${this.engine.otherPlayers[this.engine.contextTarget]?.name || 'Player'}.`);
+        if (this.engine.contextTarget && this.engine.contextTarget.type === 'player') {
+          this.engine.socket.emit('trade_request', this.engine.contextTarget.id);
+          this.engine.chat.addMessage('system', 'System', `Trade request sent to ${this.engine.otherPlayers[this.engine.contextTarget.id]?.name || 'Player'}.`);
+        }
+        document.getElementById('player-context-menu').style.display = 'none';
+      };
+    }
+    const btnTalk = document.getElementById('ctx-btn-talk');
+    if (btnTalk) {
+      btnTalk.onclick = () => {
+        if (this.engine.contextTarget && this.engine.contextTarget.type === 'npc') {
+          const npc = this.engine.npcs.find(n => n.uuid === this.engine.contextTarget.id);
+          if (npc) {
+            if (npc.type === 'trainer') {
+              this.openTrainerUI(npc);
+            } else {
+              this.engine.chat.addMessage('system', 'System', 'This NPC has nothing to say.');
+            }
+          }
         }
         document.getElementById('player-context-menu').style.display = 'none';
       };
@@ -580,6 +760,7 @@ export class UIManager {
       }
     }
 
+    // Dynamically update the Edit Window if it is open and we click a new NPC!
     const npcEditModal = document.getElementById('npc-edit-modal');
     if (npcEditModal && npcEditModal.style.display !== 'none' && eng.selectedTarget && eng.selectedTarget.type === 'npc') {
       const uuidField = document.getElementById('edit-npc-uuid');
@@ -644,6 +825,15 @@ export class UIManager {
     } else if (targetWindow) {
       targetWindow.style.display = 'none';
     }
+
+    if (eng.activeTrainer) {
+      const dist = Math.hypot(eng.player.x - eng.activeTrainer.x, eng.player.y - eng.activeTrainer.y);
+      if (dist > 150) {
+        eng.activeTrainer = null;
+        const tModal = document.getElementById('trainer-dialog-modal');
+        if (tModal) tModal.style.display = 'none';
+      }
+    }
   }
 
   openTrainerUI(npc) {
@@ -654,16 +844,294 @@ export class UIManager {
     }
     this.engine.activeTrainer = npc;
     document.getElementById('trainer-dialog-name').innerText = npc.name;
-    document.getElementById('trainer-dialog-modal').style.display = 'flex';
+    const modal = document.getElementById('trainer-dialog-modal');
+    if (modal) modal.style.display = 'flex';
     
-    document.getElementById('btn-trainer-leave').onclick = () => {
+    const btnCloseTrainer = document.getElementById('btn-close-trainer');
+    if (btnCloseTrainer) btnCloseTrainer.onclick = () => {
         this.engine.activeTrainer = null;
-        document.getElementById('trainer-dialog-modal').style.display = 'none';
+        if (modal) modal.style.display = 'none';
     };
-    document.getElementById('btn-trainer-train').onclick = () => {
-        this.engine.chat.addMessage('system', 'System', 'Skill training is currently under construction.');
-        this.engine.activeTrainer = null;
-        document.getElementById('trainer-dialog-modal').style.display = 'none';
-    };
+
+    const viewDialog = modal ? modal.querySelector('#trainer-dialog-view') : document.getElementById('trainer-dialog-view');
+    const viewTraining = modal ? modal.querySelector('#trainer-training-view') : document.getElementById('trainer-training-view');
+    if (viewDialog) viewDialog.style.display = 'block';
+    if (viewTraining) viewTraining.style.display = 'none';
+    
+    const powerPicks = this.engine.playerData.unspentPowerPicks || 0;
+    const setPicksRaw = this.engine.playerData.unspentPowersetPicks;
+    let setPicksCount = Array.isArray(setPicksRaw) ? setPicksRaw.length : (typeof setPicksRaw === 'number' ? setPicksRaw : 0);
+
+    if (viewDialog) {
+        // Scorched earth rebuild: destroy everything inside the view and manually construct the perfect layout!
+        viewDialog.innerHTML = `
+            <p style="font-family: var(--font-mono); margin-bottom: 15px; color: #fff;">Hello, recruit. Ready to improve your skills?</p>
+            <div id="trainer-actions-container" style="display: flex; flex-direction: column; gap: 5px;"></div>
+        `;
+        
+        const actionsBox = viewDialog.querySelector('#trainer-actions-container');
+
+        const btnUnlock = document.createElement('button');
+        btnUnlock.id = 'btn-trainer-unlock';
+        btnUnlock.innerText = 'Select New Powerset';
+        btnUnlock.className = 'btn-primary';
+        btnUnlock.style.cssText = 'border-color: #2ecc71; color: #2ecc71; background: rgba(46, 204, 113, 0.1); margin-top: 5px; width: 100%; text-align: left; padding: 10px; font-family: var(--font-header); letter-spacing: 1px; display: block;';
+        
+        if (setPicksCount <= 0) {
+            btnUnlock.disabled = true;
+            btnUnlock.style.opacity = '0.5';
+            btnUnlock.style.cursor = 'not-allowed';
+        } else {
+            btnUnlock.disabled = false;
+            btnUnlock.style.opacity = '1';
+            btnUnlock.style.cursor = 'pointer';
+        }
+        btnUnlock.onclick = () => {
+            if (setPicksCount <= 0) return;
+            if (viewDialog) viewDialog.style.display = 'none';
+            if (viewTraining) {
+                viewTraining.style.display = 'flex';
+                this.renderPowersetUnlockUI(viewTraining, powerPicks, setPicksRaw, () => {
+                    viewTraining.style.display = 'none';
+                    if (viewDialog) viewDialog.style.display = 'block';
+                });
+            }
+        };
+
+        const btnTrain = document.createElement('button');
+        btnTrain.id = 'btn-trainer-train';
+        btnTrain.innerText = 'Select New Abilities';
+        btnTrain.className = 'btn-secondary';
+        btnTrain.style.cssText = 'margin-top: 5px; width: 100%; text-align: left; padding: 10px; font-family: var(--font-header); letter-spacing: 1px; display: block;';
+
+        if (powerPicks <= 0) {
+            btnTrain.disabled = true;
+            btnTrain.style.opacity = '0.5';
+            btnTrain.style.cursor = 'not-allowed';
+        } else {
+            btnTrain.disabled = false;
+            btnTrain.style.opacity = '1';
+            btnTrain.style.cursor = 'pointer';
+        }
+        btnTrain.onclick = () => {
+            if (powerPicks <= 0) {
+              this.engine.chat.addMessage('system', 'System', 'You have no unspent power picks.');
+              return;
+            }
+            if (viewDialog) viewDialog.style.display = 'none';
+            if (viewTraining) {
+                viewTraining.style.display = 'flex';
+                this.renderTrainingUI(viewTraining);
+            }
+        };
+
+        const btnEnhance = document.createElement('button');
+        btnEnhance.id = 'btn-trainer-enhance';
+        btnEnhance.innerText = 'Select New Enhancement Slots';
+        btnEnhance.className = 'btn-secondary';
+        btnEnhance.style.cssText = 'margin-top: 5px; width: 100%; text-align: left; padding: 10px; font-family: var(--font-header); letter-spacing: 1px; display: block;';
+        btnEnhance.disabled = true;
+        btnEnhance.style.opacity = '0.5';
+        btnEnhance.style.cursor = 'not-allowed';
+
+        const btnLeave = document.createElement('button');
+        btnLeave.id = 'btn-trainer-leave';
+        btnLeave.innerText = 'Leave (close)';
+        btnLeave.className = 'btn-secondary';
+        btnLeave.style.cssText = 'margin-top: 10px; width: 100%; text-align: left; padding: 10px; font-family: var(--font-mono); display: block;';
+        btnLeave.onclick = () => {
+            this.engine.activeTrainer = null;
+            if (modal) modal.style.display = 'none';
+        };
+        
+        actionsBox.appendChild(btnUnlock);
+        actionsBox.appendChild(btnTrain);
+        actionsBox.appendChild(btnEnhance);
+        actionsBox.appendChild(btnLeave);
+    }
+  }
+
+  renderTrainingUI(container) {
+      let pd = this.engine.playerData;
+      let powersets = pd.powersets || [];
+      let powerPicks = pd.unspentPowerPicks || 0;
+      let setPicksRaw = pd.unspentPowersetPicks;
+      let setPicksCount = Array.isArray(setPicksRaw) ? setPicksRaw.length : (typeof setPicksRaw === 'number' ? setPicksRaw : 0);
+
+      const renderList = () => {
+        const hasPicks = powerPicks > 0 || setPicksCount > 0;
+        container.innerHTML = `
+          <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--text-dim); padding-bottom: 10px; font-family: var(--font-mono);">
+             <span style="color: #f39c12; font-weight: bold;">Power Picks: ${powerPicks}</span>
+             <span style="color: #f39c12; font-weight: bold;">Powerset Picks: ${setPicksCount}</span>
+          </div>
+          <div style="font-size: 0.9rem; color: #ccc; font-family: var(--font-mono); margin-top: 5px;">
+            ${hasPicks ? 'Select a learned Powerset to train abilities:' : 'You have no unspent picks.'}
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px;">
+             ${powersets.map((ps, i) => `<button class="btn-ps-select btn-secondary" data-index="${i}" style="text-align: left; padding: 10px;">${ps.toUpperCase()}</button>`).join('')}
+          </div>
+          <button id="btn-training-back" class="btn-secondary" style="margin-top: 10px; font-family: var(--font-mono);">Back</button>
+        `;
+
+        document.getElementById('btn-training-back').onclick = () => {
+            document.getElementById('trainer-training-view').style.display = 'none';
+            document.getElementById('trainer-dialog-view').style.display = 'block';
+        };
+        
+        container.querySelectorAll('.btn-ps-select').forEach(btn => {
+          btn.onclick = () => {
+            const psName = powersets[parseInt(btn.dataset.index)];
+            this.renderPowerSelectionUI(container, psName, powerPicks, setPicksRaw, renderList);
+          };
+        });
+      };
+      
+      renderList();
+  }
+
+  renderPowerSelectionUI(container, psName, powerPicks, setPicksRaw, goBackCb) {
+      let psData = this.engine.powersetsData[psName];
+      let knownPowers = this.engine.playerData.powers || [];
+      let currentPowerPicks = this.engine.playerData.unspentPowerPicks || 0;
+      let setPicksCount = Array.isArray(setPicksRaw) ? setPicksRaw.length : (typeof setPicksRaw === 'number' ? setPicksRaw : 0);
+
+      const renderPowerList = () => {
+        container.innerHTML = `
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--text-dim); padding-bottom: 10px; font-family: var(--font-mono);">
+           <span style="color: #f39c12; font-weight: bold;">Power Picks: ${powerPicks}</span>
+           <span style="color: #f39c12; font-weight: bold;">Powerset Picks: ${setPicksCount}</span>
+        </div>
+        <div style="font-size: 0.9rem; color: #ccc; font-family: var(--font-mono); margin-top: 5px;">Abilities in <strong style="color: var(--accent-neon);">${psName.toUpperCase()}</strong>:</div>
+        <div id="power-select-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px;">
+           <!-- Populated by JS -->
+        </div>
+        <button id="btn-power-back" class="btn-secondary" style="margin-top: 10px; font-family: var(--font-mono);">Back</button>
+      `;
+        document.getElementById('btn-power-back').onclick = goBackCb;
+
+        const powerListContainer = document.getElementById('power-select-list');
+        if (!psData || !psData.powers) {
+          powerListContainer.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 20px;">Could not load power details.</div>`;
+          return;
+        }
+
+        const powerItems = [];
+
+        const updateLocks = () => {
+          powerItems.forEach((pItem, idx) => {
+            if (idx > 1) {
+              const prev1Active = powerItems[idx - 1].classList.contains('learned');
+              const prev2Active = powerItems[idx - 2].classList.contains('learned');
+              if (prev1Active || prev2Active) {
+                pItem.classList.remove('locked');
+                pItem.style.opacity = pItem.disabled ? '0.6' : '1';
+                pItem.style.cursor = pItem.disabled ? 'not-allowed' : 'pointer';
+              } else {
+                pItem.classList.add('locked');
+                pItem.style.opacity = '0.3';
+                pItem.style.cursor = 'not-allowed';
+              }
+            }
+          });
+        };
+
+        psData.powers.forEach((power, i) => {
+          const alreadyLearned = knownPowers.includes(power.name);
+          const canAfford = currentPowerPicks > 0;
+          const isLocked = i >= 2;
+
+          const pButton = document.createElement('button');
+          pButton.className = `btn-secondary power-select-item ${alreadyLearned ? 'learned' : ''} ${isLocked ? 'locked' : ''}`;
+          pButton.style.textAlign = 'left';
+          pButton.style.padding = '10px';
+          pButton.innerHTML = `<span style="color: ${alreadyLearned ? '#aaa' : '#fff'};">${power.name}</span>`;
+
+          if (alreadyLearned) {
+            pButton.disabled = true;
+            pButton.style.cursor = 'not-allowed';
+            pButton.style.opacity = 0.6;
+          } else if (!canAfford) {
+            pButton.disabled = true;
+            pButton.style.cursor = 'not-allowed';
+            pButton.style.opacity = 0.6;
+          } else if (isLocked) {
+            pButton.style.cursor = 'not-allowed';
+            pButton.style.opacity = 0.3;
+          }
+
+          pButton.onclick = () => {
+            if (pButton.classList.contains('locked')) {
+              this.engine.chat.addMessage('system', 'System', 'You must learn earlier powers in this set first.');
+            } else if (!alreadyLearned && canAfford) {
+               this.engine.socket.emit('learn_power', { powerName: power.name, powerset: psName });
+            }
+          };
+          powerItems.push(pButton);
+          powerListContainer.appendChild(pButton);
+        });
+
+        updateLocks();
+      };
+
+      renderPowerList();
+  }
+
+      renderPowersetUnlockUI(container, powerPicks, setPicksRaw, goBackCb) {
+          let setPicksCount = 0;
+          let pickType = 'any';
+          if (Array.isArray(setPicksRaw) && setPicksRaw.length > 0) {
+              setPicksCount = setPicksRaw.length;
+              pickType = setPicksRaw[0];
+          } else if (typeof setPicksRaw === 'number') {
+              setPicksCount = setPicksRaw;
+          }
+
+      const allSets = Object.values(this.engine.powersetsData);
+      const knownSets = this.engine.playerData.powersets || [];
+          let availableSets = allSets.filter(ps => !knownSets.includes(ps.id));
+
+          if (pickType !== 'any') {
+              const allowedTypes = pickType.split('/');
+              availableSets = availableSets.filter(ps => {
+                  const psCat = ps.category ? ps.category.toLowerCase() : '';
+                  const psId = ps.id.toLowerCase();
+                  return allowedTypes.some(t => 
+                      (psCat && (psCat.includes(t) || t.includes(psCat))) ||
+                      (!psCat && (psId.includes(t) || t.includes('melee') && psId.includes('fu') || t.includes('ranged') && psId.includes('blast')))
+                  );
+              });
+          }
+
+      container.innerHTML = `
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--text-dim); padding-bottom: 10px; font-family: var(--font-mono);">
+           <span style="color: #f39c12; font-weight: bold;">Power Picks: ${powerPicks}</span>
+               <span style="color: #f39c12; font-weight: bold;">Powerset Picks: ${setPicksCount}</span>
+        </div>
+            <div style="font-size: 0.9rem; color: #ccc; font-family: var(--font-mono); margin-top: 5px;">Available Powersets ${pickType !== 'any' ? `(${pickType.toUpperCase()})` : ''}:</div>
+        <div id="powerset-unlock-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px;">
+           <!-- Populated by JS -->
+        </div>
+        <button id="btn-power-back" class="btn-secondary" style="margin-top: 10px; font-family: var(--font-mono);">Back</button>
+      `;
+      document.getElementById('btn-power-back').onclick = goBackCb;
+
+      const setListContainer = document.getElementById('powerset-unlock-list');
+          
+          if (availableSets.length === 0) {
+              setListContainer.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 20px;">No powersets match this requirement.</div>`;
+          }
+
+      availableSets.forEach(set => {
+        const sButton = document.createElement('button');
+        sButton.className = 'btn-secondary';
+        sButton.style.textAlign = 'left';
+        sButton.style.padding = '10px';
+        sButton.innerText = set.name.toUpperCase();
+        sButton.onclick = () => {
+          this.engine.socket.emit('learn_powerset', { powerset: set.id });
+        };
+        setListContainer.appendChild(sButton);
+      });
   }
 }

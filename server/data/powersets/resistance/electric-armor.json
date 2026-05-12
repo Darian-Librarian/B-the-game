@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "electric-armor",
+          "name": "Electric Armor",
+          "desc": "Channel high-voltage electricity into your defense, preventing energy drain and shocking enemies who get too close.",
+          "powers": [
+            { "id": "charged-armor", "name": "Charged Armor", "desc": "Toggle, Self +Res(Smash, Lethal, Energy)" },
+            { "id": "lightning-field", "name": "Lightning Field", "desc": "Toggle, PBAoE Minor DoT(Energy), Foe -Endurance" },
+            { "id": "conductive-shield", "name": "Conductive Shield", "desc": "Toggle, Self +Res(Fire, Cold, Energy, Negative)" },
+            { "id": "static-shield", "name": "Static Shield", "desc": "Toggle, Self +Res(Status), +Res(Endurance Drain)" },
+            { "id": "grounded", "name": "Grounded", "desc": "Auto, Self +Res(Energy, Negative), Immune to Knockback, +Res(Endurance Drain)" },
+            { "id": "lightning-armor", "name": "Lightning Armor", "desc": "Toggle, Self +Def(Energy, Negative, Status)" },
+            { "id": "power-surge", "name": "Power Surge", "desc": "Self ++++Res(All Damage), ++++Recovery, -Endurance Crash on fade" }
+          ]
+        }
+      ]
+    }
+  ]
+}

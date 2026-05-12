@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "staff-fighting",
+          "name": "Staff Fighting",
+          "desc": "Master the art of the fighting staff, balancing quick strikes with exceptional melee defense and area-of-effect capabilities.",
+          "powers": [
+            { "id": "precise-strike", "name": "Precise Strike", "desc": "Melee, DMG(Smash/Lethal), Foe -DEF" },
+            { "id": "guarded-spin", "name": "Guarded Spin", "desc": "PBAoE Melee, DMG(Smash), Self +DEF(Melee/Lethal)" },
+            { "id": "eye-of-the-storm", "name": "Eye of the Storm", "desc": "PBAoE Melee, High DMG(Smash/Lethal), Foe Knockdown" },
+            { "id": "staff-mastery", "name": "Staff Mastery", "desc": "Self +DMG, +To-Hit, Enhances Staff forms" },
+            { "id": "serpents-reach", "name": "Serpent's Reach", "desc": "Ranged, High DMG(Smash/Lethal)" },
+            { "id": "innocuous-strikes", "name": "Innocuous Strikes", "desc": "Melee (Cone), DMG(Smash), Foe -Speed" },
+            { "id": "sky-splitter", "name": "Sky Splitter", "desc": "Melee, Extreme DMG(Smash), Foe Disorient/Knockdown" }
+          ]
+        }
+      ]
+    }
+  ]
+}

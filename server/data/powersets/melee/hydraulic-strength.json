@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -100,
+      "maxIntegrity": -1,
+      "Powersets": [
+        {
+          "id": "hydraulic-strength",
+          "name": "Hydraulic Strength",
+          "desc": "Employ highly advanced servos and hydraulic pistons to crush enemies with unyielding mechanical force.",
+          "powers": [
+            { "id": "piston-punch", "name": "Piston Punch", "desc": "Melee, DMG(Smash), Foe Knockdown" },
+            { "id": "servo-smash", "name": "Servo Smash", "desc": "Melee, High DMG(Smash), Foe Knockback" },
+            { "id": "shockwave-clap", "name": "Shockwave Clap", "desc": "PBAoE, Foe Disorient/Knockback, Minor DMG(Smash)" },
+            { "id": "pile-driver", "name": "Pile Driver", "desc": "Melee, Extreme DMG(Smash), Foe Hold/Knockdown" },
+            { "id": "overclocked-blow", "name": "Overclocked Blow", "desc": "Melee, Superior DMG(Smash), Foe Disorient" },
+            { "id": "hydraulic-overdrive", "name": "Hydraulic Overdrive", "desc": "Self ++++DMG, ++To-Hit, -Endurance Crash on fade" },
+            { "id": "ground-zero", "name": "Ground Zero", "desc": "PBAoE Melee, Superior DMG(Smash), Foe Knockup" }
+          ]
+        }
+      ]
+    }
+  ]
+}

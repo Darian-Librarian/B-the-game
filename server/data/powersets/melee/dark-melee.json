@@ -1,0 +1,26 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "dark-melee",
+          "name": "Dark Melee",
+          "desc": "Harness negative ethereal energy to drain your foes' life and accuracy.",
+          "powers": [
+            { "id": "shadow-punch", "name": "Shadow Punch", "desc": "Melee, Minor DMG(Smash/Negative), Foe -To-Hit" },
+            { "id": "smite", "name": "Smite", "desc": "Melee, High DMG(Smash/Negative), Foe -To-Hit" },
+            { "id": "shadow-maul", "name": "Shadow Maul", "desc": "Melee (Cone), DMG(Smash/Negative), Foe -To-Hit" },
+            { "id": "touch-of-fear", "name": "Touch of Fear", "desc": "Melee, Minor DoT(Negative), Foe Disorient, -To-Hit" },
+            { "id": "siphon-life", "name": "Siphon Life", "desc": "Melee, DMG(Negative), Self +HP, Foe -To-Hit" },
+            { "id": "taunt", "name": "Taunt", "desc": "Ranged (Targeted AoE), Foe Taunt" },
+            { "id": "dark-consumption", "name": "Dark Consumption", "desc": "PBAoE, DMG(Negative), Self +Endurance, Foe -To-Hit" },
+            { "id": "midnight-grasp", "name": "Midnight Grasp", "desc": "Melee, High DMG(Smash/Negative), Minor DoT(Negative), Foe Hold, -To-Hit" },
+            { "id": "soul-drain", "name": "Soul Drain", "desc": "PBAoE, DMG(Negative), Self +DMG, +To-Hit for each hit, Foe -To-Hit" }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "stone-armor",
+          "name": "Stone Armor",
+          "desc": "Transform your skin into solid rock, gaining massive physical resistance and defense at the cost of mobility.",
+          "powers": [
+            { "id": "rock-armor", "name": "Rock Armor", "desc": "Toggle, Self +Def(Smash, Lethal)" },
+            { "id": "stone-skin", "name": "Stone Skin", "desc": "Auto, Self +Res(Smash, Lethal)" },
+            { "id": "earths-embrace", "name": "Earth's Embrace", "desc": "Self Heal, +Max HP, +Res(Toxic)" },
+            { "id": "mud-pots", "name": "Mud Pots", "desc": "Toggle, PBAoE Minor DoT(Fire), Foe Immobilize" },
+            { "id": "rooted", "name": "Rooted", "desc": "Toggle, Self +Res(Knockback, Status), +Regen, -Speed" },
+            { "id": "brimstone-armor", "name": "Brimstone Armor", "desc": "Toggle, Self +Res(Fire, Cold), Small DMG buff to attacks" },
+            { "id": "granite-armor", "name": "Granite Armor", "desc": "Toggle, Self ++++Res(All Damage), ++++Def(All Damage), -Speed, -Recharge, -Damage" }
+          ]
+        }
+      ]
+    }
+  ]
+}

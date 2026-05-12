@@ -1,0 +1,25 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "fiery-melee",
+          "name": "Fiery Melee",
+          "desc": "Wreathe your hands and weapons in searing flames to burn through enemy defenses.",
+          "powers": [
+            { "id": "scorch", "name": "Scorch", "desc": "Melee, DMG(Fire), Minor DoT(Fire)" },
+            { "id": "fire-sword", "name": "Fire Sword", "desc": "Melee, DMG(Fire/Lethal), Minor DoT(Fire)" },
+            { "id": "combustion", "name": "Combustion", "desc": "PBAoE, DMG(Fire), Foe Knockdown" },
+            { "id": "build-up", "name": "Build Up", "desc": "Self +DMG, +To-Hit" },
+            { "id": "breath-of-fire", "name": "Breath of Fire", "desc": "Ranged (Cone), DMG(Fire), DoT(Fire)" },
+            { "id": "fire-sword-circle", "name": "Fire Sword Circle", "desc": "PBAoE Melee, High DMG(Fire/Lethal), DoT(Fire)" },
+            { "id": "incinerate", "name": "Incinerate", "desc": "Melee, Extreme DoT(Fire)" },
+            { "id": "greater-fire-sword", "name": "Greater Fire Sword", "desc": "Melee, Extreme DMG(Fire/Lethal), High DoT(Fire)" }
+          ]
+        }
+      ]
+    }
+  ]
+}

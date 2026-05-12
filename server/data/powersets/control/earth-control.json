@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "earth-control",
+          "name": "Earth Control",
+          "desc": "Command the ground beneath your feet to encase enemies in stone and trigger localized quakes.",
+          "powers": [
+            { "id": "stone-prison", "name": "Stone Prison", "desc": "Ranged, Foe Immobilize, -DEF" },
+            { "id": "fossilize", "name": "Fossilize", "desc": "Ranged, Foe Hold, -DEF" },
+            { "id": "quicksand", "name": "Quicksand", "desc": "Location AoE, Foe -Speed, -Fly, -DEF" },
+            { "id": "stalagmites", "name": "Stalagmites", "desc": "Targeted AoE, Foe Disorient, -DEF" },
+            { "id": "earthquake", "name": "Earthquake", "desc": "Location AoE, Foe Knockdown, -To Hit, -DEF" },
+            { "id": "volcanic-gasses", "name": "Volcanic Gases", "desc": "Location AoE, Foe Hold, Minor DoT(Fire)" },
+            { "id": "animate-stone", "name": "Animate Stone", "desc": "Summon a durable stone golem to aid you." }
+          ]
+        }
+      ]
+    }
+  ]
+}

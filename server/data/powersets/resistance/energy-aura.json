@@ -1,0 +1,24 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "energy-aura",
+          "name": "Energy Aura",
+          "desc": "Surround yourself in pure energetic force fields that deflect incoming attacks and rapidly replenish your stamina.",
+          "powers": [
+            { "id": "kinetic-shield", "name": "Kinetic Shield", "desc": "Toggle, Self +Def(Smash, Lethal, Melee)" },
+            { "id": "dampening-aura", "name": "Dampening Aura", "desc": "Toggle, Self +Res(Smash, Lethal), +Def(Energy, Negative)" },
+            { "id": "power-shield", "name": "Power Shield", "desc": "Toggle, Self +Def(Fire, Cold, Energy, Negative)" },
+            { "id": "energy-cloak", "name": "Energy Cloak", "desc": "Toggle, Self Stealth, +Def(All Damage)" },
+            { "id": "energy-protection", "name": "Energy Protection", "desc": "Auto, Self +Res(Energy, Negative, Toxic, Status)" },
+            { "id": "entropic-aura", "name": "Entropic Aura", "desc": "Toggle, PBAoE Foe -Recharge, Self +Recharge" },
+            { "id": "overload", "name": "Overload", "desc": "Self ++++Def(All Damage), ++++Max HP, -Endurance Crash on fade" }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "Categories": [
+    {
+      "minIntegrity": -70,
+      "maxIntegrity": 70,
+      "Powersets": [
+        {
+          "id": "thugs",
+          "name": "Thugs",
+          "desc": "Call in a gang of street thugs and enforcers to beat down your enemies.",
+          "powers": [
+            { "id": "call-thugs", "name": "Call Thugs", "desc": "Summon 1 to 3 Thugs depending on your level." },
+            { "id": "equip-thugs", "name": "Equip Thugs", "desc": "Equip your thugs with better weapons and gear." },
+            { "id": "call-enforcer", "name": "Call Enforcer", "desc": "Summon 1 or 2 Enforcers depending on your level." },
+            { "id": "upgrade-thugs", "name": "Upgrade Thugs", "desc": "Provide your thugs with heavy weapons and advanced tactics." },
+            { "id": "call-bruiser", "name": "Call Bruiser", "desc": "Summon a massive Bruiser." }
+          ]
+        }
+      ]
+    }
+  ]
+}
