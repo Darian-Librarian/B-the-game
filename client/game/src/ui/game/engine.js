@@ -1,12 +1,12 @@
-import { ChatManager } from './chat.js?v=cf-bypass-2';
-import { NetworkManager } from './network.js?v=cf-bypass-2';
-import { UIManager } from './ui.js?v=cf-bypass-2';
-import { InputManager } from './input.js?v=cf-bypass-2';
-import { MinimapManager } from './minimap.js?v=cf-bypass-2';
-import { Renderer } from './renderer.js?v=cf-bypass-2';
-import { CombatManager } from './combat.js?v=cf-bypass-2';
-import { EntityManager } from './entity_manager.js?v=cf-bypass-2';
-import { MapOverlayManager } from './map_overlay.js?v=cf-bypass-2';
+import { ChatManager } from './chat.js?v=ui-refactor';
+import { NetworkManager } from './network.js?v=ui-refactor';
+import { UIManager } from './ui.js?v=ui-refactor';
+import { InputManager } from './input.js?v=ui-refactor';
+import { MinimapManager } from './minimap.js?v=ui-refactor';
+import { Renderer } from './renderer.js?v=ui-refactor';
+import { CombatManager } from './combat.js?v=ui-refactor';
+import { EntityManager } from './entity_manager.js?v=ui-refactor';
+import { MapOverlayManager } from './map_overlay.js?v=ui-refactor';
 
 export class GameEngine {
   constructor(canvasId, playerData, accountUuid) {

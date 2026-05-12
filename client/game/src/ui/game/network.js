@@ -125,20 +125,20 @@ export class NetworkManager {
 
     this.socket.on('trade_started', (data) => {
        eng.chat.addMessage('system', 'System', `Trade started with ${data.partnerName}!`);
-       eng.ui.openTrade(data.partnerName);
+       eng.ui.inventory.openTrade(data.partnerName);
     });
 
     this.socket.on('player_data_updated', (newCharData) => {
       Object.assign(eng.playerData, newCharData);
       const powersPanel = document.getElementById('powers-panel');
       if (powersPanel && powersPanel.style.display === 'flex') {
-          eng.ui.renderPowersUI();
+          eng.ui.powerbar.renderPowersUI();
       }
       const trainerModal = document.getElementById('trainer-dialog-modal');
       if (trainerModal && trainerModal.style.display === 'flex') {
-          eng.ui.openTrainerUI(eng.activeTrainer);
+          eng.ui.trainer.openTrainerUI(eng.activeTrainer);
       }
-      if (eng.ui.updatePowerbar) eng.ui.updatePowerbar();
+      if (eng.ui.powerbar && eng.ui.powerbar.updatePowerbar) eng.ui.powerbar.updatePowerbar();
     });
 
     this.socket.on('player_took_damage', (data) => {
