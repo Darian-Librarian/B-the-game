@@ -1,12 +1,12 @@
-import { ChatManager } from './chat.js?v=init-order-fix-2';
-import { NetworkManager } from './network.js?v=init-order-fix-2';
-import { UIManager } from './ui.js?v=init-order-fix-2';
-import { InputManager } from './input.js?v=init-order-fix-2';
-import { MinimapManager } from './minimap.js?v=init-order-fix-2';
-import { Renderer } from './renderer.js?v=init-order-fix-2';
-import { CombatManager } from './combat.js?v=init-order-fix-2';
-import { EntityManager } from './entity_manager.js?v=init-order-fix-2';
-import { MapOverlayManager } from './map_overlay.js?v=init-order-fix-2';
+import { ChatManager } from './chat.js?v=trainer-npc';
+import { NetworkManager } from './network.js?v=trainer-npc';
+import { UIManager } from './ui.js?v=trainer-npc';
+import { InputManager } from './input.js?v=trainer-npc';
+import { MinimapManager } from './minimap.js?v=trainer-npc';
+import { Renderer } from './renderer.js?v=trainer-npc';
+import { CombatManager } from './combat.js?v=trainer-npc';
+import { EntityManager } from './entity_manager.js?v=trainer-npc';
+import { MapOverlayManager } from './map_overlay.js?v=trainer-npc';
 
 export class GameEngine {
   constructor(canvasId, playerData, accountUuid) {
@@ -67,6 +67,7 @@ export class GameEngine {
       nextAttack: 1,
       moveTarget: null,
       hurtTimer: 0,
+      activeTrainer: null,
       respawnTimer: 0,
       hp: (this.playerData.stats && this.playerData.stats.hp > 10) ? this.playerData.stats.hp : 1000,
       maxHp: 1000,
@@ -343,6 +344,16 @@ export class GameEngine {
     this.lastTime = time;
     this.update(dt);
     
+    if (this.activeTrainer) {
+        const dist = Math.hypot(this.player.x - this.activeTrainer.x, this.player.y - this.activeTrainer.y);
+        if (dist > 320) { 
+            this.activeTrainer = null;
+            const tModal = document.getElementById('trainer-dialog-modal');
+            if (tModal) tModal.style.display = 'none';
+            this.chat.addMessage('system', 'System', 'You walked too far away and the conversation ended.');
+        }
+    }
+
     if (this.mapOverlay && this.mapOverlay.active) {
       this.mapOverlay.draw(this.ctx);
     }

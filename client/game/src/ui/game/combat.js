@@ -58,7 +58,7 @@ export class CombatManager {
     };
 
     eng.npcs.forEach(npc => {
-      if (npc.state !== 'dead') {
+      if (npc.state !== 'dead' && npc.type !== 'trainer') {
         if (checkHit(npc.x, npc.y, npc.z)) {
           eng.socket.emit('npc_hit', { targetUuid: npc.uuid, damage: 200 });
         }

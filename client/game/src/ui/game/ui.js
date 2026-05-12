@@ -28,13 +28,12 @@ export class UIManager {
     let startX, startY, initialLeft, initialTop;
 
     header.addEventListener('mousedown', (e) => {
-      if (e.target.tagName === 'BUTTON') return; // Don't drag if clicking the X
+      if (e.target.tagName === 'BUTTON') return;
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
 
       const rect = panel.getBoundingClientRect();
-      // Convert panel to absolute positioning without transforms for reliable dragging
       if (panel.style.transform) {
         panel.style.transform = 'none';
         panel.style.left = rect.left + 'px';
@@ -50,7 +49,7 @@ export class UIManager {
         const dy = moveEvent.clientY - startY;
         panel.style.left = `${initialLeft + dx}px`;
         panel.style.top = `${initialTop + dy}px`;
-        panel.style.right = 'auto'; // Clear constraints
+        panel.style.right = 'auto';
         panel.style.bottom = 'auto';
       };
 
@@ -137,11 +136,13 @@ export class UIManager {
         const emitNpcUpdate = () => {
           const uuid = document.getElementById('edit-npc-uuid').value;
           if (!uuid) return;
+          const energyVal = parseFloat(document.getElementById('edit-npc-energy').value);
           const updates = {
             name: document.getElementById('edit-npc-name').value,
             hp: parseFloat(document.getElementById('edit-npc-hp').value),
             maxHp: parseFloat(document.getElementById('edit-npc-maxhp').value),
-            energy: parseFloat(document.getElementById('edit-npc-energy').value),
+            energy: energyVal,
+            maxEnergy: energyVal,
             x: parseFloat(document.getElementById('edit-npc-x').value),
             y: parseFloat(document.getElementById('edit-npc-y').value),
             z: parseFloat(document.getElementById('edit-npc-z').value),
@@ -151,7 +152,6 @@ export class UIManager {
           eng.socket.emit('edit_npc', { uuid, updates });
         };
 
-        // Fire updates over the socket instantly as the developer types or selects!
         ['edit-npc-name', 'edit-npc-hp', 'edit-npc-maxhp', 'edit-npc-energy', 'edit-npc-x', 'edit-npc-y', 'edit-npc-z'].forEach(id => {
           document.getElementById(id).addEventListener('input', emitNpcUpdate);
         });
@@ -580,6 +580,26 @@ export class UIManager {
       }
     }
 
+    const npcEditModal = document.getElementById('npc-edit-modal');
+    if (npcEditModal && npcEditModal.style.display !== 'none' && eng.selectedTarget && eng.selectedTarget.type === 'npc') {
+      const uuidField = document.getElementById('edit-npc-uuid');
+      if (uuidField && uuidField.value !== eng.selectedTarget.id) {
+        const npc = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
+        if (npc) {
+          uuidField.value = npc.uuid;
+          document.getElementById('edit-npc-name').value = npc.name;
+          document.getElementById('edit-npc-hp').value = Math.floor(npc.hp);
+          document.getElementById('edit-npc-maxhp').value = npc.maxHp;
+          document.getElementById('edit-npc-energy').value = Math.floor(npc.energy || 1000);
+          document.getElementById('edit-npc-x').value = Math.round(npc.x);
+          document.getElementById('edit-npc-y').value = Math.round(npc.y);
+          document.getElementById('edit-npc-z').value = Math.round(npc.z || 0);
+          document.getElementById('edit-npc-type').value = npc.type || 'idle';
+          document.getElementById('edit-npc-dir').value = npc.dir || 'down';
+        }
+      }
+    }
+
     const targetWindow = document.getElementById('target-window');
     if (eng.selectedTarget && targetWindow) {
       let targetObj = null;
@@ -598,6 +618,7 @@ export class UIManager {
       if (targetObj && targetObj.state !== 'dead' && targetObj.state !== 'death') {
         targetWindow.style.display = 'flex';
         document.getElementById('target-name').innerText = tName;
+        
         const hpPercent = Math.max(0, targetObj.hp / targetObj.maxHp);
         document.getElementById('target-health-fill').style.width = `${hpPercent * 100}%`;
         const hpTextEl = document.getElementById('target-health-text');
@@ -608,6 +629,14 @@ export class UIManager {
         document.getElementById('target-energy-fill').style.width = `${epPercent * 100}%`;
         const epTextEl = document.getElementById('target-energy-text');
         if (epTextEl) epTextEl.innerText = `${Math.floor(targetObj.energy || maxEp)} / ${maxEp}`;
+
+        const targetActions = document.getElementById('target-actions');
+        if (targetObj.type === 'trainer' && targetActions) {
+            targetActions.style.display = 'block';
+            document.getElementById('btn-target-talk').onclick = () => this.openTrainerUI(targetObj);
+        } else if (targetActions) {
+            targetActions.style.display = 'none';
+        }
       } else {
         targetWindow.style.display = 'none';
         eng.selectedTarget = null;
@@ -615,5 +644,26 @@ export class UIManager {
     } else if (targetWindow) {
       targetWindow.style.display = 'none';
     }
+  }
+
+  openTrainerUI(npc) {
+    const dist = Math.hypot(this.engine.player.x - npc.x, this.engine.player.y - npc.y);
+    if (dist > 150) {
+        this.engine.chat.addMessage('system', 'System', 'You are too far away to interact.');
+        return;
+    }
+    this.engine.activeTrainer = npc;
+    document.getElementById('trainer-dialog-name').innerText = npc.name;
+    document.getElementById('trainer-dialog-modal').style.display = 'flex';
+    
+    document.getElementById('btn-trainer-leave').onclick = () => {
+        this.engine.activeTrainer = null;
+        document.getElementById('trainer-dialog-modal').style.display = 'none';
+    };
+    document.getElementById('btn-trainer-train').onclick = () => {
+        this.engine.chat.addMessage('system', 'System', 'Skill training is currently under construction.');
+        this.engine.activeTrainer = null;
+        document.getElementById('trainer-dialog-modal').style.display = 'none';
+    };
   }
 }
