@@ -12,20 +12,17 @@ export class MinimapManager {
     const mmRadius = Math.ceil(((mmSize / mmTileSize) / 2) * 1.5) + 1;
 
     ctx.save();
-    // Minimap Background & Border
-    ctx.fillStyle = 'rgba(5, 7, 10, 0.8)';
+        ctx.fillStyle = 'rgba(5, 7, 10, 0.8)';
     ctx.fillRect(mmX, mmY, mmSize, mmSize);
     ctx.strokeStyle = '#00d2ff';
     ctx.lineWidth = 2;
     ctx.strokeRect(mmX, mmY, mmSize, mmSize);
 
-    // Clip graphics strictly to the bounds of the minimap box
-    ctx.beginPath();
+        ctx.beginPath();
     ctx.rect(mmX, mmY, mmSize, mmSize);
     ctx.clip();
 
-    // Translate to the center of the minimap, then rotate
-    ctx.translate(mmX + mmSize / 2, mmY + mmSize / 2);
+        ctx.translate(mmX + mmSize / 2, mmY + mmSize / 2);
     ctx.rotate(45 * Math.PI / 180);
 
     const pFracX = eng.player.x / 32;
@@ -102,8 +99,7 @@ export class MinimapManager {
       }
     }
 
-    // Entity Blips
-    const drawMinimapDot = (worldX, worldY, dotColor, size) => {
+        const drawMinimapDot = (worldX, worldY, dotColor, size) => {
       const drawX = (worldX / 32 - pFracX) * mmTileSize;
       const drawY = (worldY / 32 - pFracY) * mmTileSize;
       ctx.fillStyle = dotColor;
@@ -120,8 +116,7 @@ export class MinimapManager {
       if (op.state !== 'death') drawMinimapDot(op.x, op.y, '#3498db', 2.5);
     });
 
-    // Center Player Dot
-    ctx.fillStyle = '#2ecc71';
+        ctx.fillStyle = '#2ecc71';
     ctx.beginPath();
     ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
     ctx.fill();

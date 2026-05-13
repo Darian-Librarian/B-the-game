@@ -86,7 +86,7 @@ export class MapOverlayManager {
 
     this.keydownListener = (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-      if (e.repeat) return; // Prevent rapid flickering if key is held!
+      if (e.repeat) return; 
       if (e.key.toLowerCase() === 'm') {
         toggleMap();
       }
@@ -185,8 +185,7 @@ export class MapOverlayManager {
       const drawX = (gx - pGx) * mmTileSize - offsetX - (mmTileSize / 2);
       const drawY = (gy - pGy) * mmTileSize - offsetY - (mmTileSize / 2);
       
-      // Safe Culling
-      if (drawX < -canvasW || drawX > canvasW || drawY < -canvasH || drawY > canvasH) continue;
+            if (drawX < -canvasW || drawX > canvasW || drawY < -canvasH || drawY > canvasH) continue;
 
       const tileData = eng.mapData[key];
       const color = typeof tileData === 'object' ? tileData.color : '#ffffff';

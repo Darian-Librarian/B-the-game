@@ -1,7 +1,8 @@
-import { DevToolsUIManager } from './dev-tools-ui.js?v=ui-refactor';
-import { InventoryUIManager } from './inventory-ui.js?v=ui-refactor';
-import { PowerbarUIManager } from './powerbar-ui.js?v=ui-refactor';
-import { TrainerUIManager } from './trainer-ui.js?v=ui-refactor';
+import { DevToolsUIManager } from './dev-tools-ui.js?v=voxel-builder-33';
+import { InventoryUIManager } from './inventory-ui.js?v=voxel-builder-33';
+import { PowerbarUIManager } from './powerbar-ui.js?v=voxel-builder-33';
+import { TrainerUIManager } from './trainer-ui.js?v=voxel-builder-33';
+import { PlayerListUIManager } from './player-list-ui.js?v=voxel-builder-33';
 
 export class UIManager {
   constructor(engine) {
@@ -11,6 +12,7 @@ export class UIManager {
     this.inventory = new InventoryUIManager(engine, this);
     this.powerbar = new PowerbarUIManager(engine, this);
     this.trainer = new TrainerUIManager(engine, this);
+    this.playerList = new PlayerListUIManager(engine, this);
 
     this.setupContextMenu();
   }
@@ -28,13 +30,13 @@ export class UIManager {
     let startX, startY, initialLeft, initialTop;
 
     header.addEventListener('mousedown', (e) => {
-      if (e.target.tagName === 'BUTTON') return; // Don't drag if clicking the X
+      if (e.target.tagName === 'BUTTON') return; 
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
 
       const rect = panel.getBoundingClientRect();
-      // Convert panel to absolute positioning without transforms for reliable dragging
+      
       if (panel.style.transform) {
         panel.style.transform = 'none';
         panel.style.left = rect.left + 'px';
@@ -50,7 +52,7 @@ export class UIManager {
         const dy = moveEvent.clientY - startY;
         panel.style.left = `${initialLeft + dx}px`;
         panel.style.top = `${initialTop + dy}px`;
-        panel.style.right = 'auto'; // Clear constraints
+        panel.style.right = 'auto'; 
         panel.style.bottom = 'auto';
       };
 
@@ -120,7 +122,7 @@ export class UIManager {
       }
     }
 
-    // Dynamically update the Edit Window if it is open and we click a new NPC!
+    
     const npcEditModal = document.getElementById('npc-edit-modal');
     if (npcEditModal && npcEditModal.style.display !== 'none' && eng.selectedTarget && eng.selectedTarget.type === 'npc') {
       const uuidField = document.getElementById('edit-npc-uuid');

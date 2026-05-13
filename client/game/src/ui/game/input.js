@@ -41,6 +41,7 @@ export class InputManager {
         const powerName = powers[slotIndex];
         if (powerName) {
            if (powerName === 'Brawl') eng.combat?.triggerAttack();
+           else if (powerName === 'Throw Airplane') eng.combat?.triggerThrowAirplane();
         }
       }
 
@@ -65,8 +66,7 @@ export class InputManager {
     this.handleContextMenu = (e) => e.preventDefault();
 
     this.handleBeforeUnload = (e) => {
-      // e.preventDefault();
-    };
+          };
 
     this.handleMouseDown = (e) => {
       this.mousePos.x = e.clientX;
@@ -78,8 +78,7 @@ export class InputManager {
       const ctxMenu = document.getElementById('player-context-menu');
       if (ctxMenu) ctxMenu.style.display = 'none';
 
-      if (e.button === 0) { // Left Click
-
+      if (e.button === 0) { 
         if (eng.editMode) {
           if (this.keys['shift'] && eng.selectedTiles.length > 0) {
             eng.isDraggingElevation = true;

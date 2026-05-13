@@ -13,7 +13,7 @@ export const HERITAGE_MAP = {
     types: [
       { id: 'elven', name: 'Elven', desc: 'High Energy Pools And Resistance To Psychological Debuffs.' },
       { id: 'fae', name: 'Fae', desc: 'Innate Mystical Resonance And Enhanced Agility.' },
-      { id: 'fairy', name: 'Fairy', desc: 'Compact Frame With High Energy Recovery And Mystical Assist Compatibility.' },
+      { id: 'gnome', name: 'Gnome', desc: 'Compact Frame With High Energy Recovery And Mystical Assist Compatibility.' },
       { id: 'djinn', name: 'Djinn', desc: 'Ancient Elemental Entity. Innate Environmental Manipulation And Thermal Resistance.' },
       { id: 'celestial', name: 'Celestial', desc: 'Entities Forged From Astral Essence And Starlight. High Arcane Capacity.' }
     ]

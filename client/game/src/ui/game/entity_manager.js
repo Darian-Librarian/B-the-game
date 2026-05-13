@@ -5,7 +5,7 @@ export class EntityManager {
 
   update(dt) {
     const updateBubbles = (entity) => {
-      // Backwards compatibility intercept for incoming socket data!
+      
       if (entity.chatBubble) {
         if (!entity.chatBubbles) entity.chatBubbles = [];
         entity.chatBubbles.push({ text: entity.chatBubble.text, timer: 4000, opacity: 0 });
@@ -16,12 +16,10 @@ export class EntityManager {
         const b = entity.chatBubbles[i];
         b.timer -= dt;
         
-        // Fade opacity
-        if (b.timer > 0 && b.opacity < 1) b.opacity = Math.min(1, b.opacity + dt / 150);
+                if (b.timer > 0 && b.opacity < 1) b.opacity = Math.min(1, b.opacity + dt / 150);
         else if (b.timer <= 0) b.opacity -= dt / 300;
         
-        // Drift Y Elevation
-        if (b.currentY === undefined) b.currentY = b.targetY || 0;
+                if (b.currentY === undefined) b.currentY = b.targetY || 0;
         b.currentY += ((b.targetY || 0) - b.currentY) * 15 * (dt / 1000);
         
         if (b.opacity <= 0) entity.chatBubbles.splice(i, 1);
@@ -145,7 +143,7 @@ export class EntityManager {
     } else if (player.actionTimer > 0) {
       if (player.state === 'dash') speed = player.runSpeed * 1.5;
       else if (player.state === 'jump') speed = isMoving ? (isPressingShift ? player.runSpeed : player.speed) : 0;
-      else if (player.state.startsWith('attack')) speed = 0;
+      else if (player.state.startsWith('attack') || player.state.startsWith('throw_attack')) speed = 0;
     } else {
       if (isMoving) {
         player.state = isPressingShift ? 'run' : 'walk';
@@ -164,7 +162,7 @@ export class EntityManager {
       if (!eng.checkCollision(player.x + moveX, player.y)) player.x += moveX;
       if (!eng.checkCollision(player.x, player.y + moveY)) player.y += moveY;
 
-      if (!player.state.startsWith('attack')) {
+      if (!player.state.startsWith('attack') && !player.state.startsWith('throw_attack')) {
         const screenDx = dx - dy;
         const screenDy = dx + dy;
         if (Math.abs(screenDy) > Math.abs(screenDx)) {
@@ -176,7 +174,9 @@ export class EntityManager {
     }
 
     player.frameTimer += dt;
-    const currentInterval = player.state === 'death' ? player.frameInterval * 3 : player.frameInterval;
+    let currentInterval = player.frameInterval;
+    if (player.state === 'death') currentInterval *= 3;
+    else if (player.state.startsWith('throw_attack')) currentInterval /= 8;
     if (player.frameTimer >= currentInterval) {
       player.frameTimer = 0;
       if (player.state === 'death') {
@@ -210,7 +210,9 @@ export class EntityManager {
     Object.values(this.engine.otherPlayers).forEach(op => {
       if (op.hurtTimer > 0) op.hurtTimer -= dt;
       op.frameTimer = (op.frameTimer || 0) + dt;
-      const opInterval = op.state === 'death' ? this.engine.player.frameInterval * 3 : this.engine.player.frameInterval;
+      let opInterval = this.engine.player.frameInterval;
+      if (op.state === 'death') opInterval *= 3;
+      else if (op.state && op.state.startsWith('throw_attack')) opInterval /= 8;
       if (op.frameTimer >= opInterval) {
         op.frameTimer = 0;
         if (op.state === 'death') {

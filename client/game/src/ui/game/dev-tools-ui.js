@@ -10,6 +10,39 @@ export class DevToolsUIManager {
 
     this.setupDevTools();
     this.setupBuilderTools();
+    this.setupSideHudButtons();
+  }
+
+  setupSideHudButtons() {
+    const sideHud = document.querySelector('.game-side-hud');
+    if (!sideHud) return;
+
+    const createBtn = (id, text, title, onClick) => {
+      if (document.getElementById(id)) return;
+      const btn = document.createElement('button');
+      btn.id = id;
+      btn.className = 'btn-secondary';
+      btn.style.cssText = 'width: auto; height: 45px; padding: 0 10px; font-weight: bold; background: rgba(0,0,0,0.8); border-color: #f39c12; color: #f39c12; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: background 0.2s;';
+      btn.innerText = text;
+      btn.title = title;
+      btn.onclick = onClick;
+      btn.onmouseenter = () => btn.style.background = 'rgba(243, 156, 18, 0.2)';
+      btn.onmouseleave = () => btn.style.background = 'rgba(0,0,0,0.8)';
+      
+      const btnPowers = document.getElementById('btn-powers');
+      if (btnPowers) sideHud.insertBefore(btn, btnPowers);
+      else sideHud.appendChild(btn);
+    };
+
+    createBtn('btn-hud-npc', 'NPC', 'NPC Manager', () => {
+      const npcPanel = document.getElementById('npc-manager-panel');
+      if (npcPanel) {
+        npcPanel.style.display = npcPanel.style.display === 'none' ? 'flex' : 'none';
+        if (npcPanel.style.display === 'flex') this.renderNpcManager();
+      }
+    });
+    createBtn('btn-hud-dev', '/dev', 'Toggle Dev Tools', () => this.engine.chat.processCommand('/dev'));
+    createBtn('btn-hud-edit', '/edit', 'Toggle Edit Mode', () => this.engine.chat.processCommand('/editmode'));
   }
 
   setupDevTools() {
@@ -51,11 +84,42 @@ export class DevToolsUIManager {
       setupDevBtn('btn-dev-entity-tile', 'showEntityTile', '#ff4757', 'Toggle Entity Tile');
       setupDevBtn('btn-dev-mouse', 'showMousePos', '#ff4757', 'Toggle Mouse Pos');
       setupDevBtn('btn-dev-melee', 'showMelee', '#ff4757', 'Toggle Melee Range');
+      setupDevBtn('btn-dev-los', 'showLoS', '#f1c40f', 'Toggle Line of Sight');
+
+      const btnLos = document.getElementById('btn-dev-los');
+      if (btnLos && !document.getElementById('btn-dev-los-edit')) {
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.gap = '5px';
+        wrapper.style.marginTop = '5px';
+        wrapper.style.width = '100%';
+        
+        btnLos.parentNode.insertBefore(wrapper, btnLos);
+        btnLos.style.marginTop = '0';
+        wrapper.appendChild(btnLos);
+        
+        const editBtn = document.createElement('button');
+        editBtn.id = 'btn-dev-los-edit';
+        editBtn.className = 'btn-secondary';
+        editBtn.innerText = '✎';
+        editBtn.style.cssText = 'padding: 0 10px; border-color: #f1c40f; color: #f1c40f;';
+        editBtn.onclick = () => {
+          const modal = document.getElementById('los-edit-modal');
+          if (modal) {
+            document.getElementById('edit-los-dist').value = eng.devOptions.losDistance !== undefined ? eng.devOptions.losDistance : 400;
+            document.getElementById('edit-los-angle').value = eng.devOptions.losAngle !== undefined ? eng.devOptions.losAngle : 60;
+            modal.style.display = 'flex';
+          }
+        };
+        wrapper.appendChild(editBtn);
+      }
+
       setupDevBtn('btn-dev-hitbox', 'showHitboxes', '#ff4757', 'Toggle Hitboxes');
       setupDevBtn('btn-dev-tile', 'showTile', '#ff4757', 'Toggle Tile Grids');
       setupDevBtn('btn-dev-chunk', 'showChunk', '#ff4757', 'Toggle Chunk Grids');
       setupDevBtn('btn-dev-dist-npc', 'showDistToNPC', '#f1c40f', 'Dist: Player to NPC');
       setupDevBtn('btn-dev-dist-mouse', 'showDistNpcToMouse', '#f1c40f', 'Dist: NPC to Mouse');
+      setupDevBtn('btn-dev-dist-player-mouse', 'showDistPlayerToMouse', '#f1c40f', 'Dist: Player to Mouse');
 
       const btnEditTarget = document.getElementById('btn-dev-edit-target');
       if (btnEditTarget) {
@@ -142,6 +206,37 @@ export class DevToolsUIManager {
           if (npcPanel.style.display === 'flex') this.renderNpcManager();
         });
       }
+    }
+
+    if (!document.getElementById('los-edit-modal')) {
+        const modal = document.createElement('div');
+        modal.id = 'los-edit-modal';
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000000;';
+        modal.innerHTML = `
+            <div style="background: #0b0e14; border: 2px solid #f1c40f; padding: 20px; border-radius: 8px; font-family: var(--font-mono); width: 250px;">
+                <h3 style="color: #f1c40f; margin-top: 0;">Edit Line of Sight</h3>
+                <div style="margin-bottom: 10px;">
+                    <label style="color: #fff; display: block; margin-bottom: 5px;">Distance (px)</label>
+                    <input type="number" id="edit-los-dist" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px;" value="400">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="color: #fff; display: block; margin-bottom: 5px;">FOV Angle (degrees)</label>
+                    <input type="number" id="edit-los-angle" style="width: 100%; background: #111; color: #fff; border: 1px solid #444; padding: 5px;" value="60">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-save-los" class="btn-primary" style="flex: 1;">Save</button>
+                    <button id="btn-close-los" class="btn-secondary" style="flex: 1;">Cancel</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        document.getElementById('btn-close-los').onclick = () => modal.style.display = 'none';
+        document.getElementById('btn-save-los').onclick = () => {
+            eng.devOptions.losDistance = parseInt(document.getElementById('edit-los-dist').value, 10) || 400;
+            eng.devOptions.losAngle = parseInt(document.getElementById('edit-los-angle').value, 10) || 60;
+            localStorage.setItem('b_dev_options', JSON.stringify(eng.devOptions));
+            modal.style.display = 'none';
+        };
     }
   }
 

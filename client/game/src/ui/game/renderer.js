@@ -12,16 +12,20 @@ export class Renderer {
 
   loadSprites() {
     const dirs = ['up', 'down', 'left', 'right'];
-    const states = ['idle', 'walk', 'run', 'dash', 'jump', 'attack1', 'attack2', 'hurt', 'death'];
+    const states = ['idle', 'walk', 'run', 'dash', 'jump', 'attack1', 'attack2', 'throw_attack1', 'hurt', 'death'];
     const path = 'assets/sprites/characters/standard';
+    const cb = '?v=voxel-builder-33';
     
     dirs.forEach(d => {
       states.forEach(s => {
         const img = new Image();
-        img.src = `${path}/${s}_${d}.png`;
+        img.src = `${path}/${s}_${d}.png${cb}`;
         this.engine.sprites[`${s}_${d}`] = img;
       });
     });
+
+    this.engine.sprites['proj_airplane'] = new Image();
+    this.engine.sprites['proj_airplane'].src = `assets/sprites/projectiles/paper-airplane-right.png${cb}`;
   }
 
   loadTiles() {
@@ -398,7 +402,7 @@ export class Renderer {
         isBlock: false,
         draw: () => {
           const pos = eng.getScreenPos(tx, ty, tz);
-          const t = performance.now() / 400; // Continuous rotation
+          const t = performance.now() / 400; 
           
           ctx.save();
           ctx.translate(pos.x, pos.y);
@@ -408,17 +412,15 @@ export class Renderer {
           ctx.strokeStyle = '#00d2ff';
           ctx.lineWidth = 2;
           
-          // Outer Rotating Dashed Circle
-          ctx.setLineDash([8, 8]);
+                    ctx.setLineDash([8, 8]);
           ctx.beginPath();
           ctx.arc(0, 0, 16, 0, Math.PI * 2);
           ctx.stroke();
           ctx.setLineDash([]);
           
-          // Inner Converging Pulse Lines
-          const pulse = (performance.now() % 800) / 800; // Loops from 0.0 to 1.0
+                    const pulse = (performance.now() % 800) / 800; 
           const dist = 24 - (pulse * 12);
-          ctx.globalAlpha = 1 - pulse; // Fades out as it collapses inward
+          ctx.globalAlpha = 1 - pulse; 
           for (let i = 0; i < 4; i++) {
             ctx.beginPath();
             ctx.moveTo(Math.cos(i * Math.PI / 2) * dist, Math.sin(i * Math.PI / 2) * dist);
@@ -586,10 +588,77 @@ export class Renderer {
       });
     });
 
+    eng.projectiles.forEach(proj => {
+      entitiesToDraw.push({
+        sortVal: getEntitySortVal(proj),
+        isBlock: false,
+        draw: () => {
+          const dx = proj.targetX - proj.startX;
+          const dy = proj.targetY - proj.startY;
+          const screenDx = dx - dy;
+          const screenDy = (dx + dy) * eng.tilt;
+          const screenAngle = Math.atan2(screenDy, screenDx);
+          
+          const bobOffset = Math.sin(proj.distTravelled * 0.04) * 8;
+          const pitchOffset = Math.cos(proj.distTravelled * 0.04) * 0.15;
+          
+                    const tz = eng.getTerrainZ(proj.x, proj.y);
+          const shadowPos = eng.getScreenPos(proj.x, proj.y, tz);
+          const heightDiff = Math.max(0, proj.z + bobOffset - tz);
+          const scale = Math.max(0.5, 1 - (heightDiff / 200));
+          
+          ctx.save();
+          ctx.translate(shadowPos.x, shadowPos.y);
+          ctx.rotate(screenAngle);
+          ctx.scale(scale, scale);
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 12, 5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          const pos = eng.getScreenPos(proj.x, proj.y, proj.z);
+          const img = eng.sprites['proj_airplane'];
+          ctx.save();
+          ctx.translate(pos.x, pos.y - bobOffset);
+          ctx.rotate(screenAngle + pitchOffset);
+          
+          if (img && img.complete && img.naturalWidth > 0) {
+            const frameCount = 4;
+            const frameW = img.naturalWidth / frameCount;
+            const frameH = img.naturalHeight;
+            const frameIndex = Math.floor(performance.now() / 80) % frameCount; 
+            ctx.drawImage(img, frameIndex * frameW, 0, frameW, frameH, -frameW, -frameH, frameW * 2, frameH * 2);
+          } else {
+            ctx.fillStyle = '#bdc3c7';
+            ctx.fillRect(-20, -4, 40, 8);
+          }
+          ctx.restore();
+        }
+      });
+    });
+
+    eng.particles.forEach(p => {
+      entitiesToDraw.push({
+        sortVal: getEntitySortVal(p) - 0.01,
+        isBlock: false,
+        draw: () => {
+          const pos = eng.getScreenPos(p.x, p.y, p.z);
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, p.size * Math.max(0.1, p.life / p.maxLife), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      });
+    });
+
     if (eng.clientSettings.showBaseplates) {
       const addBaseplate = (entity, color) => {
         entitiesToDraw.push({
-          sortVal: getEntitySortVal(entity) - 0.08, // Draw baseplate strictly behind the entity!
+          sortVal: getEntitySortVal(entity) - 0.08, 
           isBlock: false,
           draw: () => drawIsoCircle(entity.x, entity.y, entity.z || 0, 27.5, color, 0.2)
         });
@@ -632,7 +701,7 @@ export class Renderer {
       const addMeleeBaseplate = (entity) => {
         if (checkHit(entity.x, entity.y, entity.z)) {
           entitiesToDraw.push({
-            sortVal: getEntitySortVal(entity) - 0.09, // Draw behind the normal baseplates (-0.08)
+            sortVal: getEntitySortVal(entity) - 0.09, 
             isBlock: false,
             draw: () => drawIsoCircle(entity.x, entity.y, entity.z || 0, 35, '#f39c12', 0.4)
           });
@@ -641,6 +710,54 @@ export class Renderer {
 
       Object.values(eng.otherPlayers).forEach(op => { if (op.state !== 'death') addMeleeBaseplate(op); });
       eng.npcs.forEach(npc => { if (npc.state !== 'dead') addMeleeBaseplate(npc); });
+    }
+
+    if (eng.devOptions.showLoS) {
+      let facingAngle = 0;
+      if (eng.player.dir === 'up') facingAngle = -Math.PI * 0.75;
+      else if (eng.player.dir === 'down') facingAngle = Math.PI * 0.25;
+      else if (eng.player.dir === 'left') facingAngle = Math.PI * 0.75;
+      else if (eng.player.dir === 'right') facingAngle = -Math.PI * 0.25;
+
+      const fov = (eng.devOptions.losAngle !== undefined ? eng.devOptions.losAngle : 60) * Math.PI / 180;
+      const maxDist = eng.devOptions.losDistance !== undefined ? eng.devOptions.losDistance : 400; 
+      const pz = eng.player.z || 0;
+
+      const checkHitLoS = (tx, ty, tz) => {
+        tz = tz || 0;
+        if (Math.abs(pz - tz) > 48) return false; 
+        const dist = Math.hypot(tx - eng.player.x, ty - eng.player.y);
+        if (dist > maxDist) return false;
+        const angleToTarget = Math.atan2(ty - eng.player.y, tx - eng.player.x);
+        let angleDiff = angleToTarget - facingAngle;
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+        if (Math.abs(angleDiff) > fov) return false; 
+        const steps = Math.ceil(dist / 16);
+        for (let i = 1; i <= steps; i++) {
+          const sampleX = eng.player.x + ((tx - eng.player.x) * (i / steps));
+          const sampleY = eng.player.y + ((ty - eng.player.y) * (i / steps));
+          const terrainZ = eng.getTerrainZ(sampleX, sampleY);
+          if (terrainZ >= pz + 64 && terrainZ >= tz + 64) return false; 
+        }
+        return true;
+      };
+
+      const addLoSBaseplate = (entity) => {
+        if (checkHitLoS(entity.x, entity.y, entity.z)) {
+          entitiesToDraw.push({
+            sortVal: getEntitySortVal(entity) - 0.09, 
+            isBlock: false,
+            draw: () => {
+              drawIsoCircle(entity.x, entity.y, entity.z || 0, 35, '#f1c40f', 0.4); 
+              drawIsoCircle(entity.x, entity.y, entity.z || 0, 25, '#f1c40f', 0.1); 
+            }
+          });
+        }
+      };
+
+      Object.values(eng.otherPlayers).forEach(op => { if (op.state !== 'death') addLoSBaseplate(op); });
+      eng.npcs.forEach(npc => { if (npc.state !== 'dead') addLoSBaseplate(npc); });
     }
 
     entitiesToDraw.sort((a, b) => {
@@ -659,14 +776,16 @@ export class Renderer {
       
       ctx.save();
       ctx.globalAlpha = Math.max(0, ft.life);
-      ctx.font = 'bold 24px monospace';
+      ctx.font = 'bold 28px monospace';
       ctx.textAlign = 'center';
       
       ctx.strokeStyle = '#000';
       ctx.lineWidth = 4;
-      ctx.strokeText(ft.text, pos.x, pos.y - ft.offsetY);
+      const drawX = pos.x + (ft.rndX || 0);
+      const drawY = pos.y - ft.offsetY + (ft.rndY || 0);
+      ctx.strokeText(ft.text, drawX, drawY);
       ctx.fillStyle = ft.color;
-      ctx.fillText(ft.text, pos.x, pos.y - ft.offsetY);
+      ctx.fillText(ft.text, drawX, drawY);
       ctx.restore();
     });
 
@@ -740,6 +859,57 @@ export class Renderer {
       ctx.globalAlpha = 0.2;
       ctx.fillStyle = '#e74c3c';
       ctx.fill();
+      ctx.restore();
+    }
+
+    if (eng.devOptions.showLoS) {
+      let facingAngle = 0;
+      if (eng.player.dir === 'up') facingAngle = -Math.PI * 0.75;
+      else if (eng.player.dir === 'down') facingAngle = Math.PI * 0.25;
+      else if (eng.player.dir === 'left') facingAngle = Math.PI * 0.75;
+      else if (eng.player.dir === 'right') facingAngle = -Math.PI * 0.25;
+
+      const fov = (eng.devOptions.losAngle !== undefined ? eng.devOptions.losAngle : 60) * Math.PI / 180;
+      const maxDist = eng.devOptions.losDistance !== undefined ? eng.devOptions.losDistance : 400; 
+      const rayCount = 120; 
+      const pz = eng.player.z || 0;
+      
+      const pos = eng.getScreenPos(eng.player.x, eng.player.y, pz);
+      
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+      
+      for (let i = 0; i <= rayCount; i++) {
+        const angle = facingAngle - fov + (i / rayCount) * (fov * 2);
+        let hitX = eng.player.x;
+        let hitY = eng.player.y;
+        
+        const dx = Math.cos(angle);
+        const dy = Math.sin(angle);
+        const stepSize = 8;
+        
+        for (let d = 0; d <= maxDist; d += stepSize) {
+           const sampleX = eng.player.x + dx * d;
+           const sampleY = eng.player.y + dy * d;
+           const tz = eng.getTerrainZ(sampleX, sampleY);
+           
+           if (tz >= pz + 32) break; 
+           
+           hitX = sampleX;
+           hitY = sampleY;
+        }
+        
+        const hitPos = eng.getScreenPos(hitX, hitY, pz);
+        ctx.lineTo(hitPos.x, hitPos.y);
+      }
+      
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255, 240, 150, 0.2)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 240, 150, 0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -858,6 +1028,41 @@ export class Renderer {
         if (ray.z > 0) drawMouseDot(0, true);
         drawMouseDot(ray.z * 32, false);
       }
+    }
+
+    if (eng.devOptions.showDistPlayerToMouse) {
+      const p = eng.player;
+      const pPos = eng.getScreenPos(p.x, p.y, p.z || 0);
+      const ray = eng.getIsoRaycast(eng.input.mousePos.x, eng.input.mousePos.y);
+      const mouseZ = ray.clickedZ > 0 ? ray.clickedZ * 32 : ray.z * 32;
+      const mPos = eng.getScreenPos(ray.exactX, ray.exactY, mouseZ);
+
+      const dx = ray.exactX - p.x;
+      const dy = ray.exactY - p.y;
+      const dz = mouseZ - (p.z || 0);
+      const dist3D = Math.hypot(Math.hypot(dx, dy), dz);
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+      ctx.save();
+      ctx.strokeStyle = '#2ecc71';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(pPos.x, pPos.y);
+      ctx.lineTo(mPos.x, mPos.y);
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#000';
+      const midX = (pPos.x + mPos.x) / 2;
+      const midY = (pPos.y + mPos.y) / 2;
+      const text = `Dist: ${Math.round(dist3D)} | XYZ: ${Math.round(dx)}, ${Math.round(dy)}, ${Math.round(dz)} | Ang: ${Math.round(angle)}°`;
+      ctx.strokeText(text, midX, midY - 10);
+      ctx.fillText(text, midX, midY - 10);
+      ctx.restore();
     }
 
     if ((eng.devOptions.showDistToNPC || eng.devOptions.showDistNpcToMouse) && eng.selectedTarget && eng.selectedTarget.type === 'npc') {

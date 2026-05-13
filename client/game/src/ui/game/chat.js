@@ -1,4 +1,4 @@
-import { CHAT_CONFIG } from './chat-config.js';
+import { CHAT_CONFIG } from './chat-config.js?v=voxel-builder-33';
 
 export class ChatManager {
   constructor(engine) {
@@ -58,7 +58,7 @@ export class ChatManager {
             this.tabIndex = 0;
 
             if (val.startsWith('/') && !val.includes(' ')) {
-              const cmds = ['/teleport', '/tp', '/speed', '/stuck', '/noclip', '/editmode', '/reload', '/dev', '/npc', '/heal'];
+              const cmds = ['/teleport', '/tp', '/speed', '/stuck', '/noclip', '/editmode', '/reload', '/dev', '/npc', '/heal', '/pm'];
               this.tabMatches = cmds.filter(c => c.startsWith(val.toLowerCase()));
             } else if (val.toLowerCase().startsWith('/tp ') || val.toLowerCase().startsWith('/teleport ')) {
               const spaceIdx = val.indexOf(' ');
@@ -244,6 +244,13 @@ export class ChatManager {
       } else {
         this.addMessage('system', 'System', `Usage: /npc create <Name> <Health>`);
       }
+    } else if (cmd === '/pm' || cmd === '/whisper' || cmd === '/w') {
+      const targetName = args[1];
+      const pmMsg = args.slice(2).join(' ');
+      if (!targetName || !pmMsg) return this.addMessage('system', 'System', 'Usage: /pm <name> <message>');
+      
+      this.addMessage('local', `To [${targetName}]`, pmMsg);
+      eng.socket.emit('chat_message', { type: 'pm', target: targetName, text: pmMsg });
     } else if (cmd.startsWith('/')) {
       const emoteText = `*${msg.substring(1)}*`;
       this.addMessage('local', eng.playerData.name, emoteText);

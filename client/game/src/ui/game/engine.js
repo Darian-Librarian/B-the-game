@@ -1,12 +1,12 @@
-import { ChatManager } from './chat.js?v=ui-refactor';
-import { NetworkManager } from './network.js?v=ui-refactor';
-import { UIManager } from './ui.js?v=ui-refactor';
-import { InputManager } from './input.js?v=ui-refactor';
-import { MinimapManager } from './minimap.js?v=ui-refactor';
-import { Renderer } from './renderer.js?v=ui-refactor';
-import { CombatManager } from './combat.js?v=ui-refactor';
-import { EntityManager } from './entity_manager.js?v=ui-refactor';
-import { MapOverlayManager } from './map_overlay.js?v=ui-refactor';
+import { ChatManager } from './chat.js?v=voxel-builder-33';
+import { NetworkManager } from './network.js?v=voxel-builder-33';
+import { UIManager } from './ui.js?v=voxel-builder-33';
+import { InputManager } from './input.js?v=voxel-builder-33';
+import { MinimapManager } from './minimap.js?v=voxel-builder-33';
+import { Renderer } from './renderer.js?v=voxel-builder-33';
+import { CombatManager } from './combat.js?v=voxel-builder-33';
+import { EntityManager } from './entity_manager.js?v=voxel-builder-33';
+import { MapOverlayManager } from './map_overlay.js?v=voxel-builder-33';
 
 export class GameEngine {
   constructor(canvasId, playerData, accountUuid) {
@@ -15,9 +15,24 @@ export class GameEngine {
     this.playerData = playerData;
     this.accountUuid = accountUuid;
 
-    // Resize canvas to fill the screen
-    this.canvas.width = window.innerWidth;
+        this.canvas.width = window.innerWidth;
     this.canvas.height = window.innerHeight;
+
+            if (!this.playerData.powersets) this.playerData.powersets = [];
+    if (!this.playerData.powersets.includes('Inherited') && !this.playerData.powersets.includes('inherited')) {
+      this.playerData.powersets.push('Inherited');
+    }
+    if (!this.playerData.powers) this.playerData.powers = [];
+    if (!this.playerData.powers.includes('Brawl')) {
+      this.playerData.powers.push('Brawl');
+    }
+    const knifeIdx = this.playerData.powers.indexOf('Throw Knife');
+    if (knifeIdx !== -1) {
+      this.playerData.powers[knifeIdx] = 'Throw Airplane';
+    }
+    if (!this.playerData.powers.includes('Throw Airplane')) {
+      this.playerData.powers.push('Throw Airplane');
+    }
 
     const savedSettingsStr = localStorage.getItem('b_client_settings');
     const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true };
@@ -61,7 +76,7 @@ export class GameEngine {
       state: 'idle',
       frame: 0,
       frameTimer: 0,
-      frameInterval: 120, // ms per frame
+      frameInterval: 120,
       actionTimer: 0,
       wasPressingShift: false,
       wasPressingSpace: false,
@@ -84,9 +99,10 @@ export class GameEngine {
     };
     
     this.npcs = [];
+    this.projectiles = [];
+    this.particles = [];
 
-    // --- Input & Event Listeners ---
-    this.input = new InputManager(this);
+        this.input = new InputManager(this);
     this.keys = this.input.keys;
     this.mousePos = this.input.mousePos;
 
@@ -95,18 +111,16 @@ export class GameEngine {
       this.canvas.height = window.innerHeight;
     };
 
-    // Attach isolated listeners
-    window.addEventListener('resize', this.handleResize);
+        window.addEventListener('resize', this.handleResize);
 
-    // --- Developer Tools Setup ---
+        const defaultDev = { showPlayerPos: false, showPlayerTile: false, showEntityPos: false, showEntityTile: false, showMousePos: false, showMelee: false, showLoS: false, showHitboxes: false, showTile: false, showChunk: false, showDistToNPC: false, showDistNpcToMouse: false, showDistPlayerToMouse: false, losDistance: 400, losAngle: 60 };
     const savedDev = localStorage.getItem('b_dev_options');
-    this.devOptions = savedDev ? JSON.parse(savedDev) : { showPlayerPos: false, showPlayerTile: false, showEntityPos: false, showEntityTile: false, showMousePos: false, showMelee: false, showHitboxes: false, showTile: false, showChunk: false, showDistToNPC: false, showDistNpcToMouse: false };
+    this.devOptions = savedDev ? Object.assign({}, defaultDev, JSON.parse(savedDev)) : defaultDev;
     this.editMode = false;
 
     this.floatingTexts = [];
 
-    // --- Multiplayer Networking ---
-    this.otherPlayers = {};
+        this.otherPlayers = {};
 
     this.network = new NetworkManager(this);
     this.socket = this.network.socket;
@@ -130,7 +144,8 @@ export class GameEngine {
       hp: this.player.hp,
       maxHp: this.player.maxHp,
       state: this.player.state,
-      dir: this.player.dir
+      dir: this.player.dir,
+      level: this.playerData.level || 1
     });
 
     this.syncTimer = setInterval(() => {
@@ -262,8 +277,13 @@ export class GameEngine {
     if (this.chatDropdownListener) document.removeEventListener('click', this.chatDropdownListener);
   }
 
-  // --- Core Game Math & Physics ---
-  getTerrainZ(x, y) {
+  playSound(path, volume = 1.0) {
+    const audio = new Audio(path);
+    audio.volume = volume;
+    audio.play().catch(e => console.warn('Audio play failed:', e));
+  }
+
+    getTerrainZ(x, y) {
     const gx = Math.round(x / 32);
     const gy = Math.round(y / 32);
     const tile = this.mapData[`${gx},${gy}`];
@@ -330,7 +350,43 @@ export class GameEngine {
       if (ft.life <= 0) this.floatingTexts.splice(i, 1);
     }
 
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      let p = this.particles[i];
+      p.life -= dt / 1000;
+      if (p.life <= 0) this.particles.splice(i, 1);
+    }
+
     this.entityManager.update(dt);
+
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      let proj = this.projectiles[i];
+      let distToMove = proj.speed * (dt / 1000);
+      proj.distTravelled += distToMove;
+      if (proj.distTravelled >= proj.maxDist) {
+        if (proj.onHit) proj.onHit();
+        this.projectiles.splice(i, 1);
+      } else {
+        let ratio = proj.distTravelled / proj.maxDist;
+        proj.x = proj.startX + (proj.targetX - proj.startX) * ratio;
+        proj.y = proj.startY + (proj.targetY - proj.startY) * ratio;
+        proj.z = proj.startZ + (proj.targetZ - proj.startZ) * ratio;
+
+        if (proj.trail) {
+          const particleCount = Math.random() > 0.5 ? 2 : 1;
+          for (let pIdx = 0; pIdx < particleCount; pIdx++) {
+            this.particles.push({
+              x: proj.x + (Math.random() - 0.5) * 8,
+              y: proj.y + (Math.random() - 0.5) * 8,
+              z: proj.z + (Math.random() - 0.5) * 8,
+              life: 0.3 + Math.random() * 0.2,
+              maxLife: 0.5,
+              color: proj.trailColor || 'rgba(255, 255, 255, 0.8)',
+              size: proj.trailSize || 2
+            });
+          }
+        }
+      }
+    }
 
     if (
       Math.abs(this.player.x - this.lastEmit.x) > 1 || 

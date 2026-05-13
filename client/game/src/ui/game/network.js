@@ -21,21 +21,34 @@ export class NetworkManager {
   setupListeners() {
     const eng = this.engine;
 
+    this.socket.on('connect', () => {
+      console.log(`%c[Network] Securely connected to game server! (Session ID: ${this.socket.id})`, 'color: #2ecc71; font-weight: bold; font-size: 1.1em;');
+      if (eng.chat) eng.chat.addMessage('system', 'System', 'Network connection established.');
+    });
+
+    this.socket.on('disconnect', () => {
+      console.log(`%c[Network] Connection to the server was lost!`, 'color: #ff4757; font-weight: bold; font-size: 1.1em;');
+      if (eng.chat) eng.chat.addMessage('system', 'System', 'Lost connection to the server.');
+    });
+
     this.socket.on('current_players', (players) => {
       for (let id in players) {
         if (id !== this.socket.id) eng.otherPlayers[id] = players[id];
       }
+      if (eng.ui && eng.ui.playerList) eng.ui.playerList.updateList();
     });
 
     this.socket.on('player_joined', (player) => {
       eng.otherPlayers[player.id] = player;
       eng.chat.addMessage('system', 'System', `${player.name} connected.`);
+      if (eng.ui && eng.ui.playerList) eng.ui.playerList.updateList();
     });
 
     this.socket.on('player_left', (id) => {
       if (eng.otherPlayers[id]) {
         eng.chat.addMessage('system', 'System', `${eng.otherPlayers[id].name} disconnected.`);
         delete eng.otherPlayers[id];
+        if (eng.ui && eng.ui.playerList) eng.ui.playerList.updateList();
       }
     });
 
@@ -46,6 +59,7 @@ export class NetworkManager {
         eng.otherPlayers[player.id].state = player.state;
         eng.otherPlayers[player.id].dir = player.dir;
         if (player.hp !== undefined) eng.otherPlayers[player.id].hp = player.hp;
+        if (player.level !== undefined) eng.otherPlayers[player.id].level = player.level;
       }
     });
 
@@ -65,7 +79,6 @@ export class NetworkManager {
 
     this.socket.on('npc_spawned', (npc) => {
       eng.npcs.push({ ...npc, hurtTimer: 0, frame: 0, frameTimer: 0 });
-      eng.chat.addMessage('system', 'System', `${npc.name} has been spawned by the server!`);
     });
 
     this.socket.on('npc_took_damage', (data) => {
@@ -74,7 +87,10 @@ export class NetworkManager {
         npc.hp = data.hp;
         if (data.damage > 0) {
           npc.hurtTimer = 300;
-          eng.floatingTexts.push({ x: npc.x, y: npc.y, offsetY: 204, text: data.damage.toString(), life: 1.0, color: '#ff4757' });
+          const isCrit = data.isCrit || (data.damage >= 6 && data.damage <= 10) || data.damage >= 300;
+          const color = isCrit ? '#f39c12' : '#ff4757';
+          const prefix = isCrit ? 'Crit! ' : '';
+          eng.floatingTexts.push({ x: npc.x, y: npc.y, offsetY: 204, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: prefix + data.damage.toString(), life: 1.0, color: color });
         }
         if (data.isDead) { npc.state = 'dead'; npc.frame = 0; }
         eng.ui.update(); 
@@ -89,7 +105,6 @@ export class NetworkManager {
       const npc = eng.npcs.find(n => n.uuid === uuid);
       if (npc) {
         npc.state = 'idle'; npc.hp = npc.maxHp; npc.frame = 0;
-        eng.chat.addMessage('system', 'System', `${npc.name} has respawned!`);
       }
     });
 
@@ -146,7 +161,10 @@ export class NetworkManager {
         eng.player.hp = data.hp; eng.lastEmit.hp = data.hp;
         if (data.damage > 0) {
           eng.player.hurtTimer = 300;
-          eng.floatingTexts.push({ x: eng.player.x, y: eng.player.y, offsetY: 204, text: data.damage.toString(), life: 1.0, color: '#ff4757' });
+          const isCrit = data.isCrit || (data.damage >= 6 && data.damage <= 10) || data.damage >= 300;
+          const color = isCrit ? '#f39c12' : '#ff4757';
+          const prefix = isCrit ? 'Crit! ' : '';
+          eng.floatingTexts.push({ x: eng.player.x, y: eng.player.y, offsetY: 204, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: prefix + data.damage.toString(), life: 1.0, color: color });
           eng.chat.addMessage('combat', 'Combat', `${data.attackerName} hit you for ${data.damage} damage!`);
           eng.ui.update();
         }
@@ -159,7 +177,10 @@ export class NetworkManager {
         op.hp = data.hp;
         if (data.damage > 0) {
           op.hurtTimer = 300;
-          eng.floatingTexts.push({ x: op.x, y: op.y, offsetY: 204, text: data.damage.toString(), life: 1.0, color: '#ff4757' });
+          const isCrit = data.isCrit || (data.damage >= 6 && data.damage <= 10) || data.damage >= 300;
+          const color = isCrit ? '#f39c12' : '#ff4757';
+          const prefix = isCrit ? 'Crit! ' : '';
+          eng.floatingTexts.push({ x: op.x, y: op.y, offsetY: 204, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: prefix + data.damage.toString(), life: 1.0, color: color });
         }
         if (data.isDead) { op.state = 'death'; op.frame = 0; }
         eng.ui.update();

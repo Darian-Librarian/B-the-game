@@ -59,6 +59,7 @@ export class PowerbarUIManager {
             const powerName = powers[i];
             if (powerName) {
                 if (powerName === 'Brawl') this.engine.combat?.triggerAttack();
+                else if (powerName === 'Throw Airplane') this.engine.combat?.triggerThrowAirplane();
             }
         };
 
