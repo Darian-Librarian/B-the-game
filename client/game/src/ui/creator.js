@@ -1,8 +1,8 @@
 import { AuthLogic } from './creator-logic.js';
 import { initSelection } from './selection.js';
-import { AuthUIManager } from './auth-ui.js?v=voxel-builder-25';
-import { CharacterCreatorUIManager } from './character-creator-ui.js?v=voxel-builder-25';
-import { InGameMenuUIManager } from './in-game-menu-ui.js?v=voxel-builder-25';
+import { AuthUIManager } from './auth-ui.js?v=new-engine-01';
+import { CharacterCreatorUIManager } from './character-creator-ui.js?v=new-engine-01';
+import { InGameMenuUIManager } from './in-game-menu-ui.js?v=new-engine-01';
 
 const applyUIScaling = () => {
   const scalers = document.querySelectorAll('.screen-scaler');

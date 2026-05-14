@@ -1,12 +1,12 @@
-import { ChatManager } from './chat.js?v=voxel-builder-33';
-import { NetworkManager } from './network.js?v=voxel-builder-33';
-import { UIManager } from './ui.js?v=voxel-builder-33';
-import { InputManager } from './input.js?v=voxel-builder-33';
-import { MinimapManager } from './minimap.js?v=voxel-builder-33';
-import { Renderer } from './renderer.js?v=voxel-builder-33';
-import { CombatManager } from './combat.js?v=voxel-builder-33';
-import { EntityManager } from './entity_manager.js?v=voxel-builder-33';
-import { MapOverlayManager } from './map_overlay.js?v=voxel-builder-33';
+import { ChatManager } from './chat.js?v=new-engine-01';
+import { NetworkManager } from './network.js?v=new-engine-01';
+import { UIManager } from './ui.js?v=new-engine-01';
+import { InputManager } from './input.js?v=new-engine-01';
+import { MinimapManager } from './minimap.js?v=new-engine-01';
+import { Renderer } from './renderer.js?v=new-engine-01';
+import { CombatManager } from './combat.js?v=new-engine-01';
+import { EntityManager } from './entity_manager.js?v=new-engine-01';
+import { MapOverlayManager } from './map_overlay.js?v=new-engine-01';
 
 export class GameEngine {
   constructor(canvasId, playerData, accountUuid) {

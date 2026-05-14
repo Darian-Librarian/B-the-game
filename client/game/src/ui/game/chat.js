@@ -1,4 +1,4 @@
-import { CHAT_CONFIG } from './chat-config.js?v=voxel-builder-33';
+import { CHAT_CONFIG } from './chat-config.js?v=new-engine-01';
 
 export class ChatManager {
   constructor(engine) {

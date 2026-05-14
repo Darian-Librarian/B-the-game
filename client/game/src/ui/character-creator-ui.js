@@ -132,6 +132,12 @@ export class CharacterCreatorUIManager {
           playerPreviews.forEach(p => {
             if (p) p.style.backgroundImage = `url('assets/sprites/characters/${affinity.spriteDir}/idle_down.png')`;
           });
+          
+          const activeArchItem = document.querySelector('#archetype-list .active');
+          if (activeArchItem && typeof archetypesData !== 'undefined') {
+            const arch = archetypesData.find(a => a.id === activeArchItem.dataset.id);
+            if (arch) renderPowersetColumns(arch);
+          }
         });
 
         affinityList.appendChild(item);
@@ -453,6 +459,8 @@ export class CharacterCreatorUIManager {
             
             if (ps.minIntegrity !== undefined && ps.maxIntegrity !== undefined) {
               reqCheck = (v) => v >= ps.minIntegrity && v <= ps.maxIntegrity;
+            } else if (ps.requiresAffinity) {
+              reqCheck = (v, heritageClass, affinity) => affinity === ps.requiresAffinity;
             } else if (ps.requiresHeritage) {
               reqCheck = (v, heritageClass) => heritageClass === ps.requiresHeritage;
             } else {
@@ -464,6 +472,10 @@ export class CharacterCreatorUIManager {
                 reqCheck = (v) => v < 0;
               } else if (reqStr.includes('mutated exclusive') || reqStr.includes('mutation') || reqStr.includes('mutated')) {
                 reqCheck = (v) => v > 0;
+              } else if (reqStr.includes('fae exclusive') || reqStr.includes('fae only')) {
+                reqCheck = (v, heritageClass, affinity) => affinity === 'fae';
+              } else if (reqStr.includes('gnome exclusive') || reqStr.includes('gnome only')) {
+                reqCheck = (v, heritageClass, affinity) => affinity === 'gnome';
               } else if (reqStr.includes('hybrid') || reqStr.includes('mixed')) {
                 reqCheck = (v, heritageClass) => heritageClass === 'hybrid';
               } else if (reqStr !== '') {
@@ -507,6 +519,8 @@ export class CharacterCreatorUIManager {
       const integrityVal = parseInt(document.getElementById('integrity-scrollbar').value, 10);
       const activeClassItem = document.querySelector('#class-list .active');
       const activeClass = activeClassItem ? activeClassItem.dataset.class : 'standard';
+      const activeAffinityItem = document.querySelector('#affinity-list .active');
+      const activeAffinity = activeAffinityItem ? activeAffinityItem.dataset.id : null;
       
       const match = label.match(/\(([^)]+)\)/);
       
@@ -521,7 +535,7 @@ export class CharacterCreatorUIManager {
         if (combined.length === 0) combined = Object.values(rawPowersetsData).flat();
       }
       
-      return combined.filter(ps => ps.check ? ps.check(integrityVal, activeClass) : true);
+      return combined.filter(ps => ps.check ? ps.check(integrityVal, activeClass, activeAffinity) : true);
     };
 
     const renderPowersetColumns = (arch) => {

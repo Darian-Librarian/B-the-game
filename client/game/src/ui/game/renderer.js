@@ -14,7 +14,7 @@ export class Renderer {
     const dirs = ['up', 'down', 'left', 'right'];
     const states = ['idle', 'walk', 'run', 'dash', 'jump', 'attack1', 'attack2', 'throw_attack1', 'hurt', 'death'];
     const path = 'assets/sprites/characters/standard';
-    const cb = '?v=voxel-builder-33';
+    const cb = '?v=new-engine-01';
     
     dirs.forEach(d => {
       states.forEach(s => {

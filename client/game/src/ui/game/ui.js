@@ -1,8 +1,8 @@
-import { DevToolsUIManager } from './dev-tools-ui.js?v=voxel-builder-33';
-import { InventoryUIManager } from './inventory-ui.js?v=voxel-builder-33';
-import { PowerbarUIManager } from './powerbar-ui.js?v=voxel-builder-33';
-import { TrainerUIManager } from './trainer-ui.js?v=voxel-builder-33';
-import { PlayerListUIManager } from './player-list-ui.js?v=voxel-builder-33';
+import { DevToolsUIManager } from './dev-tools-ui.js?v=new-engine-01';
+import { InventoryUIManager } from './inventory-ui.js?v=new-engine-01';
+import { PowerbarUIManager } from './powerbar-ui.js?v=new-engine-01';
+import { TrainerUIManager } from './trainer-ui.js?v=new-engine-01';
+import { PlayerListUIManager } from './player-list-ui.js?v=new-engine-01';
 
 export class UIManager {
   constructor(engine) {
