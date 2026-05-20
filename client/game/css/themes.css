@@ -1,0 +1,30 @@
+:root {
+  /* Core Colors */
+  --bg: #0b0e14;
+  --bg-dark: #05070a;
+  --accent: #74b9ff;
+  --accent-neon: #00d2ff;
+  --text-primary: #e1e1e1;
+  --text-dim: #7f8c8d;
+  
+  /* Rainbow Accents */
+  --rainbow-red: #ff7675;
+  --rainbow-orange: #fab1a0;
+  --rainbow-yellow: #ffeaa7;
+  --rainbow-green: #55efc4;
+  --rainbow-blue: #81ecec;
+  --rainbow-purple: #a29bfe;
+
+  /* Fonts */
+  --font-header: 'Impact', sans-serif;
+  --font-mono: 'Consolas', 'Courier New', monospace;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  overflow: hidden;
+}

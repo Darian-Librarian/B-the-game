@@ -1,4 +1,4 @@
-import { CHAT_CONFIG } from './chat-config.js?v=new-engine-01';
+import { CHAT_CONFIG } from './chat-config.js?v=new-engine-240';
 
 export class ChatManager {
   constructor(engine) {
@@ -47,6 +47,16 @@ export class ChatManager {
     }
 
     if (this.input) {
+      this.input.addEventListener('focus', () => {
+        if (this.engine.player) this.engine.player.isTyping = true;
+        if (this.engine.network) this.engine.network.sendPlayerTyping(true);
+      });
+      
+      this.input.addEventListener('blur', () => {
+        if (this.engine.player) this.engine.player.isTyping = false;
+        if (this.engine.network) this.engine.network.sendPlayerTyping(false);
+      });
+
       this.input.onkeydown = (e) => {
         if (e.key === 'Tab') {
           e.preventDefault();
@@ -58,9 +68,10 @@ export class ChatManager {
             this.tabIndex = 0;
 
             if (val.startsWith('/') && !val.includes(' ')) {
-              const cmds = ['/teleport', '/tp', '/speed', '/stuck', '/noclip', '/editmode', '/reload', '/dev', '/npc', '/heal', '/pm'];
+              const cmds = ['/teleport', '/tp', '/tpo', '/teleport-other', '/speed', '/stuck', '/noclip', '/editmode', '/reload', '/dev', '/npc', '/players', '/heal', '/pm'];
               this.tabMatches = cmds.filter(c => c.startsWith(val.toLowerCase()));
             } else if (val.toLowerCase().startsWith('/tp ') || val.toLowerCase().startsWith('/teleport ')) {
+            } else if (val.toLowerCase().startsWith('/tpo ') || val.toLowerCase().startsWith('/teleport-other ') || val.toLowerCase().startsWith('/pm ') || val.toLowerCase().startsWith('/w ') || val.toLowerCase().startsWith('/whisper ')) {
               const spaceIdx = val.indexOf(' ');
               const prefix = val.substring(spaceIdx + 1).toLowerCase();
               const cmdPrefix = val.substring(0, spaceIdx + 1);
@@ -89,7 +100,7 @@ export class ChatManager {
               this.processCommand(msg);
             } else {
               this.addMessage(this.sendChannel, this.engine.playerData.name, msg);
-              this.engine.socket.emit('chat_message', { type: this.sendChannel, text: msg }); 
+              this.engine.network.sendChatMessage({ type: this.sendChannel, text: msg }); 
               if (!this.engine.player.chatBubbles) this.engine.player.chatBubbles = [];
               this.engine.player.chatBubbles.push({ text: msg, timer: 4000, opacity: 0 }); 
             }
@@ -160,7 +171,7 @@ export class ChatManager {
     const eng = this.engine;
     const pName = eng.playerData.name ? eng.playerData.name.toLowerCase() : '';
 
-    eng.socket.emit('log_command', { command: msg });
+    eng.network.sendLogCommand(msg);
 
     const checkPerm = (commandName) => {
       const perms = eng.permissions || {};
@@ -173,11 +184,25 @@ export class ChatManager {
     if (cmd === '/tp' || cmd === '/teleport') {
       if (!checkPerm('tp')) return this.addMessage('system', 'System', 'You do not have permission to use /tp.');
       if (args.length >= 3) {
-        eng.player.x = parseFloat(args[1]);
-        eng.player.y = parseFloat(args[2]);
-        eng.camera.x = eng.player.x;
-        eng.camera.y = eng.player.y;
-        this.addMessage('system', 'System', `Teleported to ${eng.player.x}, ${eng.player.y}`);
+        const x = parseFloat(args[1]);
+        const y = parseFloat(args[2]);
+        const z = args.length >= 4 ? parseFloat(args[3]) : undefined;
+        eng.network.sendAdminTeleport({ targetName: eng.playerData.name, x, y, z });
+        this.addMessage('system', 'System', `Teleport request sent to server.`);
+      } else {
+        this.addMessage('system', 'System', 'Usage: /tp <x> <y> [z]');
+      }
+    } else if (cmd === '/tpo' || cmd === '/teleport-other') {
+      if (!checkPerm('tp')) return this.addMessage('system', 'System', 'You do not have permission to use /tpo.');
+      if (args.length >= 4) {
+        const targetName = args[1];
+        const x = parseFloat(args[2]);
+        const y = parseFloat(args[3]);
+        const z = args.length >= 5 ? parseFloat(args[4]) : undefined;
+        eng.network.sendAdminTeleport({ targetName, x, y, z });
+        this.addMessage('system', 'System', `Requested teleport for ${targetName}.`);
+      } else {
+        this.addMessage('system', 'System', 'Usage: /tpo <player> <x> <y> [z]');
       }
     } else if (cmd === '/speed') {
       if (!checkPerm('speed')) return this.addMessage('system', 'System', 'You do not have permission to use /speed.');
@@ -202,7 +227,24 @@ export class ChatManager {
       eng.editMode = !eng.editMode;
       const bPanel = document.getElementById('builder-panel');
       const bHotbar = document.getElementById('builder-hotbar');
-      if (bPanel) bPanel.style.display = eng.editMode ? 'flex' : 'none';
+      if (bPanel) {
+        bPanel.style.display = eng.editMode ? 'flex' : 'none';
+        if (eng.editMode) {
+          if (eng.clientSettings.lockBuilderPanel) {
+            const savedPos = localStorage.getItem('b_builder_pos');
+            if (savedPos) {
+              try {
+                const pos = JSON.parse(savedPos);
+                bPanel.style.left = pos.left; bPanel.style.top = pos.top; bPanel.style.right = 'auto';
+              } catch(e) {}
+            }
+          } else {
+            bPanel.style.top = '70px';
+            bPanel.style.left = 'auto';
+            bPanel.style.right = eng.clientSettings.showMinimap ? '290px' : '30px';
+          }
+        }
+      }
       if (bHotbar) bHotbar.style.display = eng.editMode ? 'flex' : 'none';
       if (!eng.editMode) {
         eng.selectedTiles = [];
@@ -218,15 +260,33 @@ export class ChatManager {
       const oldEditMode = eng.editMode;
       eng.stop(); 
       import(`./engine.js?v=${Date.now()}`).then(module => {
-        window.currentGameEngine = new module.GameEngine(eng.canvas.id, eng.playerData);
+        window.currentGameEngine = new module.GameEngine(eng.canvas.id, eng.playerData, eng.accountUuid);
         if (oldEditMode) {
           window.currentGameEngine.editMode = true;
           const bPanel = document.getElementById('builder-panel');
           const bHotbar = document.getElementById('builder-hotbar');
-          if (bPanel) bPanel.style.display = 'flex';
+          if (bPanel) {
+            bPanel.style.display = 'flex';
+            if (window.currentGameEngine.clientSettings.lockBuilderPanel) {
+              const savedPos = localStorage.getItem('b_builder_pos');
+              if (savedPos) {
+                try {
+                  const pos = JSON.parse(savedPos);
+                  bPanel.style.left = pos.left; bPanel.style.top = pos.top; bPanel.style.right = 'auto';
+                } catch(e) {}
+              }
+            } else {
+              bPanel.style.top = '70px';
+              bPanel.style.left = 'auto';
+              bPanel.style.right = window.currentGameEngine.clientSettings.showMinimap ? '290px' : '30px';
+            }
+          }
           if (bHotbar) bHotbar.style.display = 'flex';
         }
       });
+    } else if (cmd === '/forceupdate') {
+      if (!checkPerm('reload')) return this.addMessage('system', 'System', 'You do not have permission to use /forceupdate.');
+      this.addMessage('system', 'System', 'Pushing update command to server...');
     } else if (cmd === '/dev') {
       if (!checkPerm('dev')) return this.addMessage('system', 'System', 'You do not have permission to use /dev.');
       const devPanel = document.getElementById('dev-panel');
@@ -240,21 +300,26 @@ export class ChatManager {
         const sy = eng.mousePos.y - (eng.canvas.height / 2) - (eng.camera.z || 0);
         const A = sx + eng.camera.x - eng.camera.y;
         const B = (sy / eng.tilt) + eng.camera.x + eng.camera.y; 
-        eng.socket.emit('create_npc', { name: npcName, maxHp: health, x: (A + B) / 2, y: (B - A) / 2 });
+        eng.network.sendCreateNpc({ name: npcName, maxHp: health, x: (A + B) / 2, y: (B - A) / 2 });
       } else {
         this.addMessage('system', 'System', `Usage: /npc create <Name> <Health>`);
       }
+    } else if (cmd === '/players') {
+      if (!checkPerm('playermanager')) return this.addMessage('system', 'System', 'You do not have permission to use this command.');
+      const pnl = document.getElementById('player-manager-panel');
+      if (pnl) pnl.style.display = pnl.style.display === 'none' ? 'flex' : 'none';
+      if (pnl.style.display === 'flex') eng.ui.devTools.renderPlayerManager();
     } else if (cmd === '/pm' || cmd === '/whisper' || cmd === '/w') {
       const targetName = args[1];
       const pmMsg = args.slice(2).join(' ');
       if (!targetName || !pmMsg) return this.addMessage('system', 'System', 'Usage: /pm <name> <message>');
       
       this.addMessage('local', `To [${targetName}]`, pmMsg);
-      eng.socket.emit('chat_message', { type: 'pm', target: targetName, text: pmMsg });
+      eng.network.sendChatMessage({ type: 'pm', target: targetName, text: pmMsg });
     } else if (cmd.startsWith('/')) {
       const emoteText = `*${msg.substring(1)}*`;
       this.addMessage('local', eng.playerData.name, emoteText);
-      eng.socket.emit('chat_message', { type: 'local', text: emoteText });
+      eng.network.sendChatMessage({ type: 'local', text: emoteText });
       if (!eng.player.chatBubbles) eng.player.chatBubbles = [];
       eng.player.chatBubbles.push({ text: emoteText, timer: 4000, opacity: 0 });
     }
@@ -312,29 +377,30 @@ export class ChatManager {
       ctx.strokeStyle = '#111';
       ctx.lineWidth = 2;
 
-      if (i === bubbles.length - 1) {
-        ctx.beginPath();
-        ctx.moveTo(x - 6, y - 2);
-        ctx.lineTo(x + 6, y - 2);
-        ctx.lineTo(x, y + 8);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(x - 5, y - 2);
-        ctx.lineTo(x + 5, y - 2);
-        ctx.lineTo(x, y + 6);
-        ctx.closePath();
-        ctx.fillStyle = '#fff';
-        ctx.fill();
-      }
-
       ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(x - b.width / 2, bubbleY - b.height, b.width, b.height, 6);
       else ctx.rect(x - b.width / 2, bubbleY - b.height, b.width, b.height);
       ctx.fill();
       ctx.stroke();
+
+      if (i === bubbles.length - 1) {
+        ctx.beginPath();
+        ctx.moveTo(x - 6, bubbleY);
+        ctx.lineTo(x + 6, bubbleY);
+        ctx.lineTo(x, bubbleY + pointerHeight);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        
+        ctx.beginPath();
+        ctx.moveTo(x - 5, bubbleY - 2);
+        ctx.lineTo(x + 5, bubbleY - 2);
+        ctx.lineTo(x, bubbleY + pointerHeight - 2);
+        ctx.closePath();
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+      }
 
       ctx.fillStyle = '#111';
       ctx.textAlign = 'center';

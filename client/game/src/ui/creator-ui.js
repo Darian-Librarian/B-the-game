@@ -1,4 +1,4 @@
-import { HERITAGE_MAP } from './heritage-data.js';
+import { HERITAGE_MAP } from './heritage-data.js?v=new-engine-240';
 
 export function initHeritageUI() {
   const classList = document.getElementById('class-list');
@@ -18,7 +18,10 @@ export function initHeritageUI() {
     }
 
     const previewSprite = document.getElementById('player-preview');
-    previewSprite.style.backgroundImage = `url('assets/sprites/characters/${classification}/idle_down.png')`;
+    previewSprite.style.backgroundImage = `url('assets/sprites/characters/idle-template.png')`;
+    previewSprite.style.backgroundSize = '800% 1200%';
+    previewSprite.style.backgroundPosition = '42.857% 0%';
+    previewSprite.style.imageRendering = 'pixelated';
   };
 
   const updateTiers = (key) => {

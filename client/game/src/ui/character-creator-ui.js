@@ -130,7 +130,12 @@ export class CharacterCreatorUIManager {
           document.querySelectorAll('#affinity-list .list-item').forEach(i => i.classList.remove('active'));
           item.classList.add('active');
           playerPreviews.forEach(p => {
-            if (p) p.style.backgroundImage = `url('assets/sprites/characters/${affinity.spriteDir}/idle_down.png')`;
+            if (p) {
+              p.style.backgroundImage = `url('assets/sprites/characters/idle-template.png')`;
+              p.style.backgroundSize = '800% 1200%';
+              p.style.backgroundPosition = '42.857% 0%';
+              p.style.imageRendering = 'pixelated';
+            }
           });
           
           const activeArchItem = document.querySelector('#archetype-list .active');
@@ -169,7 +174,7 @@ export class CharacterCreatorUIManager {
 
         playerPreviews.forEach(p => {
                 if (p) {
-                p.style.transform = `translateY(440px) scale(12) scaleX(${scaleX}) scaleY(${scaleY})`;
+                p.style.transform = `translateY(660px) scale(12) scaleX(${scaleX}) scaleY(${scaleY})`;
                 }
         });
 
@@ -178,6 +183,8 @@ export class CharacterCreatorUIManager {
         const inches = totalInches % 12;
         heightDisplay.innerText = `${feet}'${inches}"`;
         });
+        
+        heightSlider.dispatchEvent(new Event('input'));
     }
 
     const idCardName = document.getElementById('id-card-name');
@@ -269,7 +276,7 @@ export class CharacterCreatorUIManager {
     const styleData = {
       standard: {
         description: 'Recommended for new players. The baseline experience where players function as independent entities. You can team up with others or run solo without penalties. Standard players typically originate as Manifested, are created synthetically, or are brought to the city by normal means.',
-        splash: 'assets/images/ui/creator/splashes/style_standard.png',
+        splash: 'assets/images/ui/creator/splashes/standard.png',
         skills: [
           { name: 'Diversity Synergy', desc: 'Gains Efficiency and Recovery boosts for every standard player in your party.' },
           { name: 'Integrity Versatility', desc: 'Can maintain moderate levels of both Synthetic and Mutation Integrity simultaneously.' },
@@ -829,6 +836,7 @@ export class CharacterCreatorUIManager {
         try {
           const updatedAccount = await this.app.auth.createCharacter(this.app.currentAccount.uuid, pendingCharData);
           this.app.currentAccount = updatedAccount;
+          localStorage.setItem('b_current_account', JSON.stringify(updatedAccount));
           
           const newChar = this.app.currentAccount.characters.find(c => c.name === pendingCharData.name);
 

@@ -16,17 +16,33 @@ export class CombatManager {
     eng.player.nextAttack = eng.player.nextAttack === 1 ? 2 : 1;
     eng.player.frame = 0;
     eng.player.frameTimer = 0;
-    eng.player.actionTimer = 8 * eng.player.frameInterval; 
+    eng.player.actionTimer = 7 * (eng.player.frameInterval / 2); 
 
     const px = eng.player.x;
     const py = eng.player.y;
     const pz = eng.player.z || 0;
 
-    let facingAngle = 0;
-    if (eng.player.dir === 'up') facingAngle = -Math.PI * 0.75;
-    else if (eng.player.dir === 'down') facingAngle = Math.PI * 0.25;
-    else if (eng.player.dir === 'left') facingAngle = Math.PI * 0.75;
-    else if (eng.player.dir === 'right') facingAngle = -Math.PI * 0.25;
+    let targetX = px;
+    let targetY = py;
+
+    if (eng.mouseWorldPos) {
+      const dx = eng.mouseWorldPos.x - px;
+      const dy = eng.mouseWorldPos.y - py;
+      const dist = Math.hypot(dx, dy) || 1;
+      targetX = px + (dx / dist) * 100;
+      targetY = py + (dy / dist) * 100;
+    }
+
+    const dx = targetX - px;
+    const dy = targetY - py;
+
+    let angle = Math.atan2(dy, dx);
+    let normalizedAngle = angle + Math.PI / 8;
+    if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
+    const dirs = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up', 'up-left', 'left'];
+    eng.player.dir = dirs[Math.floor(normalizedAngle / (Math.PI / 4)) % 8];
+
+    let facingAngle = Math.atan2(dy, dx);
 
     const fov = Math.PI / 3;
 
@@ -58,21 +74,31 @@ export class CombatManager {
     };
 
     const isCrit = Math.random() > 0.85;
-    const dmg = isCrit ? 300 : 200;
+    const dmg = isCrit ? 35 : 25;
 
     eng.npcs.forEach(npc => {
-      if (npc.state !== 'dead' && npc.type !== 'trainer') {
+      if (npc.state !== 'dead') {
         if (checkHit(npc.x, npc.y, npc.z)) {
-          eng.socket.emit('npc_hit', { targetUuid: npc.uuid, damage: dmg, isCrit: isCrit });
+          if (npc.type === 'trainer') {
+            const words = ['Miss', 'Dodge', 'Deflect'];
+            const word = words[Math.floor(Math.random() * words.length)];
+            eng.floatingTexts.push({ x: npc.x, y: npc.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: word, life: 1.0, color: '#bdc3c7' });
+          } else {
+            eng.network.sendNpcHit({ targetUuid: npc.uuid, damage: dmg, isCrit: isCrit });
+          }
         }
       }
     });
 
+    const myAlignment = eng.playerData.alignment || 'hero';
     for (let id in eng.otherPlayers) {
       const op = eng.otherPlayers[id];
       if (op.state !== 'death') {
+        const opAlignment = op.alignment || 'hero';
+        if (myAlignment === 'hero' && opAlignment === 'hero') continue;
+
         if (checkHit(op.x, op.y, op.z)) {
-          eng.socket.emit('player_hit', { targetId: id, damage: dmg, isCrit: isCrit });
+          eng.network.sendPlayerHit({ targetId: id, damage: dmg, isCrit: isCrit });
         }
       }
     }
@@ -90,7 +116,7 @@ export class CombatManager {
     eng.player.state = 'throw_attack1';
     eng.player.frame = 0;
     eng.player.frameTimer = 0;
-    eng.player.actionTimer = 8 * (eng.player.frameInterval / 8); 
+    eng.player.actionTimer = 2.5 * eng.player.frameInterval; 
 
     const px = eng.player.x;
     const py = eng.player.y;
@@ -128,9 +154,17 @@ export class CombatManager {
     }
 
     if (!targetEntity) {
-      const ray = eng.getIsoRaycast(eng.mousePos.x, eng.mousePos.y);
-      tx = ray.exactX;
-      ty = ray.exactY;
+      if (eng.mouseWorldPos) {
+        const dx = eng.mouseWorldPos.x - px;
+        const dy = eng.mouseWorldPos.y - py;
+        const dist = Math.hypot(dx, dy) || 1;
+        tx = px + (dx / dist) * 400; // Project 400 units outward in the calculated direction
+        tx = px + (dx / dist) * 400;
+        ty = py + (dy / dist) * 400;
+      } else {
+        tx = px + 400;
+        ty = py;
+      }
     }
 
         tx += (Math.random() - 0.5) * 50;
@@ -147,13 +181,12 @@ export class CombatManager {
     const finalTx = px + (dx / dist) * finalDist;
     const finalTy = py + (dy / dist) * finalDist;
 
-    const screenDx = dx - dy;
-    const screenDy = dx + dy;
-    if (Math.abs(screenDy) > Math.abs(screenDx)) {
-      eng.player.dir = screenDy > 0 ? 'down' : 'up';
-    } else {
-      eng.player.dir = screenDx > 0 ? 'right' : 'left';
-    }
+    let angle = Math.atan2(dy, dx);
+    let normalizedAngle = angle + Math.PI / 8;
+    if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
+    const dirIndex = Math.floor(normalizedAngle / (Math.PI / 4)) % 8;
+    const dirs = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up', 'up-left', 'left'];
+    eng.player.dir = dirs[dirIndex];
 
     let facingAngle = Math.atan2(dy, dx);
 
@@ -192,6 +225,7 @@ export class CombatManager {
         if (clear && edist < closestDist) {
           closestDist = edist;
           hitTarget = entity;
+           hitTarget.targetId = id;
           hitType = type;
         }
       }
@@ -202,7 +236,7 @@ export class CombatManager {
       checkHit(eng.otherPlayers[id], 'player', id);
     }
 
-    const destZ = hitTarget ? (hitTarget.z || 0) + 45 : eng.getTerrainZ(finalTx, finalTy);
+    const destZ = hitTarget ? (hitTarget.z || 0) + 30 : eng.getTerrainZ(finalTx, finalTy) + 30;
 
         const blockSteps = Math.ceil(finalDist / 16);
     for (let i = 1; i <= blockSteps; i++) {
@@ -210,7 +244,7 @@ export class CombatManager {
       const sampleY = py + (dy / dist) * finalDist * (i / blockSteps);
       const terrainZ = eng.getTerrainZ(sampleX, sampleY);
       
-      const currentProjZ = (pz + 45) + ((destZ - (pz + 45)) * (i / blockSteps));
+      const currentProjZ = (pz + 30) + ((destZ - (pz + 30)) * (i / blockSteps));
       
       if (terrainZ >= currentProjZ) {
         const bDist = finalDist * (i / blockSteps);
@@ -223,20 +257,31 @@ export class CombatManager {
       }
     }
 
-    eng.playSound('assets/audio/sfx/combat/throw_toss.mp3', 0.6);
-
     let targetX = hitTarget ? hitTarget.x : finalTx;
     let targetY = hitTarget ? hitTarget.y : finalTy;
     let targetZ;
     if (hitTarget) {
-      targetZ = hitType === 'block' ? hitTarget.z : (hitTarget.z || 0) + 45;
+      targetZ = hitType === 'block' ? hitTarget.z : (hitTarget.z || 0) + 30;
     } else {
-      targetZ = eng.getTerrainZ(finalTx, finalTy);
+      targetZ = eng.getTerrainZ(finalTx, finalTy) + 30;
     }
 
+    const isCritLoop = Math.random() <= 0.25;
+
+    eng.network.sendProjectile({
+      isAirplane: true,
+      isCritLoop: isCritLoop,
+      startX: px, startY: py, startZ: pz + 30,
+      targetX: targetX, targetY: targetY, targetZ: targetZ,
+      speed: 400
+    });
+
     eng.projectiles.push({
-      startX: px, startY: py, startZ: pz + 45, // Adding +45 casts from the chest instead of the feet
-      x: px, y: py, z: pz + 45,
+      isAirplane: true,
+      isCritLoop: isCritLoop,
+      startX: px, startY: py, startZ: pz + 30, // Adjusted from 45 to 30 to hit 1-block walls but clear slopes
+      startX: px, startY: py, startZ: pz + 30,
+      x: px, y: py, z: pz + 30,
       targetX: targetX, targetY: targetY, targetZ: targetZ,
       speed: 400,
       distTravelled: 0,
@@ -246,30 +291,33 @@ export class CombatManager {
       trailSize: 2.5,
       onHit: () => {
         if (hitTarget) {
-          let hitSuccess = true;
-          if (wasAutoAim && Math.random() > 0.75) hitSuccess = false;
-
-          if (!hitSuccess) {
-            eng.playSound('assets/audio/sfx/combat/throw_miss.mp3', 0.5);
-            eng.floatingTexts.push({ x: hitTarget.x, y: hitTarget.y, offsetY: 204, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: 'Deflected', life: 1.0, color: '#bdc3c7' });
-          } else if (hitType === 'npc' && hitTarget.type === 'trainer') {
-            eng.playSound('assets/audio/sfx/combat/throw_miss.mp3', 0.5);
+          if (hitType === 'npc' && hitTarget.type === 'trainer') {
             const words = ['Miss', 'Dodge', 'Deflect'];
             const word = words[Math.floor(Math.random() * words.length)];
-            eng.floatingTexts.push({ x: hitTarget.x, y: hitTarget.y, offsetY: 204, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: word, life: 1.0, color: '#bdc3c7' });
+            eng.floatingTexts.push({ x: hitTarget.x, y: hitTarget.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: word, life: 1.0, color: '#bdc3c7' });
           } else if (hitType === 'npc') {
-            const isCrit = Math.random() > 0.85;
-            const dmg = isCrit ? Math.floor(Math.random() * 5) + 6 : Math.floor(Math.random() * 5) + 1;
-            eng.playSound('assets/audio/sfx/combat/throw_hit.mp3', 0.6);
-            eng.socket.emit('npc_hit', { targetUuid: hitTarget.uuid, damage: dmg, isCrit: isCrit });
+            const dmg = isCritLoop ? Math.floor(Math.random() * 2) + 3 : Math.floor(Math.random() * 2) + 1;
+            eng.network.sendNpcHit({ targetUuid: hitTarget.uuid || hitTarget.targetId, damage: dmg, isCrit: isCritLoop });
           } else if (hitType === 'player' || hitType === 'block') {
-            const isCrit = Math.random() > 0.85;
-            eng.playSound('assets/audio/sfx/combat/throw_hit.mp3', 0.6);
-            eng.floatingTexts.push({ x: hitTarget.x, y: hitTarget.y, offsetY: 204, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: isCrit ? 'Crit Bonk!' : 'Bonk', life: 1.0, color: isCrit ? '#f39c12' : '#fff' });
+            const dmg = isCritLoop ? Math.floor(Math.random() * 2) + 3 : Math.floor(Math.random() * 2) + 1;
+            eng.floatingTexts.push({ x: hitTarget.x, y: hitTarget.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: isCritLoop ? 'Crit Bonk!' : 'Bonk', life: 1.0, color: isCritLoop ? '#f39c12' : '#fff' });
+            if (hitType === 'player' && hitTarget.targetId) {
+              eng.network.sendPlayerHit({ targetId: hitTarget.targetId, damage: dmg, isCrit: isCritLoop });
+            }
           }
-        } else {
-          eng.playSound('assets/audio/sfx/combat/throw_miss.mp3', 0.3);
         }
+        
+        eng.debris.push({
+          x: targetX, y: targetY, z: targetZ,
+          vx: (Math.random() - 0.5) * 150,
+          vy: (Math.random() - 0.5) * 150,
+          vz: 100 + Math.random() * 150,
+          life: 5.0,
+          maxLife: 5.0,
+          crumpleTimer: 0.3,
+          wasteTex: Math.random() > 0.5 ? 'waste_1' : 'waste_2',
+          rotation: Math.random() * Math.PI * 2
+        });
       }
     });
   }

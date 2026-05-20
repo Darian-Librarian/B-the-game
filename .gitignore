@@ -1,2 +1,27 @@
-/docs/assets/icons/powers/templates/*
-!docs/assets/icons/powers/templates/power-template.xcf
+# Dependencies
+node_modules/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+server/logs/
+
+# Game Server State & Data
+# (Prevents committing local player accounts, characters, and chunk data)
+# server/data/
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+Thumbs.db
+/server/data/chunks
+/server/data/accounts
+/docs/assets/icons/powers/templates

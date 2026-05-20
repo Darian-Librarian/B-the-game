@@ -173,7 +173,6 @@ export class TrainerUIManager {
         </div>
         <div style="font-size: 0.9rem; color: #ccc; font-family: var(--font-mono); margin-top: 5px;">Abilities in <strong style="color: var(--accent-neon);">${psName.toUpperCase()}</strong>:</div>
         <div id="power-select-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px;">
-           <!-- Populated by JS -->
         </div>
         <button id="btn-power-back" class="btn-secondary" style="margin-top: 10px; font-family: var(--font-mono);">Back</button>
       `;
@@ -233,7 +232,7 @@ export class TrainerUIManager {
             if (pButton.classList.contains('locked')) {
               this.engine.chat.addMessage('system', 'System', 'You must learn earlier powers in this set first.');
             } else if (!alreadyLearned && canAfford) {
-               this.engine.socket.emit('learn_power', { powerName: power.name, powerset: psName });
+               this.engine.network.sendLearnPower({ powerName: power.name, powerset: psName });
             }
           };
           powerItems.push(pButton);
@@ -279,7 +278,6 @@ export class TrainerUIManager {
       </div>
           <div style="font-size: 0.9rem; color: #ccc; font-family: var(--font-mono); margin-top: 5px;">Available Powersets ${pickType !== 'any' ? `(${pickType.toUpperCase()})` : ''}:</div>
       <div id="powerset-unlock-list" style="display: flex; flex-direction: column; gap: 5px; max-height: 200px; overflow-y: auto; font-family: var(--font-header); font-size: 1.1rem; letter-spacing: 1px; margin-top: 5px;">
-         <!-- Populated by JS -->
       </div>
       <button id="btn-power-back" class="btn-secondary" style="margin-top: 10px; font-family: var(--font-mono);">Back</button>
     `;
@@ -298,7 +296,7 @@ export class TrainerUIManager {
       sButton.style.padding = '10px';
       sButton.innerText = set.name.toUpperCase();
       sButton.onclick = () => {
-        this.engine.socket.emit('learn_powerset', { powerset: set.id });
+        this.engine.network.sendLearnPowerset({ powerset: set.id });
       };
       setListContainer.appendChild(sButton);
     });

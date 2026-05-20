@@ -114,18 +114,10 @@ export class PlayerListUIManager {
 
     players.forEach(p => {
       const row = document.createElement('div');
-      row.style.cssText = 'display: flex; flex-direction: column; padding: 5px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.9rem; cursor: context-menu;';
-      
-      const hpPercent = p.maxHp > 0 ? Math.max(0, p.hp / p.maxHp) * 100 : 0;
-      
+      row.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px 5px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.9rem; cursor: context-menu;';
       row.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="color: ${p.isSelf ? '#2ecc71' : '#3498db'}; font-weight: ${p.isSelf ? 'bold' : 'normal'};">${p.name} <span style="color: #aaa; font-size: 0.8rem;">(Lv.${p.level})</span></span>
-          <span style="color: #ff4757; font-size: 0.8rem;">${Math.floor(p.hp)} / ${p.maxHp}</span>
-        </div>
-        <div style="width: 100%; height: 4px; background: rgba(0,0,0,0.5); margin-top: 4px; border-radius: 2px; overflow: hidden;">
-          <div style="width: ${hpPercent}%; height: 100%; background: ${p.isSelf ? '#2ecc71' : '#ff4757'};"></div>
-        </div>
+        <span style="color: ${p.isSelf ? '#2ecc71' : '#3498db'}; font-weight: ${p.isSelf ? 'bold' : 'normal'};">${p.name}</span>
+        <span style="color: #aaa; font-size: 0.8rem;">Lv.${p.level}</span>
       `;
       
       row.oncontextmenu = (e) => {
@@ -142,7 +134,7 @@ export class PlayerListUIManager {
         pCtx.style.display = 'flex';
         
         document.getElementById('pl-ctx-trade').onclick = () => {
-          this.engine.socket.emit('trade_request', p.id);
+          this.engine.network.sendTradeRequest(p.id);
           this.engine.chat.addMessage('system', 'System', 'Trade request sent to ' + p.name + '.');
         };
         

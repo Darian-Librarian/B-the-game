@@ -1,8 +1,8 @@
-import { AuthLogic } from './creator-logic.js';
-import { initSelection } from './selection.js';
-import { AuthUIManager } from './auth-ui.js?v=new-engine-01';
-import { CharacterCreatorUIManager } from './character-creator-ui.js?v=new-engine-01';
-import { InGameMenuUIManager } from './in-game-menu-ui.js?v=new-engine-01';
+import { AuthLogic } from './creator-logic.js?v=new-engine-240';
+import { initSelection } from './selection.js?v=new-engine-240';
+import { AuthUIManager } from './auth-ui.js?v=new-engine-240';
+import { CharacterCreatorUIManager } from './character-creator-ui.js?v=new-engine-240';
+import { InGameMenuUIManager } from './in-game-menu-ui.js?v=new-engine-240';
 
 const applyUIScaling = () => {
   const scalers = document.querySelectorAll('.screen-scaler');
@@ -16,6 +16,13 @@ applyUIScaling();
 
 const modal = document.getElementById('custom-modal');
 document.getElementById('modal-close').onclick = () => modal.style.display = 'none';
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && modal.style.display === 'flex') {
+    e.preventDefault();
+    document.getElementById('modal-close').click();
+  }
+});
 
 const app = {
   auth: new AuthLogic(),

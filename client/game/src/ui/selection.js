@@ -118,6 +118,7 @@ export function initSelection(accountData) {
           const updatedAccount = await res.json();
           deleteModal.style.display = 'none';
           Object.assign(accountData, updatedAccount);
+          localStorage.setItem('b_current_account', JSON.stringify(accountData));
           initSelection(accountData);
         } else {
           const errText = await res.text();

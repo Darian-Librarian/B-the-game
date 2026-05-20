@@ -1,8 +1,9 @@
-import { DevToolsUIManager } from './dev-tools-ui.js?v=new-engine-01';
-import { InventoryUIManager } from './inventory-ui.js?v=new-engine-01';
-import { PowerbarUIManager } from './powerbar-ui.js?v=new-engine-01';
-import { TrainerUIManager } from './trainer-ui.js?v=new-engine-01';
-import { PlayerListUIManager } from './player-list-ui.js?v=new-engine-01';
+import { DevToolsUIManager } from './dev-tools-ui.js?v=new-engine-240';
+import { InventoryUIManager } from './inventory-ui.js?v=new-engine-240';
+import { PowerbarUIManager } from './powerbar-ui.js?v=new-engine-240';
+import { TrainerUIManager } from './trainer-ui.js?v=new-engine-240';
+import { PlayerListUIManager } from './player-list-ui.js?v=new-engine-240';
+import { GAME_TIPS } from './tips.js?v=new-engine-240';
 
 export class UIManager {
   constructor(engine) {
@@ -15,6 +16,35 @@ export class UIManager {
     this.playerList = new PlayerListUIManager(engine, this);
 
     this.setupContextMenu();
+    this.setupLoadingScreen();
+  }
+
+  setupLoadingScreen() {
+    this.loadingStartTime = performance.now();
+    this.loadingScreen = document.createElement('div');
+    this.loadingScreen.id = 'loading-screen';
+    this.loadingScreen.style.cssText = 'position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0e14; z-index: 9999999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #f1c40f; font-family: var(--font-mono);';
+    
+    const randomTip = GAME_TIPS[Math.floor(Math.random() * GAME_TIPS.length)];
+    
+    this.loadingScreen.innerHTML = `
+      <h1 style="font-size: 3rem; text-shadow: 0 0 10px #f1c40f;">INITIALIZING ZONE</h1>
+      <p style="font-size: 1.2rem; color: #fff; margin-bottom: 30px;">Building Geometry...</p>
+      <div style="background: rgba(243, 156, 18, 0.2); border: 1px solid #f39c12; padding: 15px; border-radius: 6px; max-width: 600px; text-align: center;">
+        <span style="color: #f39c12; font-weight: bold;">TIP:</span> <span style="color: #fff;">${randomTip}</span>
+      </div>
+    `;
+    document.body.appendChild(this.loadingScreen);
+  }
+
+  hideLoadingScreen() {
+    if (this.loadingScreen && this.loadingScreen.style.display !== 'none') {
+      const elapsed = performance.now() - this.loadingStartTime;
+      const remaining = Math.max(0, 3000 - elapsed);
+      setTimeout(() => {
+        this.loadingScreen.style.display = 'none';
+      }, remaining);
+    }
   }
 
   makeDraggable(panelId, headerSelector) {
@@ -60,6 +90,13 @@ export class UIManager {
         isDragging = false;
         document.removeEventListener('mousemove', onMouseMove);
         document.removeEventListener('mouseup', onMouseUp);
+        
+        if (panelId === 'builder-panel') {
+          const eng = window.currentGameEngine;
+          if (eng && eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
+            localStorage.setItem('b_builder_pos', JSON.stringify({ left: panel.style.left, top: panel.style.top }));
+          }
+        }
       };
 
       document.addEventListener('mousemove', onMouseMove);
@@ -72,7 +109,7 @@ export class UIManager {
     if (btnTrade) {
       btnTrade.onclick = () => {
         if (this.engine.contextTarget && this.engine.contextTarget.type === 'player') {
-          this.engine.socket.emit('trade_request', this.engine.contextTarget.id);
+          this.engine.network.sendTradeRequest(this.engine.contextTarget.id);
           this.engine.chat.addMessage('system', 'System', `Trade request sent to ${this.engine.otherPlayers[this.engine.contextTarget.id]?.name || 'Player'}.`);
         }
         document.getElementById('player-context-menu').style.display = 'none';

@@ -133,7 +133,7 @@ export class MapOverlayManager {
   }
 
   draw(ctx) {
-    if (!this.active) return;
+    if (!this.active || !this.engine.mapManager) return;
     
     const eng = this.engine;
     const canvasW = eng.canvas.width;
@@ -146,7 +146,11 @@ export class MapOverlayManager {
     ctx.fillRect(0, 0, canvasW, canvasH);
 
     ctx.translate(canvasW / 2, canvasH / 2);
-    ctx.rotate(45 * Math.PI / 180);
+    
+    const camAngle = eng.renderer ? eng.renderer.cameraAngle : 0;
+    const rotationAngle = eng.clientSettings.rotateMinimap ? camAngle : 0;
+    ctx.scale(-1, 1);
+    ctx.rotate((45 - rotationAngle) * Math.PI / 180);
 
     const pFracX = eng.player.x / 32;
     const pFracY = eng.player.y / 32;
@@ -155,74 +159,29 @@ export class MapOverlayManager {
     const offsetX = (pFracX - pGx) * mmTileSize;
     const offsetY = (pFracY - pGy) * mmTileSize;
 
-    ctx.fillStyle = '#447525';
-    const maxD = Math.max(canvasW, canvasH) * 2;
-    ctx.fillRect(-maxD, -maxD, maxD * 2, maxD * 2);
+    const tilesX = Math.ceil((canvasW / mmTileSize) / 2) + 1;
+    const tilesY = Math.ceil((canvasH / mmTileSize) / 2) + 1;
+    const maxRadius = Math.max(tilesX, tilesY);
 
-    if (!this.grassPattern && eng.grassVariations && eng.grassVariations.length > 0) {
-      this.grassPattern = ctx.createPattern(eng.grassVariations[0], 'repeat');
-    }
-    if (this.grassPattern) {
-      ctx.save();
-      const shiftX = (pFracX * mmTileSize);
-      const shiftY = (pFracY * mmTileSize);
-      ctx.translate(-shiftX, -shiftY);
-      const scale = mmTileSize / 64;
-      ctx.scale(scale, scale);
-      ctx.fillStyle = this.grassPattern;
-      const fillMax = maxD / scale;
-      ctx.fillRect(-fillMax, -fillMax, fillMax * 2, fillMax * 2);
-      ctx.restore();
-    }
-
-    ctx.imageSmoothingEnabled = true;
-
-    for (let key in eng.mapData) {
-      const coords = key.split(',');
-      const gx = parseInt(coords[0], 10);
-      const gy = parseInt(coords[1], 10);
-
-      const drawX = (gx - pGx) * mmTileSize - offsetX - (mmTileSize / 2);
-      const drawY = (gy - pGy) * mmTileSize - offsetY - (mmTileSize / 2);
+    for (let gy = pGy - maxRadius; gy <= pGy + maxRadius; gy++) {
+      for (let gx = pGx - maxRadius; gx <= pGx + maxRadius; gx++) {
+        const drawX = (gx - pGx) * mmTileSize - offsetX - (mmTileSize / 2);
+        const drawY = (gy - pGy) * mmTileSize - offsetY - (mmTileSize / 2);
       
-            if (drawX < -canvasW || drawX > canvasW || drawY < -canvasH || drawY > canvasH) continue;
+        if (drawX < -canvasW * 1.5 || drawX > canvasW * 1.5 || drawY < -canvasH * 1.5 || drawY > canvasH * 1.5) continue;
 
-      const tileData = eng.mapData[key];
-      const color = typeof tileData === 'object' ? tileData.color : '#ffffff';
-      let sourceImg = null;
-      let finalSy = 0;
-      let sw = 64, sh = 64;
-
-      if (tileData) {
-        const texId = typeof tileData === 'object' ? tileData.tex : tileData;
-        if (texId && eng.customTiles && eng.customTiles[texId] && eng.customTiles[texId].complete) {
-          const img = eng.customTiles[texId];
-          sw = img.width;
-          sh = img.height;
-          if (img.animated) {
-             sh = sw;
-             const frameCount = Math.max(1, img.height / sh);
-             finalSy = (Math.floor(performance.now() / 100) % frameCount) * sh;
-          }
-          
-          const cacheKey = `${texId}_${color}_${finalSy}`;
-          if (eng.tintCache && eng.tintCache[cacheKey]) {
-            sourceImg = eng.tintCache[cacheKey];
-            finalSy = 0;
-          } else {
-            sourceImg = img;
+        let color = null;
+        for (let z = 15; z >= -4; z--) {
+          const v = eng.mapManager.getVoxelAt(gx * 32, gy * 32, z * 32);
+          if (v) {
+            color = v.color || (v.tex === 'grass' ? '#51852E' : '#ffffff');
+            break;
           }
         }
-      }
 
-      if (sourceImg && (sourceImg.naturalWidth > 0 || sourceImg.width > 0)) {
-        ctx.drawImage(sourceImg, 0, finalSy, sw, sh, drawX, drawY, mmTileSize + 0.5, mmTileSize + 0.5);
-        
-        if (tileData && color !== '#ffffff' && (!eng.tintCache || !eng.tintCache[`${tileData.tex}_${color}_${finalSy}`])) {
-           ctx.fillStyle = color;
-           ctx.globalCompositeOperation = 'multiply';
-           ctx.fillRect(drawX, drawY, mmTileSize + 0.5, mmTileSize + 0.5);
-           ctx.globalCompositeOperation = 'source-over';
+        if (color) {
+          ctx.fillStyle = color;
+          ctx.fillRect(drawX, drawY, mmTileSize + 0.5, mmTileSize + 0.5);
         }
       }
     }
@@ -235,40 +194,36 @@ export class MapOverlayManager {
 
       ctx.save();
       ctx.translate(drawX, drawY);
-      ctx.rotate(-45 * Math.PI / 180);
+      
+      ctx.fillStyle = isPlayer ? '#2ecc71' : (entity.uuid ? '#ff4757' : '#3498db');
+      ctx.beginPath();
+      ctx.arc(0, 0, Math.max(4, mmTileSize/2), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
-      let state = entity.state;
-      if (state === 'dead') state = 'death';
-      else if (entity.hurtTimer > 0) state = 'hurt';
-
-      const spriteKey = `${state}_${entity.dir}`;
-      const img = eng.sprites[spriteKey];
-
-      if (img && img.complete && img.naturalWidth > 0) {
-        const fw = 96; const fh = 90;
-        const scale = Math.max(0.3, mmTileSize / 24);
-        ctx.scale(scale, scale);
-        ctx.drawImage(img, (entity.frame || 0) * fw, 0, fw, fh, -fw / 2, -fh + 35, fw, fh);
-      } else {
-        ctx.fillStyle = isPlayer ? '#2ecc71' : (entity.uuid ? '#ff4757' : '#3498db');
+      if (isPlayer) {
+        const screenAngles = { 'right': 0, 'down-right': Math.PI/4, 'down': Math.PI/2, 'down-left': Math.PI*0.75, 'left': Math.PI, 'up-left': -Math.PI*0.75, 'up': -Math.PI/2, 'up-right': -Math.PI/4 };
+        const pAngle = screenAngles[eng.player.dir] || 0;
         ctx.beginPath();
-        ctx.arc(0, 0, 5, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(pAngle) * Math.max(8, mmTileSize), Math.sin(pAngle) * Math.max(8, mmTileSize));
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
       }
 
-      ctx.restore();
-      
-      ctx.save();
-      ctx.translate(drawX, drawY);
-      ctx.rotate(-45 * Math.PI / 180);
-      
+      ctx.rotate(-(45 - rotationAngle) * Math.PI / 180); // Un-rotate for text
+      ctx.scale(-1, 1); // Un-mirror for text
+
       const name = isPlayer ? eng.playerData.name : entity.name;
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 12px monospace';
       ctx.textAlign = 'center';
       ctx.strokeStyle = 'rgba(0,0,0,0.8)';
       ctx.lineWidth = 3;
-      const textOffset = Math.max(10, mmTileSize * 1.5);
+      const textOffset = Math.max(12, mmTileSize * 1.5);
       ctx.strokeText(name, 0, textOffset);
       ctx.fillText(name, 0, textOffset);
 

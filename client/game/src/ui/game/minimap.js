@@ -5,6 +5,7 @@ export class MinimapManager {
 
   draw(ctx) {
     const eng = this.engine;
+    if (!eng.mapManager) return;
     const mmSize = 250;
     const mmX = eng.canvas.width - mmSize - 20;
     const mmY = 70; 
@@ -23,7 +24,11 @@ export class MinimapManager {
     ctx.clip();
 
         ctx.translate(mmX + mmSize / 2, mmY + mmSize / 2);
-    ctx.rotate(45 * Math.PI / 180);
+    
+    const camAngle = eng.renderer ? eng.renderer.cameraAngle : 0;
+    const rotationAngle = eng.clientSettings.rotateMinimap ? camAngle : 0;
+    ctx.scale(-1, 1);
+    ctx.rotate((45 - rotationAngle) * Math.PI / 180);
 
     const pFracX = eng.player.x / 32;
     const pFracY = eng.player.y / 32;
@@ -34,67 +39,22 @@ export class MinimapManager {
 
     for (let gy = pGy - mmRadius; gy <= pGy + mmRadius; gy++) {
       for (let gx = pGx - mmRadius; gx <= pGx + mmRadius; gx++) {
-        const tileKey = `${gx},${gy}`;
-        let sourceImg = null;
-        let finalSy = 0;
-        let sw = 64, sh = 64;
+        let color = null;
         
-        const tileData = eng.mapData[tileKey];
-        const color = typeof tileData === 'object' ? tileData.color : '#ffffff';
-        
-        if (tileData) {
-          const texId = typeof tileData === 'object' ? tileData.tex : tileData;
-          if (texId && eng.customTiles[texId] && eng.customTiles[texId].complete) {
-            const img = eng.customTiles[texId];
-            sw = img.width;
-            sh = img.height;
-            if (img.animated) {
-               sh = sw;
-               const frameCount = Math.max(1, img.height / sh);
-               finalSy = (Math.floor(performance.now() / 100) % frameCount) * sh;
-            }
-            
-            const cacheKey = `${texId}_${color}_${finalSy}`;
-            if (eng.tintCache && eng.tintCache[cacheKey]) {
-              sourceImg = eng.tintCache[cacheKey];
-              finalSy = 0;
-            } else {
-              sourceImg = img;
-            }
+        for (let z = 15; z >= -4; z--) {
+          const v = eng.mapManager.getVoxelAt(gx * 32, gy * 32, z * 32);
+          if (v) {
+            color = v.color || (v.tex === 'grass' ? '#51852E' : '#ffffff');
+            break;
           }
         }
 
-        if (!sourceImg && eng.grassVariations && eng.grassVariations.length > 0) {
-          const patchX = Math.floor(gx / 6);
-          const patchY = Math.floor(gy / 6);
-          let patchHash = Math.sin(patchX * 12.9898 + patchY * 78.233) * 43758.5453;
-          patchHash -= Math.floor(patchHash);
-          const baseIndex = Math.floor(patchHash * eng.grassVariations.length);
-          
-          let localHash = Math.sin(gx * 12.9898 + gy * 78.233) * 43758.5453;
-          localHash -= Math.floor(localHash);
-          let variation = 0;
-          if (localHash > 0.85) variation = 1;
-          else if (localHash < 0.15) variation = -1;
-          
-          let finalIndex = Math.max(0, Math.min(eng.grassVariations.length - 1, baseIndex + variation));
-          sourceImg = eng.grassVariations[finalIndex];
-          sw = sourceImg.width || 64;
-          sh = sourceImg.height || 64;
-        }
-
-        if (sourceImg && (sourceImg.naturalWidth > 0 || sourceImg.width > 0)) {
+        if (color) {
           const drawX = (gx - pGx) * mmTileSize - offsetX - (mmTileSize / 2);
           const drawY = (gy - pGy) * mmTileSize - offsetY - (mmTileSize / 2);
           
-          ctx.drawImage(sourceImg, 0, finalSy, sw, sh, drawX, drawY, mmTileSize + 0.5, mmTileSize + 0.5);
-          
-          if (tileData && color !== '#ffffff' && (!eng.tintCache || !eng.tintCache[`${tileData.tex}_${color}_${finalSy}`])) {
-             ctx.fillStyle = color;
-             ctx.globalCompositeOperation = 'multiply';
-             ctx.fillRect(drawX, drawY, mmTileSize + 0.5, mmTileSize + 0.5);
-             ctx.globalCompositeOperation = 'source-over';
-          }
+          ctx.fillStyle = color;
+          ctx.fillRect(drawX, drawY, mmTileSize + 0.5, mmTileSize + 0.5);
         }
       }
     }
@@ -106,6 +66,9 @@ export class MinimapManager {
       ctx.beginPath();
       ctx.arc(drawX, drawY, size, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.stroke();
     };
 
     eng.npcs.forEach(npc => {
@@ -122,6 +85,15 @@ export class MinimapManager {
     ctx.fill();
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 1;
+    ctx.stroke();
+
+    const screenAngles = { 'right': 0, 'down-right': Math.PI/4, 'down': Math.PI/2, 'down-left': Math.PI*0.75, 'left': Math.PI, 'up-left': -Math.PI*0.75, 'up': -Math.PI/2, 'up-right': -Math.PI/4 };
+    const pAngle = screenAngles[eng.player.dir] || 0;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(pAngle) * 8, Math.sin(pAngle) * 8);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
     ctx.stroke();
 
     ctx.restore();

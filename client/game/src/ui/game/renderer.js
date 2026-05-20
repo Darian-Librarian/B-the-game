@@ -1,374 +1,1637 @@
+import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+import { BlockRegistry } from './registry.js?v=new-engine-240';
+
 export class Renderer {
   constructor(engine) {
     this.engine = engine;
-    this.engine.sprites = {};
-    this.engine.grassVariations = [];
-    this.engine.customTiles = {};
-    this.engine.tintCache = {};
     
-    this.loadSprites();
-    this.loadTiles();
+    THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
+
+    this.cameraAngle = 0; 
+    this.needsVoxelUpdate = true;
+    this.initialLoadComplete = false;
+    
+    this.setupWebGL();
+    this.setupCamera();
+    this.setupScene();
+    this.setupInstancedMesh();
+    this.setupCompass();
+    this.setupDebugOverlay();
+    this.loadAssets();
   }
 
-  loadSprites() {
-    const dirs = ['up', 'down', 'left', 'right'];
-    const states = ['idle', 'walk', 'run', 'dash', 'jump', 'attack1', 'attack2', 'throw_attack1', 'hurt', 'death'];
-    const path = 'assets/sprites/characters/standard';
-    const cb = '?v=new-engine-01';
-    
-    dirs.forEach(d => {
-      states.forEach(s => {
-        const img = new Image();
-        img.src = `${path}/${s}_${d}.png${cb}`;
-        this.engine.sprites[`${s}_${d}`] = img;
-      });
+  setupWebGL() {
+    this.webgl = new THREE.WebGLRenderer({ 
+      canvas: this.engine.canvas, 
+      antialias: false,
+      alpha: false 
     });
-
-    this.engine.sprites['proj_airplane'] = new Image();
-    this.engine.sprites['proj_airplane'].src = `assets/sprites/projectiles/paper-airplane-right.png${cb}`;
+    this.webgl.setPixelRatio(1);
+    this.webgl.setSize(window.innerWidth, window.innerHeight);
+    this.webgl.setClearColor(0x0b0e14, 1);
   }
 
-  loadTiles() {
-    const eng = this.engine;
-    const img = new Image();
-    img.src = 'assets/tiles/base/floor/grass_block_top.png';
-    img.onerror = () => {
-      img.src = 'assets/tiles/base/grass_block_top.png'; 
-      img.onerror = null;
+  setupCamera() {
+    const aspect = window.innerWidth / window.innerHeight;
+    const frustumSize = 1000;
+    
+    this.camera = new THREE.OrthographicCamera(
+      frustumSize * aspect / -2, 
+      frustumSize * aspect / 2, 
+      frustumSize / 2, 
+      frustumSize / -2, 
+      -50000, 
+      50000
+    );
+    
+    this.camera.rotation.order = 'YXZ';
+    this.updateCameraRotation();
+  }
+
+  updateCameraRotation() {
+    // Strict Isometric Locking Logic
+    const baseIsoAngle = Math.PI / 4; 
+    const zRotOffset = -this.cameraAngle * (Math.PI / 180);
+    
+    this.camera.rotation.x = Math.atan(1 / Math.sqrt(2));
+    this.camera.rotation.y = 0; // Handled by Z up
+    this.camera.rotation.z = baseIsoAngle + zRotOffset;
+    this.updateCompass();
+  }
+
+  rotateCamera(direction) {
+    this.cameraAngle = (this.cameraAngle + direction + 360) % 360;
+    this.updateCameraRotation();
+  }
+
+  setupScene() {
+    this.scene = new THREE.Scene();
+    this.scene.add(new THREE.AmbientLight(0xffffff, 1.0)); 
+
+    this.arrowHelper = new THREE.ArrowHelper(
+      new THREE.Vector3(1, 0, 0),
+      new THREE.Vector3(0, 0, 0),
+      100,
+      0xff0000
+    );
+    
+    this.arrowHelper.line.material.depthTest = false;
+    this.arrowHelper.line.material.depthWrite = false;
+    this.arrowHelper.line.renderOrder = 999;
+    
+    this.arrowHelper.cone.material.depthTest = false;
+    this.arrowHelper.cone.material.depthWrite = false;
+    this.arrowHelper.cone.renderOrder = 999;
+    
+    this.arrowHelper.visible = true;
+    this.scene.add(this.arrowHelper);
+
+    const boxGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(32.5, 32.5, 32.5));
+    const boxMat = new THREE.LineBasicMaterial({ color: 0xf1c40f, depthTest: false, linewidth: 2 });
+    this.highlightBox = new THREE.LineSegments(boxGeo, boxMat);
+    this.highlightBox.renderOrder = 999;
+    this.highlightBox.visible = false;
+    this.scene.add(this.highlightBox);
+    
+    this.setupDebugMeshes();
+  }
+
+  setupDebugMeshes() {
+    this.debugMeshes = new THREE.Group();
+    this.scene.add(this.debugMeshes);
+
+    const ringGeo = new THREE.RingGeometry(25, 30, 32);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false });
+    this.targetRing = new THREE.Mesh(ringGeo, ringMat);
+    this.targetRing.add(new THREE.LineSegments(new THREE.EdgesGeometry(ringGeo), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthTest: false })));
+    this.targetRing.visible = false;
+    this.debugMeshes.add(this.targetRing);
+
+    const circleGeo = new THREE.CircleGeometry(200, 32);
+    const meleeMat = new THREE.MeshBasicMaterial({ color: 0xf39c12, transparent: true, opacity: 0.1, side: THREE.DoubleSide, depthWrite: false });
+    this.meleeCircle = new THREE.Mesh(circleGeo, meleeMat);
+    this.meleeCircle.add(new THREE.LineSegments(new THREE.EdgesGeometry(circleGeo), new THREE.LineBasicMaterial({ color: 0xf39c12, transparent: true, opacity: 0.8, depthTest: false })));
+    this.meleeCircle.visible = false;
+    this.debugMeshes.add(this.meleeCircle);
+
+    const fov = Math.PI / 3;
+    const coneGeo = new THREE.CircleGeometry(200, 32, -fov, fov * 2);
+    const coneMat = new THREE.MeshBasicMaterial({ color: 0xe74c3c, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false });
+    this.meleeCone = new THREE.Mesh(coneGeo, coneMat);
+    this.meleeCone.add(new THREE.LineSegments(new THREE.EdgesGeometry(coneGeo), new THREE.LineBasicMaterial({ color: 0xe74c3c, transparent: true, opacity: 0.8, depthTest: false })));
+    this.meleeCone.visible = false;
+    this.debugMeshes.add(this.meleeCone);
+    
+    const meleeHitGeo = new THREE.CircleGeometry(35, 32);
+    const meleeHitMat = new THREE.MeshBasicMaterial({ color: 0xe74c3c, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false });
+    this.meleeHitMesh = new THREE.InstancedMesh(meleeHitGeo, meleeHitMat, 100);
+    this.meleeHitMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.meleeHitMesh.visible = false;
+    this.debugMeshes.add(this.meleeHitMesh);
+
+    const meleeHitEdgeGeo = new THREE.RingGeometry(34, 35, 32);
+    const meleeHitEdgeMat = new THREE.MeshBasicMaterial({ color: 0xe74c3c, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false });
+    this.meleeHitLineMesh = new THREE.InstancedMesh(meleeHitEdgeGeo, meleeHitEdgeMat, 100);
+    this.meleeHitLineMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.meleeHitLineMesh.visible = false;
+    this.debugMeshes.add(this.meleeHitLineMesh);
+
+    const losGeo = new THREE.CircleGeometry(35, 32);
+    const losMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false });
+    this.losMesh = new THREE.InstancedMesh(losGeo, losMat, 100);
+    this.losMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.losMesh.visible = false;
+    this.debugMeshes.add(this.losMesh);
+
+    const losEdgeGeo = new THREE.RingGeometry(34, 35, 32);
+    const losEdgeMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false });
+    this.losLineMesh = new THREE.InstancedMesh(losEdgeGeo, losEdgeMat, 100);
+    this.losLineMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.losLineMesh.visible = false;
+    this.debugMeshes.add(this.losLineMesh);
+    
+    const losConeGeo = new THREE.CircleGeometry(400, 32, -Math.PI/3, (Math.PI/3)*2);
+    const losConeMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, transparent: true, opacity: 0.15, side: THREE.DoubleSide, depthWrite: false });
+    this.losCone = new THREE.Mesh(losConeGeo, losConeMat);
+    this.losCone.add(new THREE.LineSegments(new THREE.EdgesGeometry(losConeGeo), new THREE.LineBasicMaterial({ color: 0xf1c40f, transparent: true, opacity: 0.8, depthTest: false })));
+    this.losCone.visible = false;
+    this.debugMeshes.add(this.losCone);
+
+    this.debugTileMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(32, 32, 32), new THREE.MeshBasicMaterial({ color: 0xff4757, wireframe: true, depthTest: false }), 100);
+    this.debugTileMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.debugTileMesh.visible = false;
+    this.debugMeshes.add(this.debugTileMesh);
+    
+    const chunkBoxGeo = new THREE.BoxGeometry(1024, 1024, 2048);
+    const chunkBoxMat = new THREE.LineBasicMaterial({ color: 0x9b59b6, depthTest: false, transparent: true, opacity: 0.5, linewidth: 2 });
+    this.chunkBox = new THREE.LineSegments(new THREE.EdgesGeometry(chunkBoxGeo), chunkBoxMat);
+    this.chunkBox.visible = false;
+    this.debugMeshes.add(this.chunkBox);
+  }
+
+  setupInstancedMesh() {
+    const maxInstances = 100000;
+
+    this.instancedMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0xffffff,
+      alphaTest: 0.1
+    }); 
+
+    this.instancedMaterial.userData = { time: { value: 0 } };
+
+    this.instancedMaterial.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = this.instancedMaterial.userData.time;
+      shader.vertexShader = `
+        attribute float isFluid;
+        attribute vec4 instanceUVTop;
+        attribute vec4 instanceUVSide;
+        attribute vec4 instanceUVBottom;
+        varying float vIsFluid;
+        varying vec4 vInstanceUVTop;
+        varying vec4 vInstanceUVSide;
+        varying vec4 vInstanceUVBottom;
+        varying vec3 vWorldNormal;
+        varying vec3 vLocalPosition;
+        varying vec3 vInstancePosition;
+      ` + shader.vertexShader.replace(
+        '#include <uv_vertex>',
+        `
+        #include <uv_vertex>
+        vIsFluid = isFluid;
+        vInstanceUVTop = instanceUVTop;
+        vInstanceUVSide = instanceUVSide;
+        vInstanceUVBottom = instanceUVBottom;
+        vWorldNormal = normalize( mat3( modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz ) * normal );
+        vLocalPosition = position;
+        vInstancePosition = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+        `
+      );
+      shader.fragmentShader = `
+        uniform float uTime;
+        varying float vIsFluid;
+        varying vec4 vInstanceUVTop;
+        varying vec4 vInstanceUVSide;
+        varying vec4 vInstanceUVBottom;
+        varying vec3 vWorldNormal;
+        varying vec3 vLocalPosition;
+        varying vec3 vInstancePosition;
+      ` + shader.fragmentShader.replace(
+        '#include <map_fragment>',
+        `
+        #ifdef USE_MAP
+          vec2 baseUV = vMapUv;
+          
+          vec4 iuv;
+          if (vWorldNormal.z > 0.5) { // Top
+            iuv = vInstanceUVTop;
+          } else if (vWorldNormal.z < -0.5) { // Bottom
+            iuv = vInstanceUVBottom;
+          } else { // Sides
+            iuv = vInstanceUVSide;
+            // Force ALL side faces to mathematically orient V directly downwards (-Z)
+            if (abs(vWorldNormal.x) > 0.5) {
+                baseUV.x = vWorldNormal.x > 0.0 ? (0.5 - vLocalPosition.y / 32.0) : (vLocalPosition.y / 32.0 + 0.5);
+            } else {
+                baseUV.x = vWorldNormal.y > 0.0 ? (vLocalPosition.x / 32.0 + 0.5) : (0.5 - vLocalPosition.x / 32.0);
+            }
+            baseUV.y = vLocalPosition.z / 32.0 + 0.5;
+          }
+
+          // --- Fluid Animation Override ---
+          if (vIsFluid > 0.5) {
+              vec3 worldPos = vInstancePosition + vLocalPosition;
+              if (vWorldNormal.z > 0.9) { // Flat Top face ONLY
+                  // Seamless world-aligned mapping, NO time sliding
+                  baseUV = fract(vec2(worldPos.x, -worldPos.y) / 32.0);
+              }
+          }
+
+          vec2 modifiedUV = baseUV * iuv.zw + iuv.xy;
+          vec4 sampledDiffuseColor = texture2D( map, modifiedUV );
+
+          // --- Fake AO/Lighting for Depth Perception ---
+          float lighting = 1.0;
+          if (abs(vWorldNormal.z) < 0.9) { 
+            lighting = 0.75;
+          } else if (vWorldNormal.z < -0.9) { 
+            lighting = 0.5;
+          }
+          sampledDiffuseColor.rgb *= lighting;
+
+          diffuseColor *= sampledDiffuseColor;
+        #endif
+        `
+      );
     };
 
-    img.onload = () => {
-      const shades = ['#51852E', '#589132', '#4A7C2A', '#5C9636', '#447525'];
-      shades.forEach(color => {
-        const offCanvas = document.createElement('canvas');
-        offCanvas.width = img.naturalWidth;
-        offCanvas.height = img.naturalHeight;
-        const oCtx = offCanvas.getContext('2d');
-
-        oCtx.drawImage(img, 0, 0);
-        oCtx.globalCompositeOperation = 'multiply';
-        oCtx.fillStyle = color;
-        oCtx.fillRect(0, 0, offCanvas.width, offCanvas.height);
-
-        eng.grassVariations.push(offCanvas);
-      });
+    const createMesh = (geometry, material = this.instancedMaterial) => {
+      const uvsTop = new Float32Array(maxInstances * 4);
+      geometry.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(uvsTop, 4));
+      const uvsSide = new Float32Array(maxInstances * 4);
+      geometry.setAttribute('instanceUVSide', new THREE.InstancedBufferAttribute(uvsSide, 4));
+      const uvsBottom = new Float32Array(maxInstances * 4);
+      geometry.setAttribute('instanceUVBottom', new THREE.InstancedBufferAttribute(uvsBottom, 4));
+      geometry.setAttribute('isFluid', new THREE.InstancedBufferAttribute(new Float32Array(maxInstances), 1));
+      
+      const mesh = new THREE.InstancedMesh(geometry, material, maxInstances);
+      
+      mesh.frustumCulled = false;
+      mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1000000);
+      geometry.boundingSphere = mesh.boundingSphere;
+      
+      const colors = new Float32Array(maxInstances * 3);
+      mesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
+      
+      this.scene.add(mesh);
+      return mesh;
     };
 
-    const customFiles = [
-      { id: 'grass', src: 'assets/tiles/base/floor/grass_block_top.png', fallback: 'assets/tiles/base/grass_block_top.png' },
-      { id: 'dirt', src: 'assets/tiles/base/all-facing/dirt.png' },
-      { id: 'stone', src: 'assets/tiles/base/all-facing/stone.png' },
-      { id: 'water', src: 'assets/tiles/base/fluid/water_still.png', animated: true, tintable: true, alpha: 0.85 },
-      { id: 'paint', src: 'assets/tiles/base/side/rough-paint.png', tintable: true },
-      { id: 'carpet', src: 'assets/tiles/base/all-facing/carpet.png', tintable: true }
-    ];
-    customFiles.forEach(t => {
-      const tImg = new Image();
-      tImg.src = t.src;
-      tImg.onerror = () => { if (t.fallback) tImg.src = t.fallback; };
-      tImg.animated = t.animated;
-      tImg.tintable = t.tintable;
-      tImg.alpha = t.alpha || 1.0;
+    const cubeGeo = new THREE.BoxGeometry(32, 32, 32);
+    cubeGeo.computeBoundingBox();
+    cubeGeo.computeBoundingSphere();
+    this.voxelMesh = createMesh(cubeGeo);
 
-      if (t.animated) {
-        fetch(`${t.src}.mcmeta`).then(r => r.json()).then(data => tImg.mcmeta = data).catch(() => {});
+    const slabGeo = new THREE.BoxGeometry(32, 32, 16);
+    slabGeo.translate(0, 0, -8);
+    slabGeo.computeBoundingBox();
+    slabGeo.computeBoundingSphere();
+    this.slabMesh = createMesh(slabGeo);
+
+    const rampGeo = new THREE.BoxGeometry(32, 32, 32);
+    let pos = rampGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      if (pos.getY(i) < 0 && pos.getZ(i) > 0) {
+        pos.setZ(i, -16);
       }
-      eng.customTiles[t.id] = tImg;
+    }
+    let rampUv = rampGeo.attributes.uv;
+    for (let i = 0; i < rampUv.count; i++) {
+      if (i < 12) {
+        rampUv.setY(i, 1.0 - rampUv.getY(i));
+      }
+    }
+    rampGeo.computeVertexNormals();
+    rampGeo.computeBoundingBox();
+    rampGeo.computeBoundingSphere();
+    this.rampMesh = createMesh(rampGeo);
+
+    this.previewMaterial = this.instancedMaterial.clone();
+    this.previewMaterial.onBeforeCompile = this.instancedMaterial.onBeforeCompile;
+    this.previewMaterial.transparent = true;
+    this.previewMaterial.opacity = 0.6;
+    this.previewMaterial.depthTest = true;
+    this.previewMaterial.polygonOffset = true;
+    this.previewMaterial.polygonOffsetFactor = -2;
+    this.previewMaterial.polygonOffsetUnits = -2;
+
+    const createPreviewMesh = (geometry) => {
+      geometry.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(new Float32Array(4), 4));
+      geometry.setAttribute('instanceUVSide', new THREE.InstancedBufferAttribute(new Float32Array(4), 4));
+      geometry.setAttribute('instanceUVBottom', new THREE.InstancedBufferAttribute(new Float32Array(4), 4));
+      geometry.setAttribute('isFluid', new THREE.InstancedBufferAttribute(new Float32Array(4), 1));
+      const mesh = new THREE.InstancedMesh(geometry, this.previewMaterial, 1);
+      mesh.frustumCulled = false; mesh.count = 0; mesh.renderOrder = 998;
+      mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(3), 3);
+      this.scene.add(mesh); return mesh;
+    };
+    
+    this.previewCubeMesh = createPreviewMesh(cubeGeo.clone());
+    this.previewSlabMesh = createPreviewMesh(slabGeo.clone());
+    this.previewRampMesh = createPreviewMesh(rampGeo.clone());
+
+    this.decorMaterial = this.instancedMaterial.clone();
+    this.decorMaterial.side = THREE.DoubleSide;
+    this.decorMaterial.depthWrite = true;
+    this.decorMaterial.alphaTest = 0.5;
+    this.decorMaterial.onBeforeCompile = (shader) => {
+      shader.vertexShader = `
+        attribute vec4 instanceUVTop;
+        varying vec4 vInstanceUVTop;
+        varying vec3 vWorldNormal;
+      ` + shader.vertexShader.replace(
+        '#include <uv_vertex>',
+        `
+        #include <uv_vertex>
+        vInstanceUVTop = instanceUVTop;
+        vWorldNormal = normalize( mat3( modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz ) * normal );
+        `
+      );
+      shader.fragmentShader = `
+        varying vec4 vInstanceUVTop;
+        varying vec3 vWorldNormal;
+      ` + shader.fragmentShader.replace(
+        '#include <map_fragment>',
+        `
+        #ifdef USE_MAP
+          vec2 modifiedUV = vMapUv * vInstanceUVTop.zw + vInstanceUVTop.xy;
+          vec4 sampledDiffuseColor = texture2D( map, modifiedUV );
+          float lighting = 1.0;
+          if (abs(vWorldNormal.z) < 0.9) lighting = 0.75;
+          else if (vWorldNormal.z < -0.9) lighting = 0.5;
+          sampledDiffuseColor.rgb *= lighting;
+          diffuseColor *= sampledDiffuseColor;
+        #endif
+        `
+      );
+    };
+
+    const decorGeo = new THREE.BufferGeometry();
+    const verts = new Float32Array([
+      -16, 0, 32,  16, 0, 32,  -16, 0, 0,   16, 0, 32,  16, 0, 0,  -16, 0, 0,
+       0, -16, 32,  0, 16, 32,  0, -16, 0,   0, 16, 32,  0, 16, 0,  0, -16, 0
+    ]);
+    const uvsGeo = new Float32Array([
+      0, 1,  1, 1,  0, 0,   1, 1,  1, 0,  0, 0,
+      0, 1,  1, 1,  0, 0,   1, 1,  1, 0,  0, 0
+    ]);
+    decorGeo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+    decorGeo.setAttribute('uv', new THREE.BufferAttribute(uvsGeo, 2));
+    decorGeo.computeVertexNormals();
+    this.decorMesh = createMesh(decorGeo);
+    this.decorMesh.material = this.decorMaterial;
+  }
+
+  setupCompass() {
+    let compass = document.getElementById('compass-ui');
+    if (!compass) {
+      compass = document.createElement('div');
+      compass.id = 'compass-ui';
+      compass.style.cssText = 'position: absolute; top: 85px; right: 35px; width: 40px; height: 40px; background: rgba(5, 7, 10, 0.8); border: 2px solid #3498db; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 1000; pointer-events: auto; cursor: pointer; font-family: var(--font-mono); font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.8); transition: background 0.2s;';
+      
+      compass.onmouseenter = () => compass.style.background = 'rgba(52, 152, 219, 0.3)';
+      compass.onmouseleave = () => compass.style.background = 'rgba(5, 7, 10, 0.8)';
+      compass.onclick = () => {
+        const snapAngle = this.engine.clientSettings.cameraAngleSnap !== undefined ? this.engine.clientSettings.cameraAngleSnap : 0;
+        this.cameraAngle = parseInt(snapAngle, 10);
+        this.updateCameraRotation();
+      };
+      
+      const needle = document.createElement('div');
+      needle.id = 'compass-needle';
+      needle.style.cssText = 'position: relative; width: 4px; height: 32px; background: linear-gradient(to bottom, #e74c3c 50%, #bdc3c7 50%); border-radius: 2px;';
+      
+      const nLabel = document.createElement('div');
+      nLabel.innerText = 'N';
+      nLabel.style.cssText = 'position: absolute; top: -12px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #e74c3c; text-shadow: 1px 1px 0 #000;';
+      needle.appendChild(nLabel);
+      
+      compass.appendChild(needle);
+      document.body.appendChild(compass);
+    }
+  }
+
+  updateCompass() {
+    const needle = document.getElementById('compass-needle');
+    if (needle) {
+      needle.style.transform = `rotate(${-this.cameraAngle}deg)`;
+    }
+  }
+
+  setupDebugOverlay() {
+    let overlay = document.getElementById('3d-debug-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = '3d-debug-overlay';
+      overlay.style.cssText = 'position: absolute; pointer-events: none; background: rgba(0,0,0,0.8); border: 1px solid #f1c40f; color: #fff; font-family: var(--font-mono); font-size: 12px; padding: 10px; border-radius: 4px; z-index: 1000; display: none; white-space: nowrap; box-shadow: 0 0 10px rgba(0,0,0,0.8);';
+      document.body.appendChild(overlay);
+    }
+    this.debugOverlay = overlay;
+
+    let dCanvas = document.getElementById('debug-canvas');
+    if (!dCanvas) {
+      dCanvas = document.createElement('canvas');
+      dCanvas.id = 'debug-canvas';
+      dCanvas.style.cssText = 'position: absolute; top: 0; left: 0; pointer-events: none; z-index: 10;';
+      document.body.appendChild(dCanvas);
+    }
+    this.debugCanvas = dCanvas;
+    this.debugCtx = dCanvas.getContext('2d');
+  }
+
+  loadAssets() {
+    this.textures = {};
+    this.entityMeshes = new Map();
+    this.projectileMeshes = new Map();
+    this.debrisMeshes = new Map();
+    this.atlasMap = {};
+    
+    this.buildTextureAtlas();
+    
+    const loader = new THREE.TextureLoader();
+    const cb = '?v=phase2-3d';
+
+    loader.load(`assets/sprites/projectiles/paper-airplane-right.png${cb}`, (tex) => {
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.repeat.set(1/4, 1);
+      this.textures['proj_airplane'] = tex;
     });
+
+    ['crumpled-cronched-paper-1', 'crumpled-cronched-paper-2', 'crumpled-cronched-paper-3'].forEach((name, i) => {
+      loader.load(`assets/sprites/projectiles/${name}.png${cb}`, (tex) => {
+        tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
+        this.textures[`cronched_${i+1}`] = tex;
+      });
+    });
+
+    ['crumpled-paper-1', 'crumpled-paper-2'].forEach((name, i) => {
+      loader.load(`assets/sprites/projectiles/${name}.png${cb}`, (tex) => {
+        tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
+        this.textures[`waste_${i+1}`] = tex;
+      });
+    });
+
+    loader.load(`assets/sprites/projectiles/crumpled-cronched-charred-paper-1.png${cb}`, (tex) => {
+      tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.colorSpace = THREE.SRGBColorSpace;
+      this.textures['charred_1'] = tex;
+    });
+
+    const spriteConfigs = [
+      { state: 'idle', file: 'idle-template', rows: 12 },
+      { state: 'walk', file: 'walk-template', rows: 8 },
+      { state: 'run', file: 'run-template', rows: 8 },
+      { state: 'dash', file: 'dash-template', rows: 8 },
+      { state: 'jump', file: 'jump-template', rows: 8 },
+      { state: 'attack1', file: 'attack-template', rows: 7 },
+      { state: 'attack2', file: 'attack-template', rows: 7 },
+      { state: 'throw_attack1', file: 'attack-ranged', rows: 7 },
+      { state: 'hurt', file: 'idle-template', rows: 12 },
+      { state: 'death', file: 'idle-template', rows: 12 }
+    ];
+
+    const path = 'assets/sprites/characters';
+
+    spriteConfigs.forEach(config => {
+      loader.load(`${path}/${config.file}.png${cb}`, (tex) => {
+        tex.magFilter = THREE.NearestFilter;
+        tex.minFilter = THREE.NearestFilter;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.repeat.set(1/8, 1/config.rows);
+        tex.userData = { rows: config.rows };
+        this.textures[config.state] = tex;
+      });
+    });
+  }
+
+  buildTextureAtlas() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+
+    this.atlasMap = {
+      'white': { x: 0, y: 1 },
+      'mud1': { x: 2, y: 1 },
+      'mud2': { x: 3, y: 1 },
+      'mud3': { x: 0, y: 2 },
+      'bubble': { x: 2, y: 2 },
+      'smoke': { x: 0, y: 1 }, // Maps directly to the white square fallback
+      'water_flow': { x: 1, y: 3 },
+      'lava_flow': { x: 3, y: 3 }
+    };
+
+    for (const id in BlockRegistry) {
+      const block = BlockRegistry[id];
+      if (block.faces) {
+        if (block.faces.top && !this.atlasMap[block.name]) this.atlasMap[block.name] = { x: block.faces.top[0], y: block.faces.top[1] };
+        if (block.faces.sides && !this.atlasMap[block.name + '_flow']) this.atlasMap[block.name + '_flow'] = { x: block.faces.sides[0], y: block.faces.sides[1] };
+        if (block.faces.bottom && !this.atlasMap[block.name + '_bottom']) this.atlasMap[block.name + '_bottom'] = { x: block.faces.bottom[0], y: block.faces.bottom[1] };
+      }
+    }
+
+    const atlasTexture = new THREE.CanvasTexture(canvas);
+    atlasTexture.magFilter = THREE.NearestFilter;
+    atlasTexture.minFilter = THREE.NearestFilter;
+    atlasTexture.generateMipmaps = false;
+    atlasTexture.colorSpace = THREE.SRGBColorSpace;
+    
+    this.instancedMaterial.map = atlasTexture;
+    this.instancedMaterial.needsUpdate = true;
+
+    this.atlasCtx = ctx;
+    this.atlasTexture = atlasTexture;
+    this.animatedTiles = [];
+
+    const loadTile = (id, src, isAnimated = false) => {
+      const img = new Image();
+      img.src = src + '?v=' + Date.now();
+      img.onload = () => {
+        const pos = this.atlasMap[id];
+        let sequence = null;
+        let frametime = 150;
+        
+        const baseName = id.replace('_flow', '');
+        for (const key in BlockRegistry) {
+          if (BlockRegistry[key].name === baseName) {
+            if (BlockRegistry[key].animated) {
+              isAnimated = true;
+              sequence = BlockRegistry[key].sequence;
+              frametime = BlockRegistry[key].frametime || 150;
+            }
+            break;
+          }
+        }
+
+        if (isAnimated) {
+          this.animatedTiles.push({ id, img, pos, frames: img.height / img.width, lastFrame: -1, sequence, frametime });
+        } else {
+          if (pos) {
+            ctx.drawImage(img, 0, 0, img.width, img.height, pos.x * 64, pos.y * 64, 64, 64);
+            atlasTexture.needsUpdate = true;
+          }
+        }
+      };
+    };
+
+    loadTile('grass', 'assets/tiles/base/floor/grass_block_top.png');
+    loadTile('dirt', 'assets/tiles/base/all-facing/dirt.png');
+    loadTile('stone', 'assets/tiles/base/all-facing/stone.png');
+    loadTile('water', 'assets/tiles/base/fluid/water_still.png', true);
+    loadTile('water_flow', 'assets/tiles/base/fluid/water_flow.png', true);
+    loadTile('mud1', 'assets/tiles/base/all-facing/packed_mud1.png');
+    loadTile('mud2', 'assets/tiles/base/all-facing/packed_mud2.png');
+    loadTile('mud3', 'assets/tiles/base/all-facing/packed_mud3.png');
+    loadTile('ice', 'assets/tiles/base/all-facing/ice.png');
+    loadTile('acid', 'assets/tiles/base/fluid/water_still.png');
+    loadTile('lava', 'assets/tiles/base/fluid/lava_still.png');
+    loadTile('lava_flow', 'assets/tiles/base/fluid/lava_flow.png');
+    loadTile('bubble', 'assets/sprites/fx/bubble-grayscale.png');
+    
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 64, 64, 64);
+  }
+
+  updateAnimatedTiles() {
+    if (!this.animatedTiles || this.animatedTiles.length === 0) return;
+    let updated = false;
+    
+    this.animatedTiles.forEach(tile => {
+      let currentFrame;
+      if (tile.sequence) {
+        let seqIdx = Math.floor(performance.now() / (tile.frametime || 150)) % tile.sequence.length;
+        currentFrame = tile.sequence[seqIdx];
+      } else {
+        const frameCount = tile.frames || 1;
+        currentFrame = Math.floor(performance.now() / (tile.frametime || 150)) % frameCount; 
+      }
+      
+      if (tile.lastFrame !== currentFrame) {
+        tile.lastFrame = currentFrame;
+        const sy = currentFrame * tile.img.width; 
+        this.atlasCtx.clearRect(tile.pos.x * 64, tile.pos.y * 64, 64, 64);
+        this.atlasCtx.drawImage(tile.img, 0, sy, tile.img.width, tile.img.width, tile.pos.x * 64, tile.pos.y * 64, 64, 64);
+        updated = true;
+      }
+    });
+    
+    if (updated) {
+      this.atlasTexture.needsUpdate = true;
+    }
+  }
+
+  isBlockOccluded(x, y, z, shape) {
+    if (shape !== 'cube') return false;
+    const cm = this.engine.mapManager;
+    if (!cm) return false;
+
+    const getShape = (v) => v ? (v.shape || 'cube') : null;
+
+    const top = cm.getVoxelAt(x, y, z + 32);
+    const bottom = z <= -96 ? { shape: 'cube' } : cm.getVoxelAt(x, y, z - 32);
+    const north = cm.getVoxelAt(x, y - 32, z);
+    const south = cm.getVoxelAt(x, y + 32, z);
+    const east = cm.getVoxelAt(x + 32, y, z);
+    const west = cm.getVoxelAt(x - 32, y, z);
+
+    if (getShape(top) === 'cube' && getShape(bottom) === 'cube' && 
+        getShape(north) === 'cube' && getShape(south) === 'cube' && 
+        getShape(east) === 'cube' && getShape(west) === 'cube') {
+      return true;
+    }
+    return false;
+  }
+
+  cacheOcclusion() {
+    if (!this.engine.mapManager) return;
+    for (const [key, voxel] of this.engine.mapManager.voxels.entries()) {
+      const [vx, vy, vz] = key.split('_').map(Number);
+      voxel.isOccluded = this.isBlockOccluded(vx * 32, vy * 32, vz * 32, voxel.shape || 'cube');
+    }
+  }
+
+  updateBlockOcclusion(localX, localY, localZ) {
+    if (!this.engine.mapManager) return;
+    const offsets = [
+      [0, 0, 0], [0, 0, 1], [0, 0, -1], [0, -1, 0], [0, 1, 0], [1, 0, 0], [-1, 0, 0]
+    ];
+    for (const [dx, dy, dz] of offsets) {
+      const nx = localX + dx;
+      const ny = localY + dy;
+      const nz = localZ + dz;
+      const voxel = this.engine.mapManager.voxels.get(`${nx}_${ny}_${nz}`);
+      if (voxel) voxel.isOccluded = this.isBlockOccluded(nx * 32, ny * 32, nz * 32, voxel.shape || 'cube');
+    }
+  }
+
+  getRelativeSpriteDirection(absoluteDir) {
+    const dirs = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up', 'up-left', 'left'];
+    let dirIdx = dirs.indexOf(absoluteDir);
+    if (dirIdx === -1) dirIdx = 0;
+
+    const shift = Math.round((-this.cameraAngle || 0) / 45);
+    
+    let relativeIdx = (dirIdx + shift) % 8;
+    if (relativeIdx < 0) relativeIdx += 8;
+
+    return dirs[relativeIdx];
+  }
+
+  updateVoxels() {
+    if (!this.engine.mapManager) return;
+    
+    if (!this.needsVoxelUpdate) return;
+    this.needsVoxelUpdate = false;
+
+    const nameToId = {};
+    for (const id in BlockRegistry) {
+      nameToId[BlockRegistry[id].name] = id;
+    }
+
+    let iCube = 0, iSlab = 0, iRamp = 0, iDecor = 0;
+    const dummy = new THREE.Object3D();
+    
+    const fluidAttrCube = this.voxelMesh.geometry.attributes.isFluid;
+    const fluidAttrSlab = this.slabMesh.geometry.attributes.isFluid;
+    const fluidAttrRamp = this.rampMesh.geometry.attributes.isFluid;
+    const fluidAttrDecor = this.decorMesh.geometry.attributes.isFluid;
+
+    this.engine.splashPoints = [];
+    this.engine.lavaPoints = [];
+
+    for (const [key, voxel] of this.engine.mapManager.voxels.entries()) {
+      if (voxel.isOccluded) continue;
+
+        const [vx, vy, vz] = key.split('_').map(Number);
+        const absX = vx * 32;
+        const absY = vy * 32;
+        const absZ = vz * 32;
+
+        if (voxel.tex === 'water_flow') {
+           const bottomVoxel = this.engine.mapManager.getVoxelAt(absX, absY, absZ - 32);
+           if (bottomVoxel && bottomVoxel.tex === 'water') {
+              let wColor = bottomVoxel.color;
+              if (!wColor || typeof wColor !== 'string' || !wColor.startsWith('#') || wColor.includes('NaN')) {
+                wColor = '#3498db';
+              }
+              
+              let fallHeight = 1;
+              while (this.engine.mapManager.getVoxelAt(absX, absY, absZ + (fallHeight * 32))?.tex === 'water_flow') {
+                 fallHeight++;
+              }
+              this.engine.splashPoints.push({ x: absX, y: absY, z: absZ - 16, color: wColor, fallHeight });
+           }
+        }
+
+        if (voxel.tex === 'lava' || voxel.tex === 'acid') {
+           const topVoxel = this.engine.mapManager.getVoxelAt(absX, absY, absZ + 32);
+           if (!topVoxel || topVoxel.shape !== 'cube') {
+              let lColor = voxel.color;
+              if (!lColor || typeof lColor !== 'string' || !lColor.startsWith('#') || lColor.includes('NaN')) {
+                lColor = voxel.tex === 'acid' ? '#2ecc71' : '#ff5d00';
+              }
+              this.engine.lavaPoints.push({ x: absX, y: absY, z: absZ, color: lColor, isAcid: voxel.tex === 'acid' });
+           }
+        }
+
+        const shape = voxel.shape || 'cube';
+        let currentMesh, currentI, currentUVTop, currentUVSide, currentUVBottom, currentFluidAttr;
+
+        dummy.rotation.set(0, 0, 0);
+        const isFluid = voxel.tex === 'water' || voxel.tex === 'water_flow' || voxel.tex === 'lava' || voxel.tex === 'acid';
+
+        if (shape === 'decor') {
+          currentMesh = this.decorMesh; currentI = iDecor;
+          currentUVTop = this.decorMesh.geometry.attributes.instanceUVTop;
+          currentUVSide = this.decorMesh.geometry.attributes.instanceUVSide;
+          currentUVBottom = this.decorMesh.geometry.attributes.instanceUVBottom;
+          currentFluidAttr = fluidAttrDecor;
+          iDecor++;
+        } else if (shape === 'slab') {
+          currentMesh = this.slabMesh; currentI = iSlab;
+          currentUVTop = this.slabMesh.geometry.attributes.instanceUVTop;
+          currentUVSide = this.slabMesh.geometry.attributes.instanceUVSide;
+          currentUVBottom = this.slabMesh.geometry.attributes.instanceUVBottom;
+          currentFluidAttr = fluidAttrSlab;
+          iSlab++;
+        } else if (shape.startsWith('ramp')) {
+          currentMesh = this.rampMesh; currentI = iRamp;
+          currentUVTop = this.rampMesh.geometry.attributes.instanceUVTop;
+          currentUVSide = this.rampMesh.geometry.attributes.instanceUVSide;
+          currentUVBottom = this.rampMesh.geometry.attributes.instanceUVBottom;
+          currentFluidAttr = fluidAttrRamp;
+          iRamp++;
+          if (shape === 'ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
+          else if (shape === 'ramp_n') dummy.rotation.set(0, 0, Math.PI);
+          else if (shape === 'ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
+        } else {
+          currentMesh = this.voxelMesh; currentI = iCube;
+          currentUVTop = this.voxelMesh.geometry.attributes.instanceUVTop;
+          currentUVSide = this.voxelMesh.geometry.attributes.instanceUVSide;
+          currentUVBottom = this.voxelMesh.geometry.attributes.instanceUVBottom;
+          currentFluidAttr = fluidAttrCube;
+          iCube++;
+        }
+        if (currentI >= 100000) continue;
+
+        dummy.position.set(absX, absY, absZ);
+        dummy.updateMatrix();
+        currentMesh.setMatrixAt(currentI, dummy.matrix);
+
+        let blockColor = voxel.color;
+        if (!blockColor || typeof blockColor !== 'string' || !blockColor.startsWith('#') || blockColor.includes('NaN')) {
+          if (voxel.tex === 'lava') blockColor = '#ff5d00';
+          else if (voxel.tex === 'acid') blockColor = '#2ecc71';
+          else blockColor = voxel.tex === 'grass' ? '#51852E' : '#ffffff';
+        }
+        
+        let finalColor = new THREE.Color(blockColor);
+        if (isFluid) {
+            let depth = 0;
+            let checkZ = absZ + 32;
+            while (true) {
+                const topVoxel = this.engine.mapManager.getVoxelAt(absX, absY, checkZ);
+                if (topVoxel && (topVoxel.tex === 'water' || topVoxel.tex === 'water_flow' || topVoxel.tex === 'lava' || topVoxel.tex === 'acid')) {
+                    depth++;
+                    checkZ += 32;
+                } else {
+                    break;
+                }
+            }
+            if (depth > 0) {
+                const darkenFactor = Math.max(0.3, 1.0 - (depth * 0.2));
+                finalColor.multiplyScalar(darkenFactor);
+            }
+        }
+        currentMesh.setColorAt(currentI, finalColor);
+
+        const blockId = nameToId[voxel.tex];
+        const voxelDef = blockId ? BlockRegistry[blockId] : null;
+        let mainAtlasPos, sidesAtlasPos, bottomAtlasPos;
+
+        if (voxelDef && voxelDef.faces) {
+          mainAtlasPos = this.atlasMap[voxelDef.name];
+          sidesAtlasPos = this.atlasMap[voxelDef.name + '_flow'];
+          if (!sidesAtlasPos) sidesAtlasPos = mainAtlasPos;
+          bottomAtlasPos = this.atlasMap[voxelDef.name + '_bottom'] || mainAtlasPos;
+        } else {
+          let blockType = voxel.tex || 'grass';
+          if (blockType === 'mud') {
+            const hash = Math.abs(Math.sin(vx * 12.9898 + vy * 78.233 + vz * 37.719)) * 10000;
+            blockType = `mud${Math.floor(hash) % 3 + 1}`;
+          }
+          mainAtlasPos = this.atlasMap[blockType] || this.atlasMap['stone'];
+          sidesAtlasPos = mainAtlasPos;
+          bottomAtlasPos = mainAtlasPos;
+        }
+
+        const uvScaleX = 64 / 256; const uvScaleY = 64 / 256;
+        
+        if (currentFluidAttr) currentFluidAttr.setX(currentI, isFluid ? 1.0 : 0.0);
+        
+        if (currentUVTop) {
+          const tx = mainAtlasPos ? mainAtlasPos.x : 0; const ty = mainAtlasPos ? mainAtlasPos.y : 0;
+          currentUVTop.setXYZW(currentI, tx * uvScaleX, 1.0 - ((ty + 1) * uvScaleY), uvScaleX, uvScaleY);
+        }
+        if (currentUVSide) {
+          const sx = sidesAtlasPos ? sidesAtlasPos.x : 0; const sy = sidesAtlasPos ? sidesAtlasPos.y : 0;
+          currentUVSide.setXYZW(currentI, sx * uvScaleX, 1.0 - ((sy + 1) * uvScaleY), uvScaleX, uvScaleY);
+        }
+        if (currentUVBottom) {
+          const bx = bottomAtlasPos ? bottomAtlasPos.x : 0; const by = bottomAtlasPos ? bottomAtlasPos.y : 0;
+          currentUVBottom.setXYZW(currentI, bx * uvScaleX, 1.0 - ((by + 1) * uvScaleY), uvScaleX, uvScaleY);
+        }
+    }
+    
+    this.voxelMesh.count = iCube;
+    this.slabMesh.count = iSlab;
+    this.rampMesh.count = iRamp;
+    this.decorMesh.count = iDecor;
+    
+    [this.voxelMesh, this.slabMesh, this.rampMesh, this.decorMesh].forEach(m => {
+      m.instanceMatrix.needsUpdate = true;
+      if (m.instanceColor) m.instanceColor.needsUpdate = true;
+      if (m.geometry.attributes.instanceUVTop) m.geometry.attributes.instanceUVTop.needsUpdate = true;
+      if (m.geometry.attributes.instanceUVSide) m.geometry.attributes.instanceUVSide.needsUpdate = true;
+      if (m.geometry.attributes.instanceUVBottom) m.geometry.attributes.instanceUVBottom.needsUpdate = true;
+      if (m.geometry.attributes.isFluid) m.geometry.attributes.isFluid.needsUpdate = true;
+    });
+    
+    if (!this.initialLoadComplete) {
+      this.initialLoadComplete = true;
+      if (this.engine.ui) this.engine.ui.hideLoadingScreen();
+    }
+  }
+
+  updateEntities() {
+    const activeEntities = new Set();
+
+    const updateEntityMesh = (entity, id) => {
+      activeEntities.add(id);
+      let group = this.entityMeshes.get(id);
+      
+      if (!group) {
+        group = new THREE.Group();
+
+        const mat = new THREE.SpriteMaterial({ 
+          transparent: true, 
+          alphaTest: 0.1,
+          polygonOffset: true,
+          polygonOffsetFactor: -1,
+          polygonOffsetUnits: -1
+        });
+        const sprite = new THREE.Sprite(mat);
+        group.add(sprite);
+        group.userData.sprite = sprite;
+
+        if (!id.startsWith('proj_')) {
+          const shadowGeo = new THREE.CircleGeometry(12, 16);
+          const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false });
+          const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+          group.add(shadow);
+          group.userData.shadow = shadow;
+        }
+
+        this.scene.add(group);
+        this.entityMeshes.set(id, group);
+      }
+
+      const sprite = group.userData.sprite;
+      const shadow = group.userData.shadow;
+
+      let state = entity.state || 'idle';
+      if (state === 'dead') state = 'death';
+      else if (entity.hurtTimer > 0) state = 'hurt';
+
+      let width = 192;
+      let height = 192;
+      let zOffset = 0;
+      if (state === 'attack1' || state === 'attack2' || state === 'throw_attack1') {
+        width = 288;
+        height = 288;
+        zOffset = -48;
+      }
+      sprite.scale.set(width, height, 1);
+
+      // This is PLAYER SPRITE HEIGHT
+      const groundOffset = -50
+
+      sprite.position.set(0, 0, (height / 2) + zOffset + groundOffset);
+      
+      group.position.set(entity.x, entity.y, entity.z || 0);
+
+      if (shadow) {
+        shadow.visible = !!this.engine.clientSettings.showBaseplates;
+        const terrainZ = this.engine.getTerrainZ(entity.x, entity.y, entity.z || 0);
+        shadow.position.set(0, 0, terrainZ - (entity.z || 0) + 0.5);
+
+        const heightDiff = Math.max(0, (entity.z || 0) - terrainZ);
+        const shadowScale = Math.max(0.1, 1 - (heightDiff / 200));
+        shadow.scale.set(shadowScale, shadowScale, 1);
+      }
+
+      const relDir = this.getRelativeSpriteDirection(entity.dir || 'down');
+      const tex = this.textures[state] || this.textures['idle'];
+      
+      if (tex) {
+        
+        if (sprite.userData.state !== state) {
+          sprite.material.map = tex.clone();
+          sprite.userData.state = state;
+          sprite.material.needsUpdate = true;
+        }
+        
+        let dirCols = {
+          'up-left': 0, 'left': 1, 'down-left': 2, 'down': 3,
+          'down-right': 4, 'right': 5, 'up-right': 6, 'up': 7
+        };
+
+        const colIndex = dirCols[relDir] !== undefined ? dirCols[relDir] : 3;
+        const rows = tex.userData.rows || 8;
+
+        sprite.material.map.offset.x = colIndex / 8;
+        sprite.material.map.offset.y = 1.0 - (((entity.frame || 0) % rows) + 1) * (1 / rows);
+
+        const maxFrames = this.engine.entityManager.getFrameCount(entity.state || 'idle');
+        if (state === 'death' && (entity.frame || 0) >= maxFrames - 1) {
+          group.visible = false;
+        } else {
+          group.visible = true;
+        }
+      }
+    };
+    if (this.engine.player) updateEntityMesh(this.engine.player, 'player_self');
+    for (const id in this.engine.otherPlayers) updateEntityMesh(this.engine.otherPlayers[id], `player_${id}`);
+    this.engine.npcs.forEach(npc => updateEntityMesh(npc, `npc_${npc.uuid}`));
+    for (const [id, group] of this.entityMeshes.entries()) {
+      if (!activeEntities.has(id) && !id.startsWith('proj_')) {
+        this.scene.remove(group);
+        if (group.userData.sprite) group.userData.sprite.material.dispose();
+        if (group.userData.shadow) {
+          group.userData.shadow.material.dispose();
+          group.userData.shadow.geometry.dispose();
+        }
+        this.entityMeshes.delete(id);
+      }
+    }
+  }
+
+  updateProjectiles() {
+    if (!this.engine.projectiles) return;
+    const activeProjs = new Set();
+    
+    this.engine.projectiles.forEach((proj, idx) => {
+      const id = `proj_${idx}`;
+      activeProjs.add(id);
+      
+      let group = this.projectileMeshes.get(id);
+      if (!group) {
+        group = new THREE.Group();
+        const mat = new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.1 });
+        const sprite = new THREE.Sprite(mat);
+        group.add(sprite);
+        group.userData.sprite = sprite;
+
+        const shadowGeo = new THREE.CircleGeometry(6, 16);
+        const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false });
+        const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+        group.add(shadow);
+        group.userData.shadow = shadow;
+
+        this.scene.add(group);
+        this.projectileMeshes.set(id, group);
+      }
+
+      const sprite = group.userData.sprite;
+      const shadow = group.userData.shadow;
+
+      let isLeft = false;
+      
+      if (proj.isCritLoop && proj.loopPitch !== undefined) {
+        const v1 = new THREE.Vector3(proj.startX, proj.startY, proj.startZ).project(this.camera);
+        const v2 = new THREE.Vector3(proj.targetX, proj.targetY, proj.targetZ).project(this.camera);
+        const baseAngle = Math.atan2(v2.y - v1.y, v2.x - v1.x);
+        
+        isLeft = Math.abs(baseAngle) > Math.PI / 2;
+        sprite.material.rotation = baseAngle + (isLeft ? -proj.loopPitch : proj.loopPitch);
+        proj.lastAngle = sprite.material.rotation;
+      } else if (proj.lastX !== undefined) {
+        const v1 = new THREE.Vector3(proj.lastX, proj.lastY, proj.lastZ).project(this.camera);
+        const v2 = new THREE.Vector3(proj.x, proj.y, proj.z).project(this.camera);
+        const dxScreen = v2.x - v1.x;
+        const dyScreen = v2.y - v1.y;
+        if (Math.abs(dxScreen) > 0.00001 || Math.abs(dyScreen) > 0.00001) {
+          const angle = Math.atan2(dyScreen, dxScreen);
+          sprite.material.rotation = angle;
+          isLeft = Math.abs(angle) > Math.PI / 2;
+          proj.lastAngle = angle;
+        } else if (proj.lastAngle !== undefined) {
+          sprite.material.rotation = proj.lastAngle;
+          isLeft = Math.abs(proj.lastAngle) > Math.PI / 2;
+        }
+      } else {
+        const v1 = new THREE.Vector3(proj.startX, proj.startY, proj.startZ).project(this.camera);
+        const v2 = new THREE.Vector3(proj.targetX, proj.targetY, proj.targetZ).project(this.camera);
+        const angle = Math.atan2(v2.y - v1.y, v2.x - v1.x);
+        sprite.material.rotation = angle;
+        isLeft = Math.abs(angle) > Math.PI / 2;
+        proj.lastAngle = angle;
+      }
+      
+      proj.lastX = proj.x;
+      proj.lastY = proj.y;
+      proj.lastZ = proj.z;
+
+      sprite.scale.set(64, 64, 1);
+
+      sprite.position.set(0, 0, 0);
+      group.position.set(proj.x, proj.y, proj.z);
+
+      if (shadow) {
+        const tz = this.engine.getTerrainZ(proj.x, proj.y, proj.z);
+        const heightDiff = Math.max(0, proj.z - tz);
+        const shadowScale = Math.max(0.5, 1 - (heightDiff / 200));
+        shadow.scale.set(shadowScale, shadowScale, 1);
+        shadow.position.set(0, 0, tz - proj.z + 0.5); 
+      }
+
+      const tex = this.textures['proj_airplane'];
+      if (tex) {
+        if (sprite.userData.tex !== 'proj_airplane') {
+          sprite.material.map = tex.clone();
+          sprite.userData.tex = 'proj_airplane';
+          sprite.material.needsUpdate = true;
+        }
+        const frameCount = 4;
+        const frameIndex = Math.floor(performance.now() / 80) % frameCount; 
+        
+        if (isLeft) {
+          sprite.material.map.repeat.set(1 / frameCount, -1);
+          sprite.material.map.offset.set(frameIndex / frameCount, 1);
+        } else {
+          sprite.material.map.repeat.set(1 / frameCount, 1);
+          sprite.material.map.offset.set(frameIndex / frameCount, 0);
+        }
+      }
+    });
+
+    for (const [id, group] of this.projectileMeshes.entries()) {
+      if (!activeProjs.has(id)) {
+        this.scene.remove(group);
+        if (group.userData.sprite) group.userData.sprite.material.dispose();
+        if (group.userData.shadow) {
+          group.userData.shadow.material.dispose();
+          group.userData.shadow.geometry.dispose();
+        }
+        this.projectileMeshes.delete(id);
+      }
+    }
+  }
+
+  updateParticles() {
+    if (!this.engine.particles) return;
+    
+    if (!this.particleMesh) {
+      const pGeo = new THREE.PlaneGeometry(1, 1);
+      const uvsMain = new Float32Array(2000 * 4);
+      const uvsSides = new Float32Array(2000 * 4);
+      pGeo.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(uvsMain, 4));
+      pGeo.setAttribute('instanceUVSide', new THREE.InstancedBufferAttribute(uvsSides, 4));
+      pGeo.setAttribute('instanceUVBottom', new THREE.InstancedBufferAttribute(uvsSides, 4));
+      
+      const pMat = this.instancedMaterial.clone();
+      pMat.onBeforeCompile = this.instancedMaterial.onBeforeCompile;
+      pMat.side = THREE.DoubleSide;
+      pMat.transparent = true;
+      pMat.alphaTest = 0.1;
+      this.particleMesh = new THREE.InstancedMesh(pGeo, pMat, 2000);
+      this.particleMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      this.particleMesh.frustumCulled = false;
+      
+      const colors = new Float32Array(2000 * 3);
+      this.particleMesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
+      this.scene.add(this.particleMesh);
+    }
+
+    const dummy = new THREE.Object3D();
+    const color = new THREE.Color();
+    const uvAttr = this.particleMesh.geometry.attributes.instanceUVTop;
+    const uvAttrSides = this.particleMesh.geometry.attributes.instanceUVSide;
+    const uvAttrBottom = this.particleMesh.geometry.attributes.instanceUVBottom;
+    let count = 0;
+
+    this.engine.particles.forEach(p => {
+      if (count >= 2000) return;
+      dummy.position.set(p.x, p.y, p.z);
+      dummy.quaternion.copy(this.camera.quaternion);
+      if (p.rot) dummy.rotateZ(p.rot);
+      
+      let scale = p.size * 2 * Math.max(0.1, p.life / p.maxLife);
+      if (p.isPop) {
+        scale = p.size * 2 * (1.0 + (1.0 - (p.life / p.maxLife)) * 1.5);
+      }
+      
+      dummy.scale.set(scale, scale, 1);
+      dummy.updateMatrix();
+      
+      this.particleMesh.setMatrixAt(count, dummy.matrix);
+      
+      const colorStr = p.color || '#ffffff';
+      let rgbaMatch = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      if (rgbaMatch) {
+         color.setRGB(parseInt(rgbaMatch[1])/255, parseInt(rgbaMatch[2])/255, parseInt(rgbaMatch[3])/255);
+      } else {
+         color.setStyle(colorStr);
+      }
+      
+      if (p.isPop) {
+        color.lerp(new THREE.Color(0xffffff), 1.0 - (p.life / p.maxLife));
+      }
+      this.particleMesh.setColorAt(count, color);
+
+      // Map a random subset of the block's texture to the particle
+      let blockType = p.tex || 'white';
+      
+      // Force 'bubble' or 'smoke' textures correctly
+      if (p.tex === 'bubble') blockType = 'bubble';
+      else if (p.tex === 'smoke') blockType = 'smoke';
+      else if (blockType === 'mud') blockType = 'mud1'; // Fallback mapping for particle chunks
+      if (blockType === 'ice') blockType = 'ice';
+      const atlasPos = this.atlasMap[blockType] || this.atlasMap['white'];
+      const uvScaleX = 64 / 256;
+      const uvScaleY = 64 / 256;
+      
+      let subUvX = p.uvOffsetX !== undefined ? p.uvOffsetX : 0;
+      let subUvY = p.uvOffsetY !== undefined ? p.uvOffsetY : 0;
+      let subScale = p.uvScale !== undefined ? p.uvScale : 1;
+      
+      const finalUvOffsetX = (atlasPos.x + subUvX) * uvScaleX;
+      const finalUvOffsetY = 1.0 - ((atlasPos.y + 1 - subUvY) * uvScaleY);
+      
+      uvAttr.setXYZW(count, finalUvOffsetX, finalUvOffsetY, uvScaleX * subScale, uvScaleY * subScale);
+      uvAttrSides.setXYZW(count, finalUvOffsetX, finalUvOffsetY, uvScaleX * subScale, uvScaleY * subScale);
+      uvAttrBottom.setXYZW(count, finalUvOffsetX, finalUvOffsetY, uvScaleX * subScale, uvScaleY * subScale);
+
+      count++;
+    });
+
+    this.particleMesh.count = count;
+    this.particleMesh.instanceMatrix.needsUpdate = true;
+    if (this.particleMesh.instanceColor) this.particleMesh.instanceColor.needsUpdate = true;
+    uvAttr.needsUpdate = true;
+    uvAttrSides.needsUpdate = true;
+    uvAttrBottom.needsUpdate = true;
+  }
+
+  updateDebris() {
+    if (!this.engine.debris) return;
+    const activeDebris = new Set();
+
+    this.engine.debris.forEach((deb, idx) => {
+      const id = `deb_${idx}`;
+      activeDebris.add(id);
+
+      let group = this.debrisMeshes.get(id);
+      if (!group) {
+        group = new THREE.Group();
+        const mat = new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.01 });
+        const sprite = new THREE.Sprite(mat);
+        group.add(sprite);
+        group.userData.sprite = sprite;
+
+        const shadowGeo = new THREE.CircleGeometry(4, 16);
+        const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4, depthWrite: false });
+        const shadow = new THREE.Mesh(shadowGeo, shadowMat);
+        group.add(shadow);
+        group.userData.shadow = shadow;
+
+        this.scene.add(group);
+        this.debrisMeshes.set(id, group);
+      }
+
+      const sprite = group.userData.sprite;
+      const shadow = group.userData.shadow;
+
+      let texName = deb.wasteTex;
+      if (deb.isCharred) texName = 'charred_1';
+      else if (deb.crumpleTimer > 0.2) texName = 'cronched_1';
+      else if (deb.crumpleTimer > 0.1) texName = 'cronched_2';
+      else if (deb.crumpleTimer > 0) texName = 'cronched_3';
+
+      const tex = this.textures[texName];
+      if (tex && sprite.userData.tex !== texName) {
+        sprite.material.map = tex;
+        sprite.userData.tex = texName;
+        sprite.material.needsUpdate = true;
+      }
+
+      sprite.scale.set(48, 48, 1);
+      sprite.material.rotation = deb.rotation || 0;
+      sprite.material.opacity = deb.life < 1.0 ? deb.life : 1.0;
+      
+      const fadeStart = 3.0;
+      const currentOpacity = deb.life < fadeStart ? Math.max(0, deb.life / fadeStart) : 1.0;
+      sprite.material.opacity = currentOpacity;
+
+      sprite.position.set(0, 0, 0);
+      group.position.set(deb.x, deb.y, deb.z);
+
+      if (shadow) {
+        const tz = this.engine.getTerrainZ(deb.x, deb.y, deb.z);
+        const heightDiff = Math.max(0, deb.z - tz);
+        const shadowScale = Math.max(0.1, 1 - (heightDiff / 100));
+        shadow.scale.set(shadowScale, shadowScale, 1);
+        shadow.material.opacity = currentOpacity * 0.4;
+      }
+    });
+
+    for (const [id, group] of this.debrisMeshes.entries()) {
+      if (!activeDebris.has(id)) {
+        this.scene.remove(group);
+        if (group.userData.sprite) group.userData.sprite.material.dispose();
+        if (group.userData.shadow) {
+          group.userData.shadow.material.dispose();
+          group.userData.shadow.geometry.dispose();
+        }
+        this.debrisMeshes.delete(id);
+      }
+    }
+  }
+
+  updateCameraTracking() {
+    const p = this.engine.player;
+    if (!p) return;
+    
+    // The camera stays fixed at an isometric angle, but its physical location
+    // must orbit the player based on the current cameraAngle.
+    const camOffsetDist = 500;
+    const zRotOffset = -this.cameraAngle * (Math.PI / 180);
+    // Calculate the orbit angle relative to the player
+    const orbitAngle = (Math.PI / 4) + zRotOffset; 
+    
+    const cx = this.engine.camera.x ?? 0;
+    const cy = this.engine.camera.y ?? 0;
+    const cz = this.engine.camera.z ?? 0;
+    
+    this.camera.position.x = cx + (Math.sin(orbitAngle) * camOffsetDist);
+    this.camera.position.y = cy + (Math.cos(orbitAngle) * camOffsetDist);
+    this.camera.position.z = cz + (camOffsetDist * Math.tan(Math.atan(1 / Math.sqrt(2))));
+    
+    this.camera.lookAt(cx, cy, cz);
+    // Force a matrix update so the Raycaster perfectly aligns with the new camera position!
+    this.camera.updateMatrixWorld();
+  }
+
+  updateArrowHelper() {
+    const eng = this.engine;
+    if (!eng.player || eng.player.state === 'death' || !this.camera || !this.arrowHelper) {
+      if (this.arrowHelper) this.arrowHelper.visible = false;
+      if (this.debugOverlay) this.debugOverlay.style.display = 'none';
+      return;
+    }
+    
+    const mouse = new THREE.Vector2();
+    mouse.x = (eng.input.mousePos.x / window.innerWidth) * 2 - 1;
+    mouse.y = -(eng.input.mousePos.y / window.innerHeight) * 2 + 1;
+
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouse, this.camera);
+
+    let targetPoint = null;
+    let blockHit = null;
+    
+    if (this.previewCubeMesh) this.previewCubeMesh.count = 0;
+    if (this.previewSlabMesh) this.previewSlabMesh.count = 0;
+    if (this.previewRampMesh) this.previewRampMesh.count = 0;
+
+    eng.cursorGridPos = null;
+
+    const buildMeshes = [this.voxelMesh, this.slabMesh, this.rampMesh].filter(Boolean);
+    if (buildMeshes.length > 0) {
+      const hits = raycaster.intersectObjects(buildMeshes);
+      if (hits.length > 0) {
+        targetPoint = hits[0].point;
+        blockHit = hits[0];
+      }
+    }
+
+    if (!targetPoint) {
+      const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -(eng.player.z || 0));
+      targetPoint = new THREE.Vector3();
+      if (!raycaster.ray.intersectPlane(plane, targetPoint)) targetPoint = null;
+    }
+
+    this.highlightBox.visible = false;
+
+    if (eng.editMode && targetPoint && (eng.devOptions.showTile || eng.devOptions.useBlockPreview)) {
+      let hitPos = new THREE.Vector3();
+      let normal = new THREE.Vector3(0, 0, 1);
+      
+      if (blockHit) {
+        const matrix = new THREE.Matrix4();
+        blockHit.object.getMatrixAt(blockHit.instanceId, matrix);
+        hitPos.setFromMatrixPosition(matrix);
+        const rawNormal = blockHit.face ? blockHit.face.normal.clone() : new THREE.Vector3(0, 0, 1);
+        const absX = Math.abs(rawNormal.x); const absY = Math.abs(rawNormal.y); const absZ = Math.abs(rawNormal.z);
+        if (absZ >= absX && absZ >= absY) normal.set(0, 0, Math.sign(rawNormal.z));
+        else if (absX > absY) normal.set(Math.sign(rawNormal.x), 0, 0);
+        else normal.set(0, Math.sign(rawNormal.y), 0);
+      } else {
+        hitPos.copy(targetPoint);
+      }
+
+      let targetX = Math.round(hitPos.x / 32) * 32; 
+      let targetY = Math.round(hitPos.y / 32) * 32; 
+      let targetZ = Math.round(hitPos.z / 32) * 32;
+      eng.cursorGridPos = { x: targetX, y: targetY, z: targetZ };
+
+      if (eng.devOptions.showTile && !eng.devOptions.useBlockPreview) {
+        this.highlightBox.position.set(targetX, targetY, targetZ);
+        this.highlightBox.material.color.setHex(0xf1c40f);
+        this.highlightBox.visible = true;
+      }
+
+      if (eng.devOptions.useBlockPreview) {
+        const activeSlot = document.querySelector('.hotbar-slot.active');
+        const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
+        const isDeleting = eng.input.keys['shift'] || tex === 'erase';
+        const isPicker = tex === 'picker';
+
+        if (isPicker) {
+           this.highlightBox.position.set(targetX, targetY, targetZ);
+           this.highlightBox.material.color.setHex(0x9b59b6); // Purple for picker
+           this.highlightBox.visible = true;
+        } else if (isDeleting) {
+           this.highlightBox.position.set(targetX, targetY, targetZ);
+           this.highlightBox.material.color.setHex(0xff4757); // Red for delete
+           this.highlightBox.visible = true;
+        } else {
+           let placeShape = eng.editShape || 'cube';
+           if (placeShape === 'ramp_player') {
+              const pDir = eng.player.dir;
+              if (pDir.includes('up')) placeShape = 'ramp_n';
+              else if (pDir.includes('down')) placeShape = 'ramp_s';
+              else if (pDir.includes('right')) placeShape = 'ramp_e';
+              else if (pDir.includes('left')) placeShape = 'ramp_w';
+              else placeShape = 'ramp_s';
+           }
+           const colorPicker = document.getElementById('build-color-picker');
+           const colorHex = colorPicker ? colorPicker.value : '#ffffff';
+           const clickedVoxel = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
+
+           if (clickedVoxel && clickedVoxel.shape === 'slab' && normal.z === 1 && clickedVoxel.tex === tex && clickedVoxel.color === colorHex) {
+             placeShape = 'cube';
+           } else {
+             targetX += normal.x * 32; targetY += normal.y * 32; targetZ += normal.z * 32;
+           }
+
+           let currentMesh; const dummy = new THREE.Object3D(); dummy.position.set(targetX, targetY, targetZ);
+           if (placeShape === 'slab') { currentMesh = this.previewSlabMesh; }
+           else if (placeShape.startsWith('ramp')) { 
+             currentMesh = this.previewRampMesh; 
+             if (placeShape === 'ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
+             else if (placeShape === 'ramp_n') dummy.rotation.set(0, 0, Math.PI); // Corrected from -Math.PI to Math.PI
+             else if (placeShape === 'ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
+           } else { currentMesh = this.previewCubeMesh; }
+
+           dummy.updateMatrix(); currentMesh.setMatrixAt(0, dummy.matrix); currentMesh.setColorAt(0, new THREE.Color(colorHex));
+           
+           const nameToId = {};
+           for (const id in BlockRegistry) {
+             nameToId[BlockRegistry[id].name] = id;
+           }
+
+           const blockId = nameToId[tex];
+           const voxelDef = blockId ? BlockRegistry[blockId] : null;
+           let mainAtlasPos, sidesAtlasPos, bottomAtlasPos;
+           if (voxelDef && voxelDef.faces) {
+             mainAtlasPos = { x: voxelDef.faces.top[0], y: voxelDef.faces.top[1] };
+             sidesAtlasPos = { x: voxelDef.faces.sides[0], y: voxelDef.faces.sides[1] };
+             bottomAtlasPos = { x: voxelDef.faces.bottom[0], y: voxelDef.faces.bottom[1] };
+           } else {
+             mainAtlasPos = this.atlasMap[tex] || this.atlasMap['stone'];
+             sidesAtlasPos = mainAtlasPos;
+             bottomAtlasPos = mainAtlasPos;
+           }
+
+           const setUVs = (uvAttr, atlasPos) => {
+             uvAttr.setXYZW(0, atlasPos.x * (64/256), 1.0 - ((atlasPos.y + 1) * (64/256)), 64/256, 64/256);
+           };
+           setUVs(currentMesh.geometry.attributes.instanceUVTop, mainAtlasPos);
+           setUVs(currentMesh.geometry.attributes.instanceUVSide, sidesAtlasPos);
+           setUVs(currentMesh.geometry.attributes.instanceUVBottom, bottomAtlasPos);
+           const isFluid = tex === 'water' || tex === 'water_flow' || tex === 'lava' || tex === 'acid';
+           if (currentMesh.geometry.attributes.isFluid) currentMesh.geometry.attributes.isFluid.setX(0, isFluid ? 1.0 : 0.0);
+
+           currentMesh.count = 1; currentMesh.instanceMatrix.needsUpdate = true;
+           if (currentMesh.instanceColor) currentMesh.instanceColor.needsUpdate = true;
+           currentMesh.geometry.attributes.instanceUVTop.needsUpdate = true;
+           currentMesh.geometry.attributes.instanceUVSide.needsUpdate = true;
+           currentMesh.geometry.attributes.instanceUVBottom.needsUpdate = true;
+           if (currentMesh.geometry.attributes.isFluid) currentMesh.geometry.attributes.isFluid.needsUpdate = true;
+        }
+      }
+    }
+
+    if (targetPoint) {
+      const feetPos = new THREE.Vector3(eng.player.x, eng.player.y, eng.player.z || 0);
+      const chestPos = new THREE.Vector3(eng.player.x, eng.player.y, (eng.player.z || 0) + 20);
+      
+      this.arrowHelper.visible = false;
+      if (this.debugOverlay) this.debugOverlay.style.display = 'none';
+
+      if (eng.devOptions.showDistPlayerToMouse && eng.devOptions.useDebugTooltip) {
+        const mathDir = new THREE.Vector3().copy(targetPoint).sub(feetPos);
+        const dist = mathDir.length();
+        
+        this.arrowHelper.visible = true;
+        
+        if (dist > 0.001) {
+          const visualDir = new THREE.Vector3().copy(targetPoint).sub(chestPos);
+          const visualDist = visualDir.length();
+          visualDir.normalize();
+          this.arrowHelper.setDirection(visualDir);
+          this.arrowHelper.setLength(visualDist, Math.min(visualDist * 0.2, 20), Math.min(visualDist * 0.05, 10));
+          this.arrowHelper.position.copy(chestPos);
+        }
+        if (this.debugOverlay) {
+          this.debugOverlay.style.display = 'block';
+          this.debugOverlay.style.left = (eng.input.mousePos.x + 20) + 'px';
+          this.debugOverlay.style.top = (eng.input.mousePos.y + 20) + 'px';
+          this.debugOverlay.innerHTML = `
+            <strong style="color: #f1c40f; border-bottom: 1px solid #f1c40f; padding-bottom: 3px; display: inline-block; margin-bottom: 5px;">Raycast Trace</strong><br>
+            Cursor XYZ: <span style="color: #2ecc71;">${Math.round(targetPoint.x)}, ${Math.round(targetPoint.y)}, ${Math.round(targetPoint.z)}</span><br>
+            Player XYZ: <span style="color: #3498db;">${Math.round(feetPos.x)}, ${Math.round(feetPos.y)}, ${Math.round(feetPos.z)}</span><br>
+            Trace Diff: <span style="color: #e74c3c;">${Math.round(targetPoint.x - feetPos.x)}, ${Math.round(targetPoint.y - feetPos.y)}, ${Math.round(targetPoint.z - feetPos.z)}</span><br>
+            Distance: &nbsp;&nbsp;<span style="color: #f39c12;">${Math.round(dist)}</span>
+          `;
+        }
+      }
+
+      if (this.debugCtx && !eng.devOptions.useDebugTooltip) {
+        const ctx = this.debugCtx;
+        
+        const drawDashedTrace = (origin, target, originLabel, targetLabel, color) => {
+          const p1 = origin.clone().project(this.camera);
+          const p2 = target.clone().project(this.camera);
+          const sx1 = (p1.x + 1) / 2 * window.innerWidth;
+          const sy1 = -(p1.y - 1) / 2 * window.innerHeight;
+          const sx2 = (p2.x + 1) / 2 * window.innerWidth;
+          const sy2 = -(p2.y - 1) / 2 * window.innerHeight;
+          
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(sx1, sy1);
+            ctx.lineTo(sx2, sy2);
+            ctx.stroke();
+            ctx.fillStyle = '#ff4757';
+            ctx.fillRect(sx1 - 2, sy1 - 2, 4, 4);
+            ctx.fillRect(sx2 - 2, sy2 - 2, 4, 4);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px monospace';
+            ctx.textAlign = 'left';
+            ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+            ctx.lineWidth = 3;
+            ctx.strokeText(`${originLabel} X:${Math.round(origin.x)} Y:${Math.round(origin.y)} Z:${Math.round(origin.z)}`, sx1 + 10, sy1);
+            ctx.fillText(`${originLabel} X:${Math.round(origin.x)} Y:${Math.round(origin.y)} Z:${Math.round(origin.z)}`, sx1 + 10, sy1);
+            ctx.strokeText(`${targetLabel} X:${Math.round(target.x)} Y:${Math.round(target.y)} Z:${Math.round(target.z)}`, sx2 + 10, sy2);
+            ctx.fillText(`${targetLabel} X:${Math.round(target.x)} Y:${Math.round(target.y)} Z:${Math.round(target.z)}`, sx2 + 10, sy2);
+            ctx.textAlign = 'center';
+            const midX = (sx1 + sx2) / 2;
+            const midY = (sy1 + sy2) / 2;
+            const dx = target.x - origin.x;
+            const dy = target.y - origin.y;
+            const dz = target.z - origin.z;
+            const dist = Math.hypot(Math.hypot(dx, dy), dz);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            const text = `Dist: ${Math.round(dist)} | XYZ: ${Math.round(dx)}, ${Math.round(dy)}, ${Math.round(dz)} | Ang: ${Math.round(angle)}°`;
+            
+            let screenAngle = Math.atan2(sy2 - sy1, sx2 - sx1);
+            if (sx1 > sx2) screenAngle += Math.PI; // Prevent text from rendering upside down
+            ctx.save();
+            ctx.translate(midX, midY);
+            ctx.rotate(screenAngle);
+            ctx.strokeText(text, 0, -10);
+            ctx.fillText(text, 0, -10);
+            ctx.restore();
+            ctx.restore();
+        };
+
+        if (eng.devOptions.showDistPlayerToMouse) {
+          drawDashedTrace(feetPos, targetPoint, "Player", "Mouse", "#2ecc71");
+        }
+        
+        if (eng.selectedTarget && eng.selectedTarget.type === 'npc') {
+          const npc = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
+          if (npc) {
+            const npcPos = new THREE.Vector3(npc.x, npc.y, npc.z || 0);
+            if (eng.devOptions.showDistToNPC) drawDashedTrace(feetPos, npcPos, "Player", "NPC", "#f1c40f");
+            if (eng.devOptions.showDistNpcToMouse) drawDashedTrace(npcPos, targetPoint, "NPC", "Mouse", "#e74c3c");
+          }
+        }
+      }
+    }
+    
+    eng.mouseWorldPos = targetPoint;
   }
 
   draw() {
     const eng = this.engine;
-    const ctx = eng.ctx;
-
-    ctx.save();
-    if (eng.mapOverlay && eng.mapOverlay.active) {
-      const mmSize = 250;
-      const pipX = eng.canvas.width - mmSize / 2 - 20;
-      const pipY = 70 + mmSize / 2;
-      const pipRadius = mmSize / 2;
-
-      ctx.beginPath();
-      ctx.arc(pipX, pipY, pipRadius, 0, Math.PI * 2);
-      ctx.clip();
-      
-      ctx.fillStyle = '#0b0e14';
-      ctx.fillRect(pipX - pipRadius, pipY - pipRadius, mmSize, mmSize);
-    } else {
-      ctx.fillStyle = '#0b0e14';
-      ctx.fillRect(0, 0, eng.canvas.width, eng.canvas.height);
-    }
-
-    const drawIsoCircle = (wx, wy, wz, radius, color, fillAlpha) => {
-      const pos = eng.getScreenPos(wx, wy, wz);
-      ctx.save();
-      ctx.transform(1, eng.tilt, -1, eng.tilt, pos.x, pos.y);
-      ctx.beginPath();
-      ctx.arc(0, 0, radius, 0, Math.PI * 2);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      if (fillAlpha > 0) {
-        ctx.globalAlpha = fillAlpha;
-        ctx.fillStyle = color;
-        ctx.fill();
-      }
-      ctx.restore();
-    };
     
-    const drawTileHighlight = (wx, wy, fill, stroke, textColor, zOffset = 0, isBase = false) => {
-      const blockSize = 32; 
-      const tileW = 64;
-      const gx = Math.round(wx / blockSize);
-      const gy = Math.round(wy / blockSize);
-      const pos = eng.getScreenPos(gx * blockSize, gy * blockSize);
-      
-      ctx.save();
-      ctx.translate(pos.x, pos.y - zOffset);
-      ctx.scale(1, eng.tilt);
-      ctx.rotate(45 * Math.PI / 180);
-      const size = tileW / Math.SQRT2;
-      ctx.fillStyle = fill;
-      ctx.fillRect(-size / 2, -size / 2, size, size);
-      ctx.strokeStyle = stroke;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(-size / 2, -size / 2, size, size);
-      ctx.restore();
-      
-      if (textColor) {
-        ctx.font = 'bold 14px monospace';
-        ctx.textAlign = 'center';
-        ctx.lineJoin = 'round';
-        const dispZ = isBase ? 0 : Math.round(zOffset / 32);
-        
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.9)';
-        ctx.lineWidth = 4;
-        ctx.strokeText(`Tile X:${gx} Y:${gy} Z:${dispZ}`, pos.x, pos.y - 10);
-        
-        ctx.fillStyle = textColor;
-        ctx.fillText(`Tile X:${gx} Y:${gy} Z:${dispZ}`, pos.x, pos.y - 10);
-      }
-    };
-
-    const getEntitySortVal = (entity) => {
-      const x = entity.x || 0;
-      const y = entity.y || 0;
-      const gx = Math.round(x / 32);
-      const gy = Math.round(y / 32);
-      const offsetX = x - (gx * 32);
-      const offsetY = y - (gy * 32);
-      const subCell = (((offsetX + 16) / 32) + ((offsetY + 16) / 32)) * 0.4;
-      return (gx * 32) + (gy * 32) + 0.1 + subCell; 
-    };
-
-    const getBlockSortVal = (gx, gy) => {
-      return (gx * 32) + (gy * 32);
-    };
-
-    const entitiesToDraw = [];
-
-    if (eng.grassVariations && eng.grassVariations.length > 0) {
-      ctx.imageSmoothingEnabled = false;
-
-      const tileW = 64; 
-      const blockSize = 32; 
-      const camGridX = Math.floor(eng.camera.x / blockSize);
-      const camGridY = Math.floor(eng.camera.y / blockSize);
-      const radius = Math.ceil(Math.max(eng.canvas.width, eng.canvas.height / eng.tilt) / blockSize / 2) + 2;
-      const tallBlockBuffer = 20; 
-
-      const getHash = (gx, gy) => {
-        let val = Math.sin(gx * 12.9898 + gy * 78.233) * 43758.5453;
-        return val - Math.floor(val);
-      };
-      
-      for (let gy = camGridY - radius; gy <= camGridY + radius + tallBlockBuffer; gy++) {
-        for (let gx = camGridX - radius; gx <= camGridX + radius; gx++) {
-          const worldX = gx * blockSize;
-          const worldY = gy * blockSize;
-          
-          const pos = eng.getScreenPos(worldX, worldY);
-          
-          const tileKey = `${gx},${gy}`;
-          let img = null;
-          
-          const tileData = eng.mapData[tileKey];
-          const texId = typeof tileData === 'object' ? tileData.tex : tileData;
-          const color = typeof tileData === 'object' ? tileData.color : '#ffffff';
-          const z = typeof tileData === 'object' && tileData.z ? tileData.z : 0;
-          const zOffset = z * 32; 
-
-          if (
-            pos.x < -tileW || 
-            pos.x > eng.canvas.width + tileW || 
-            pos.y < -tileW || 
-            (pos.y - zOffset) > eng.canvas.height + tileW
-          ) continue;
-
-          let sourceImg = null;
-          let finalSy = 0;
-          let sw = 0;
-          let sh = 0;
-
-          if (texId && eng.customTiles[texId] && eng.customTiles[texId].complete && eng.customTiles[texId].naturalWidth > 0) {
-            img = eng.customTiles[texId];
-            sw = img.width;
-            sh = img.height;
-
-            if (img.animated) {
-              sh = sw;
-              const frameCount = Math.max(1, img.height / sh);
-              let frameIndex = 0;
-              if (img.mcmeta && img.mcmeta.animation) {
-                 const anim = img.mcmeta.animation;
-                 const frametime = anim.frametime || 2; 
-                 const frames = anim.frames || Array.from({length: frameCount}, (_,i)=>i);
-                 const ticks = Math.floor(performance.now() / 50); 
-                 frameIndex = frames[Math.floor(ticks / frametime) % frames.length];
-              } else {
-                 frameIndex = Math.floor(performance.now() / 100) % frameCount; 
-              }
-              finalSy = frameIndex * sh;
-            }
-
-            sourceImg = img;
-
-            if (color && color !== '#ffffff' && img.tintable) {
-              const cacheKey = `${texId}_${color}_${finalSy}`;
-              if (!eng.tintCache) eng.tintCache = {};
-              
-              if (!eng.tintCache[cacheKey]) {
-                const tCanvas = document.createElement('canvas');
-                tCanvas.width = sw;
-                tCanvas.height = sh;
-                const tCtx = tCanvas.getContext('2d');
-                tCtx.globalCompositeOperation = 'source-over';
-                tCtx.drawImage(img, 0, finalSy, sw, sh, 0, 0, sw, sh);
-                
-                tCtx.globalCompositeOperation = 'multiply';
-                tCtx.fillStyle = color;
-                tCtx.fillRect(0, 0, sw, sh);
-                
-                tCtx.globalCompositeOperation = 'destination-in';
-                tCtx.drawImage(img, 0, finalSy, sw, sh, 0, 0, sw, sh);
-                
-                eng.tintCache[cacheKey] = tCanvas;
-              }
-              sourceImg = eng.tintCache[cacheKey];
-              finalSy = 0; 
-            }
-          } else {
-            const patchX = Math.floor(gx / 6);
-            const patchY = Math.floor(gy / 6);
-            const patchHash = getHash(patchX, patchY);
-            
-            const baseIndex = Math.floor(patchHash * eng.grassVariations.length);
-  
-            const localHash = getHash(gx, gy);
-            let variation = 0;
-            if (localHash > 0.85) variation = 1;
-            else if (localHash < 0.15) variation = -1;
-  
-            let finalIndex = baseIndex + variation;
-            finalIndex = Math.max(0, Math.min(eng.grassVariations.length - 1, finalIndex));
-            sourceImg = eng.grassVariations[finalIndex];
-            sw = sourceImg.width || 64; 
-            sh = sourceImg.height || 64;
-            finalSy = 0;
-          }
-          
-          if (sourceImg && (sourceImg.naturalWidth > 0 || sourceImg.width > 0)) {
-            if (z > 0) {
-              entitiesToDraw.push({
-                sortVal: getBlockSortVal(gx, gy),
-                isBlock: true,
-                draw: () => {
-                  ctx.save();
-                  ctx.translate(pos.x - 32, pos.y - zOffset);
-                  ctx.transform(32 / sw, 16 / sw, 0, 32 / sh, 0, 0);
-                  for (let i = 0; i < z; i++) {
-                    ctx.drawImage(sourceImg, 0, finalSy, sw, sh, 0, i * sh, sw, sh);
-                  }
-                  ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; 
-                  ctx.fillRect(0, 0, sw, z * sh);
-                  ctx.restore();
-
-                  ctx.save();
-                  ctx.translate(pos.x, pos.y - zOffset + 16);
-                  ctx.transform(32 / sw, -16 / sw, 0, 32 / sh, 0, 0);
-                  for (let i = 0; i < z; i++) {
-                    ctx.drawImage(sourceImg, 0, finalSy, sw, sh, 0, i * sh, sw, sh);
-                  }
-                  ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'; 
-                  ctx.fillRect(0, 0, sw, z * sh);
-                  ctx.restore();
-
-                  ctx.save();
-                  ctx.translate(pos.x, pos.y - zOffset);
-                  ctx.scale(1, eng.tilt);
-                  ctx.rotate(45 * Math.PI / 180);
-                  const size = tileW / Math.SQRT2;
-                  if (img && img.alpha < 1.0) ctx.globalAlpha = img.alpha; 
-                  ctx.drawImage(sourceImg, 0, finalSy, sw, sh, -size / 2, -size / 2, size + 0.5, size + 0.5);
-                  ctx.restore();
-                }
-              });
-            } else {
-              ctx.save();
-              ctx.translate(pos.x, pos.y);
-              ctx.scale(1, eng.tilt);
-              ctx.rotate(45 * Math.PI / 180);
-              const size = tileW / Math.SQRT2;
-              if (img && img.alpha < 1.0) ctx.globalAlpha = img.alpha; 
-              ctx.drawImage(sourceImg, 0, finalSy, sw, sh, -size / 2, -size / 2, size + 0.5, size + 0.5);
-              ctx.restore();
-            }
-          }
-        }
-      }
-    } else {
-      ctx.strokeStyle = '#1a2332';
-      ctx.lineWidth = 2;
-      const tileW = 64;
-      const blockSize = 32;
-      
-      const camGridX = Math.floor(eng.camera.x / blockSize);
-      const camGridY = Math.floor(eng.camera.y / blockSize);
-      const radius = Math.ceil(Math.max(eng.canvas.width, eng.canvas.height / eng.tilt) / blockSize / 2) + 2;
-
-      for (let gy = camGridY - radius; gy <= camGridY + radius; gy++) {
-        for (let gx = camGridX - radius; gx <= camGridX + radius; gx++) {
-          const pos = eng.getScreenPos(gx * blockSize, gy * blockSize);
-          if (pos.x < -tileW || pos.x > eng.canvas.width + tileW || pos.y < -tileW || pos.y > eng.canvas.height + tileW) continue;
-
-          ctx.beginPath();
-          ctx.moveTo(pos.x, pos.y - (tileW * eng.tilt) / 2);
-          ctx.lineTo(pos.x + tileW / 2, pos.y);
-          ctx.lineTo(pos.x, pos.y + (tileW * eng.tilt) / 2);
-          ctx.lineTo(pos.x - tileW / 2, pos.y);
-          ctx.closePath();
-          ctx.stroke();
-        }
-      }
+    if (this.instancedMaterial && this.instancedMaterial.userData.time) {
+        this.instancedMaterial.userData.time.value = performance.now() / 1000;
     }
 
-    if (eng.editMode && eng.selectedTiles.length > 0) {
-      eng.selectedTiles.forEach(tile => {
-        const key = `${tile.x},${tile.y}`;
-        const td = eng.mapData[key];
-        const z = td && td.z ? td.z : 0;
-        const zOff = z * 32;
-        entitiesToDraw.push({
-          sortVal: getBlockSortVal(tile.x, tile.y) + 0.05,
-          isBlock: false,
-          draw: () => {
-            if (z > 0) {
-              drawTileHighlight(tile.x * 32, tile.y * 32, 'rgba(52, 152, 219, 0.05)', 'rgba(52, 152, 219, 0.4)', null, 0, true);
-            }
-            drawTileHighlight(tile.x * 32, tile.y * 32, 'rgba(52, 152, 219, 0.4)', '#3498db', null, zOff);
-          }
-        });
-      });
+    // Handle resizing logic
+    if (this.webgl.domElement.width !== window.innerWidth || this.webgl.domElement.height !== window.innerHeight) {
+      this.webgl.setSize(window.innerWidth, window.innerHeight);
+      const aspect = window.innerWidth / window.innerHeight;
+      const frustumSize = 1000;
+      this.camera.left = frustumSize * aspect / -2;
+      this.camera.right = frustumSize * aspect / 2;
+      this.camera.updateProjectionMatrix();
+    }
+
+    if (this.debugCanvas) {
+      if (this.debugCanvas.width !== window.innerWidth || this.debugCanvas.height !== window.innerHeight) {
+        this.debugCanvas.width = window.innerWidth;
+        this.debugCanvas.height = window.innerHeight;
+      }
+      this.debugCtx.clearRect(0, 0, this.debugCanvas.width, this.debugCanvas.height);
+    }
+
+    this.updateAnimatedTiles();
+    this.updateVoxels();
+    this.updateEntities();
+    this.updateProjectiles();
+    this.updateParticles();
+    this.updateDebris();
+    this.updateCameraTracking();
+    this.updateArrowHelper();
+    this.update3DDebug();
+
+    if (this.debugCtx) {
+      const ctx = this.debugCtx;
+      this.update2DOverlay();
+      ctx.save();
+      ctx.fillStyle = '#f1c40f';
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'right';
+      ctx.strokeStyle = '#000';
+      let textY = window.innerHeight - 80;
+
+      if (eng.clientSettings.showCoords && eng.player) {
+        const text = `XYZ: ${Math.round(eng.player.x)}, ${Math.round(eng.player.y)}, ${Math.round(eng.player.z || 0)}`;
+        ctx.strokeText(text, window.innerWidth - 20, textY);
+        ctx.fillText(text, window.innerWidth - 20, textY);
+        textY -= 20;
+      }
+
+      if (eng.clientSettings.showPing) {
+        const text = `Ping: ${eng.ping}ms`;
+        ctx.strokeText(text, window.innerWidth - 20, textY);
+        ctx.fillText(text, window.innerWidth - 20, textY);
+        textY -= 20;
+      }
+      if (eng.clientSettings.showFPS) {
+        const text = `FPS: ${eng.fps}`;
+        ctx.strokeText(text, window.innerWidth - 20, textY);
+        ctx.fillText(text, window.innerWidth - 20, textY);
+        textY -= 20;
+      }
+      ctx.restore();
+    }
+    this.webgl.render(this.scene, this.camera);
+  }
+
+  update3DDebug() {
+    const eng = this.engine;
+    if (!eng.player || eng.player.state === 'death') {
+      this.targetRing.visible = false;
+      this.meleeCircle.visible = false;
+      this.meleeCone.visible = false;
+      this.losCone.visible = false;
+      this.losMesh.visible = false;
+      this.losLineMesh.visible = false;
+      this.meleeHitMesh.visible = false;
+      this.meleeHitLineMesh.visible = false;
+      this.debugTileMesh.visible = false;
+      this.chunkBox.visible = false;
+      return;
     }
 
     if (eng.selectedTarget) {
@@ -383,347 +1646,87 @@ export class Renderer {
         tx = eng.player.x; ty = eng.player.y; tz = eng.player.z;
       }
       if (tx !== undefined) {
-        entitiesToDraw.push({
-          sortVal: getEntitySortVal({ x: tx, y: ty }) - 0.05,
-          isBlock: false,
-          draw: () => {
-            drawIsoCircle(tx, ty, tz || 0, 30, '#ffffff', 0.15);
-          }
-        });
+        this.targetRing.position.set(tx, ty, (tz || 0) + 1);
+        this.targetRing.visible = true;
+      } else {
+        this.targetRing.visible = false;
       }
-    }
-
-    if (eng.player.moveTarget) {
-      const tx = eng.player.moveTarget.x;
-      const ty = eng.player.moveTarget.y;
-      const tz = eng.getTerrainZ(tx, ty);
-      entitiesToDraw.push({
-        sortVal: getEntitySortVal({ x: tx, y: ty }) - 0.05,
-        isBlock: false,
-        draw: () => {
-          const pos = eng.getScreenPos(tx, ty, tz);
-          const t = performance.now() / 400; 
-          
-          ctx.save();
-          ctx.translate(pos.x, pos.y);
-          ctx.scale(1, eng.tilt);
-          ctx.rotate(t);
-          
-          ctx.strokeStyle = '#00d2ff';
-          ctx.lineWidth = 2;
-          
-                    ctx.setLineDash([8, 8]);
-          ctx.beginPath();
-          ctx.arc(0, 0, 16, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.setLineDash([]);
-          
-                    const pulse = (performance.now() % 800) / 800; 
-          const dist = 24 - (pulse * 12);
-          ctx.globalAlpha = 1 - pulse; 
-          for (let i = 0; i < 4; i++) {
-            ctx.beginPath();
-            ctx.moveTo(Math.cos(i * Math.PI / 2) * dist, Math.sin(i * Math.PI / 2) * dist);
-            ctx.lineTo(Math.cos(i * Math.PI / 2) * (dist - 6), Math.sin(i * Math.PI / 2) * (dist - 6));
-            ctx.stroke();
-          }
-          ctx.restore();
-        }
-      });
-    }
-
-    entitiesToDraw.push({
-      sortVal: getEntitySortVal(eng.player),
-      isBlock: false,
-      draw: () => {
-        let playerState = eng.player.state;
-        if (playerState === 'death') playerState = 'death';
-        else if (eng.player.hurtTimer > 0) playerState = 'hurt';
-        
-        const spriteKey = `${playerState}_${eng.player.dir}`;
-        const img = eng.sprites[spriteKey];
-        if (img && img.complete && img.naturalWidth > 0) {
-          const fw = 96; const fh = 90;
-          const yOffset = 35;
-          const pos = eng.getScreenPos(eng.player.x, eng.player.y, eng.player.z || 0);
-          ctx.save();
-          ctx.translate(pos.x, pos.y);
-          ctx.scale(4, 4);
-          ctx.drawImage(img, eng.player.frame * fw, 0, fw, fh, -fw / 2, -fh + yOffset, fw, fh);
-          ctx.restore();
-
-          if (eng.player.state !== 'death') {
-            const barW = 80; const barH = 8;
-            const hpPercent = Math.max(0, eng.player.hp / eng.player.maxHp);
-            if (eng.clientSettings.showPlayerHealth) {
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-              ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW, barH);
-              ctx.fillStyle = '#2ecc71';
-              ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW * hpPercent, barH);
-              ctx.strokeStyle = '#111';
-              ctx.strokeRect(pos.x - barW / 2, pos.y - 156, barW, barH);
-            }
-  
-            if (eng.clientSettings.showPlayerNames) {
-              ctx.fillStyle = (eng.playerData.name && eng.playerData.name.toLowerCase() === 'tim') ? '#00d2ff' : '#fff';
-              ctx.font = 'bold 14px monospace';
-              ctx.textAlign = 'center';
-              ctx.lineJoin = 'round';
-              ctx.strokeStyle = '#000';
-              ctx.lineWidth = 3;
-              ctx.strokeText(`[${eng.playerData.name}]`, pos.x, pos.y - 171);
-              ctx.fillText(`[${eng.playerData.name}]`, pos.x, pos.y - 171);
-            }
-          }
-
-          if (eng.player.chatBubbles && eng.player.chatBubbles.length > 0) {
-            eng.chat.drawBubbles(ctx, pos.x, pos.y - 206, eng.player.chatBubbles);
-          }
-        }
-      }
-    });
-
-    Object.values(eng.otherPlayers).forEach(op => {
-      entitiesToDraw.push({
-        sortVal: getEntitySortVal(op),
-        isBlock: false,
-        draw: () => {
-          const pos = eng.getScreenPos(op.x, op.y, op.z || 0);
-          
-          let opState = op.state;
-          if (opState === 'death') opState = 'death';
-          else if (op.hurtTimer > 0) opState = 'hurt';
-
-          const spriteKey = `${opState}_${op.dir}`;
-          const img = eng.sprites[spriteKey];
-          if (img && img.complete && img.naturalWidth > 0) {
-            const fw = 96; const fh = 90;
-            const yOffset = 35;
-            ctx.save();
-            ctx.translate(pos.x, pos.y);
-            ctx.scale(4, 4);
-            ctx.drawImage(img, (op.frame || 0) * fw, 0, fw, fh, -fw / 2, -fh + yOffset, fw, fh);
-            ctx.restore();
-          }
-          
-          if (op.state !== 'death') {
-            const barW = 80; const barH = 8;
-            const maxHp = op.maxHp || 1000;
-            const currentHp = op.hp !== undefined ? op.hp : 1000;
-            const hpPercent = Math.max(0, currentHp / maxHp);
-          if (eng.clientSettings.showPlayerHealth) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW, barH);
-            ctx.fillStyle = '#2ecc71';
-            ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW * hpPercent, barH);
-            ctx.strokeStyle = '#111';
-            ctx.strokeRect(pos.x - barW / 2, pos.y - 156, barW, barH);
-          }
-  
-          if (eng.clientSettings.showPlayerNames) {
-            ctx.fillStyle = (op.name.toLowerCase() === 'tim') ? '#00d2ff' : '#fff';
-            ctx.font = 'bold 14px monospace';
-            ctx.textAlign = 'center';
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 3;
-            ctx.strokeText(`[${op.name}]`, pos.x, pos.y - 171);
-            ctx.fillText(`[${op.name}]`, pos.x, pos.y - 171);
-          }
-          }
-          
-          if (op.chatBubbles && op.chatBubbles.length > 0) {
-            eng.chat.drawBubbles(ctx, pos.x, pos.y - 206, op.chatBubbles);
-          }
-        }
-      });
-    });
-
-    eng.npcs.forEach(npc => {
-      entitiesToDraw.push({
-        sortVal: getEntitySortVal(npc),
-        isBlock: false,
-        draw: () => {
-          const pos = eng.getScreenPos(npc.x, npc.y, npc.z || 0);
-          
-          let npcState = 'idle';
-          if (npc.state === 'dead') npcState = 'death';
-          else if (npc.hurtTimer > 0) npcState = 'hurt';
-
-          const img = eng.sprites[`${npcState}_${npc.dir || 'down'}`];
-          if (img && img.complete && img.naturalWidth > 0) {
-            const fw = 96; const fh = 90;
-            const yOffset = 35;
-            ctx.save();
-            ctx.translate(pos.x, pos.y);
-            ctx.scale(4, 4);
-            ctx.drawImage(img, npc.frame * fw, 0, fw, fh, -fw / 2, -fh + yOffset, fw, fh);
-            ctx.restore();
-          }
-
-          if (npc.state !== 'dead') {
-            const barW = 80; const barH = 8;
-            const hpPercent = Math.max(0, npc.hp / npc.maxHp);
-            if (eng.clientSettings.showEntityHealth) {
-              ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-              ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW, barH);
-              ctx.fillStyle = '#ff4757';
-              ctx.fillRect(pos.x - barW / 2, pos.y - 156, barW * hpPercent, barH);
-              ctx.strokeStyle = '#111';
-              ctx.strokeRect(pos.x - barW / 2, pos.y - 156, barW, barH);
-            }
-
-            if (eng.clientSettings.showEntityNames) {
-              ctx.fillStyle = '#fff';
-              ctx.font = 'bold 14px monospace';
-              ctx.textAlign = 'center';
-              ctx.lineJoin = 'round';
-              ctx.strokeStyle = '#000';
-              ctx.lineWidth = 3;
-              ctx.strokeText(npc.name, pos.x, pos.y - 171);
-              ctx.fillText(npc.name, pos.x, pos.y - 171);
-            }
-          }
-        }
-      });
-    });
-
-    eng.projectiles.forEach(proj => {
-      entitiesToDraw.push({
-        sortVal: getEntitySortVal(proj),
-        isBlock: false,
-        draw: () => {
-          const dx = proj.targetX - proj.startX;
-          const dy = proj.targetY - proj.startY;
-          const screenDx = dx - dy;
-          const screenDy = (dx + dy) * eng.tilt;
-          const screenAngle = Math.atan2(screenDy, screenDx);
-          
-          const bobOffset = Math.sin(proj.distTravelled * 0.04) * 8;
-          const pitchOffset = Math.cos(proj.distTravelled * 0.04) * 0.15;
-          
-                    const tz = eng.getTerrainZ(proj.x, proj.y);
-          const shadowPos = eng.getScreenPos(proj.x, proj.y, tz);
-          const heightDiff = Math.max(0, proj.z + bobOffset - tz);
-          const scale = Math.max(0.5, 1 - (heightDiff / 200));
-          
-          ctx.save();
-          ctx.translate(shadowPos.x, shadowPos.y);
-          ctx.rotate(screenAngle);
-          ctx.scale(scale, scale);
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-          ctx.beginPath();
-          ctx.ellipse(0, 0, 12, 5, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-
-          const pos = eng.getScreenPos(proj.x, proj.y, proj.z);
-          const img = eng.sprites['proj_airplane'];
-          ctx.save();
-          ctx.translate(pos.x, pos.y - bobOffset);
-          ctx.rotate(screenAngle + pitchOffset);
-          
-          if (img && img.complete && img.naturalWidth > 0) {
-            const frameCount = 4;
-            const frameW = img.naturalWidth / frameCount;
-            const frameH = img.naturalHeight;
-            const frameIndex = Math.floor(performance.now() / 80) % frameCount; 
-            ctx.drawImage(img, frameIndex * frameW, 0, frameW, frameH, -frameW, -frameH, frameW * 2, frameH * 2);
-          } else {
-            ctx.fillStyle = '#bdc3c7';
-            ctx.fillRect(-20, -4, 40, 8);
-          }
-          ctx.restore();
-        }
-      });
-    });
-
-    eng.particles.forEach(p => {
-      entitiesToDraw.push({
-        sortVal: getEntitySortVal(p) - 0.01,
-        isBlock: false,
-        draw: () => {
-          const pos = eng.getScreenPos(p.x, p.y, p.z);
-          ctx.save();
-          ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
-          ctx.fillStyle = p.color;
-          ctx.beginPath();
-          ctx.arc(pos.x, pos.y, p.size * Math.max(0.1, p.life / p.maxLife), 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        }
-      });
-    });
-
-    if (eng.clientSettings.showBaseplates) {
-      const addBaseplate = (entity, color) => {
-        entitiesToDraw.push({
-          sortVal: getEntitySortVal(entity) - 0.08, 
-          isBlock: false,
-          draw: () => drawIsoCircle(entity.x, entity.y, entity.z || 0, 27.5, color, 0.2)
-        });
-      };
-      addBaseplate(eng.player, '#2ecc71');
-      Object.values(eng.otherPlayers).forEach(op => { if (op.state !== 'death') addBaseplate(op, '#3498db'); });
-      eng.npcs.forEach(npc => { if (npc.state !== 'dead') addBaseplate(npc, '#ff4757'); });
+    } else {
+      this.targetRing.visible = false;
     }
 
     if (eng.devOptions.showMelee) {
-      let facingAngle = 0;
-      if (eng.player.dir === 'up') facingAngle = -Math.PI * 0.75;
-      else if (eng.player.dir === 'down') facingAngle = Math.PI * 0.25;
-      else if (eng.player.dir === 'left') facingAngle = Math.PI * 0.75;
-      else if (eng.player.dir === 'right') facingAngle = -Math.PI * 0.25;
+      this.meleeCircle.visible = true;
 
-      const fov = Math.PI / 3;
+      const dirAngleMap = {
+        'down-left': 0, 'down': Math.PI / 4, 'down-right': Math.PI / 2, 'right': Math.PI * 0.75,
+        'up-right': Math.PI, 'up': -Math.PI * 0.75, 'up-left': -Math.PI / 2, 'left': -Math.PI / 4
+      };
+      this.meleeCone.position.set(eng.player.x, eng.player.y, (eng.player.z || 0) + 1.1);
+      this.meleeCone.rotation.z = dirAngleMap[eng.player.dir] || 0;
+      this.meleeCone.visible = true;
 
-      const checkHit = (tx, ty, tz) => {
+      let hitCount = 0;
+      const dummy = new THREE.Object3D();
+      const checkMeleeHit = (tx, ty, tz) => {
         const pz = eng.player.z || 0;
-        tz = tz || 0;
-        if (Math.abs(pz - tz) > 48) return false; 
+        if (Math.abs(pz - (tz || 0)) > 48) return false;
         const dist = Math.hypot(tx - eng.player.x, ty - eng.player.y);
         if (dist > 200) return false;
-        const angleToTarget = Math.atan2(ty - eng.player.y, tx - eng.player.x);
-        let angleDiff = angleToTarget - facingAngle;
+        let angleDiff = Math.atan2(ty - eng.player.y, tx - eng.player.x) - this.meleeCone.rotation.z;
         while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
         while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-        if (Math.abs(angleDiff) > fov) return false; 
-        const steps = Math.ceil(dist / 16);
-        for (let i = 1; i <= steps; i++) {
-          const sampleX = eng.player.x + ((tx - eng.player.x) * (i / steps));
-          const sampleY = eng.player.y + ((ty - eng.player.y) * (i / steps));
-          const terrainZ = eng.getTerrainZ(sampleX, sampleY);
-          if (terrainZ >= pz + 64 && terrainZ >= tz + 64) return false; 
-        }
+        if (Math.abs(angleDiff) > Math.PI / 3) return false;
         return true;
-      };
-
+      }
       const addMeleeBaseplate = (entity) => {
-        if (checkHit(entity.x, entity.y, entity.z)) {
-          entitiesToDraw.push({
-            sortVal: getEntitySortVal(entity) - 0.09, 
-            isBlock: false,
-            draw: () => drawIsoCircle(entity.x, entity.y, entity.z || 0, 35, '#f39c12', 0.4)
-          });
+        if (hitCount >= 100) return;
+        if (checkMeleeHit(entity.x, entity.y, entity.z)) {
+          dummy.position.set(entity.x, entity.y, (entity.z || 0) + 1);
+          dummy.updateMatrix();
+          this.meleeHitMesh.setMatrixAt(hitCount, dummy.matrix);
+          this.meleeHitLineMesh.setMatrixAt(hitCount++, dummy.matrix);
         }
       };
-
       Object.values(eng.otherPlayers).forEach(op => { if (op.state !== 'death') addMeleeBaseplate(op); });
       eng.npcs.forEach(npc => { if (npc.state !== 'dead') addMeleeBaseplate(npc); });
+      
+      this.meleeHitMesh.count = hitCount; this.meleeHitLineMesh.count = hitCount;
+      this.meleeHitMesh.instanceMatrix.needsUpdate = true; this.meleeHitLineMesh.instanceMatrix.needsUpdate = true;
+      this.meleeHitMesh.visible = true; this.meleeHitLineMesh.visible = true;
+    } else {
+      this.meleeCircle.visible = false;
+      this.meleeCone.visible = false;
+      this.meleeHitMesh.visible = false;
+      this.meleeHitLineMesh.visible = false;
     }
 
     if (eng.devOptions.showLoS) {
-      let facingAngle = 0;
-      if (eng.player.dir === 'up') facingAngle = -Math.PI * 0.75;
-      else if (eng.player.dir === 'down') facingAngle = Math.PI * 0.25;
-      else if (eng.player.dir === 'left') facingAngle = Math.PI * 0.75;
-      else if (eng.player.dir === 'right') facingAngle = -Math.PI * 0.25;
-
-      const fov = (eng.devOptions.losAngle !== undefined ? eng.devOptions.losAngle : 60) * Math.PI / 180;
       const maxDist = eng.devOptions.losDistance !== undefined ? eng.devOptions.losDistance : 400; 
-      const pz = eng.player.z || 0;
+      const losAngle = eng.devOptions.losAngle !== undefined ? eng.devOptions.losAngle : 60;
+      const fov = (losAngle / 2) * (Math.PI / 180);
+
+      if (this.losCone.userData.fov !== fov || this.losCone.userData.maxDist !== maxDist) {
+        this.losCone.geometry.dispose();
+        this.losCone.geometry = new THREE.CircleGeometry(maxDist, 32, -fov, fov * 2);
+        this.losCone.children[0].geometry.dispose();
+        this.losCone.children[0].geometry = new THREE.EdgesGeometry(this.losCone.geometry);
+        this.losCone.userData.fov = fov;
+        this.losCone.userData.maxDist = maxDist;
+      }
+      
+      const dirAngleMap = {
+        'down-left': 0, 'down': Math.PI / 4, 'down-right': Math.PI / 2, 'right': Math.PI * 0.75,
+        'up-right': Math.PI, 'up': -Math.PI * 0.75, 'up-left': -Math.PI / 2, 'left': -Math.PI / 4
+      };
+      let facingAngle = dirAngleMap[eng.player.dir] || 0;
+      
+      this.losCone.position.set(eng.player.x, eng.player.y, (eng.player.z || 0) + 1.1);
+      this.losCone.rotation.z = facingAngle;
+      this.losCone.visible = true;
 
       const checkHitLoS = (tx, ty, tz) => {
+        const pz = eng.player.z || 0;
         tz = tz || 0;
         if (Math.abs(pz - tz) > 48) return false; 
         const dist = Math.hypot(tx - eng.player.x, ty - eng.player.y);
@@ -737,422 +1740,205 @@ export class Renderer {
         for (let i = 1; i <= steps; i++) {
           const sampleX = eng.player.x + ((tx - eng.player.x) * (i / steps));
           const sampleY = eng.player.y + ((ty - eng.player.y) * (i / steps));
-          const terrainZ = eng.getTerrainZ(sampleX, sampleY);
-          if (terrainZ >= pz + 64 && terrainZ >= tz + 64) return false; 
+          const terrainZ = eng.getTerrainZ(sampleX, sampleY, pz, true);
+          if (terrainZ > pz + 16 && terrainZ > tz + 16) return false; 
         }
         return true;
       };
 
+      const dummy = new THREE.Object3D();
+      let hitCount = 0;
       const addLoSBaseplate = (entity) => {
+        if (hitCount >= 100) return;
         if (checkHitLoS(entity.x, entity.y, entity.z)) {
-          entitiesToDraw.push({
-            sortVal: getEntitySortVal(entity) - 0.09, 
-            isBlock: false,
-            draw: () => {
-              drawIsoCircle(entity.x, entity.y, entity.z || 0, 35, '#f1c40f', 0.4); 
-              drawIsoCircle(entity.x, entity.y, entity.z || 0, 25, '#f1c40f', 0.1); 
-            }
-          });
+          dummy.position.set(entity.x, entity.y, (entity.z || 0) + 1);
+          dummy.updateMatrix();
+            this.losMesh.setMatrixAt(hitCount, dummy.matrix);
+            this.losLineMesh.setMatrixAt(hitCount++, dummy.matrix);
         }
       };
 
       Object.values(eng.otherPlayers).forEach(op => { if (op.state !== 'death') addLoSBaseplate(op); });
       eng.npcs.forEach(npc => { if (npc.state !== 'dead') addLoSBaseplate(npc); });
+      
+      this.losMesh.count = hitCount;
+      this.losMesh.instanceMatrix.needsUpdate = true;
+      this.losMesh.visible = true;
+    } else {
+      this.losCone.visible = false;
+      this.losMesh.visible = false;
     }
 
-    entitiesToDraw.sort((a, b) => {
-      if (a.sortVal === b.sortVal) return a.isBlock ? -1 : 1;
-      return a.sortVal - b.sortVal;
-    });
-    entitiesToDraw.forEach(ent => ent.draw());
+    let tileHitCount = 0;
+    const dummy = new THREE.Object3D();
+    const addTileBox = (entity) => {
+      if (tileHitCount >= 100) return;
+      const tx = Math.round(entity.x / 32) * 32;
+      const ty = Math.round(entity.y / 32) * 32;
+      const tz = Math.round((entity.z || 0) / 32) * 32;
+      dummy.position.set(tx, ty, tz);
+      dummy.updateMatrix();
+      this.debugTileMesh.setMatrixAt(tileHitCount++, dummy.matrix);
+    };
 
-    if (eng.screenFade > 0) {
-      ctx.fillStyle = `rgba(0, 0, 0, ${eng.screenFade})`;
-      ctx.fillRect(0, 0, eng.canvas.width, eng.canvas.height);
+    if (eng.devOptions.showPlayerTile && eng.player) addTileBox(eng.player);
+    if (eng.devOptions.showEntityTile) {
+      eng.npcs.forEach(npc => { if (npc.state !== 'dead') addTileBox(npc); });
+      Object.values(eng.otherPlayers).forEach(op => { if (op.state !== 'death') addTileBox(op); });
+    }
+    
+    this.debugTileMesh.count = tileHitCount;
+    this.debugTileMesh.instanceMatrix.needsUpdate = true;
+    this.debugTileMesh.visible = tileHitCount > 0;
+  }
+
+  update2DOverlay() {
+    if (!this.debugCtx) return;
+    const ctx = this.debugCtx;
+    const eng = this.engine;
+
+    const drawEntityBubbles = (entity) => {
+        const p3d = new THREE.Vector3(entity.x, entity.y, (entity.z || 0) + 145).project(this.camera);
+        const sx = (p3d.x + 1) / 2 * window.innerWidth;
+        const sy = -(p3d.y - 1) / 2 * window.innerHeight;
+        eng.chat.drawBubbles(ctx, sx, sy, entity.chatBubbles);
+    };
+
+    eng.npcs.forEach(npc => drawEntityBubbles(npc));
+    Object.values(eng.otherPlayers).forEach(op => drawEntityBubbles(op));
+    if (eng.player) drawEntityBubbles(eng.player);
+
+    const drawNameplate = (entity, isPlayer) => {
+      const showName = (isPlayer && eng.clientSettings.showPlayerNames) || (!isPlayer && eng.clientSettings.showEntityNames);
+      const showHealth = (isPlayer && eng.clientSettings.showPlayerHealth) || (!isPlayer && eng.clientSettings.showEntityHealth);
+      
+      if (!showName && !showHealth && !entity.isTyping) return;
+
+      const p3d = new THREE.Vector3(entity.x, entity.y, (entity.z || 0) + 120).project(this.camera);
+      const sx = (p3d.x + 1) / 2 * window.innerWidth;
+      const sy = -(p3d.y - 1) / 2 * window.innerHeight;
+
+      if (showName || entity.isTyping) {
+        const name = isPlayer ? (entity === eng.player ? eng.playerData.name : entity.name) : (entity.name || '');
+        const dots = entity.isTyping ? '.'.repeat(Math.floor(performance.now() / 400) % 4) : '';
+        const textToShow = showName ? name + dots : dots;
+        if (textToShow) {
+          ctx.fillStyle = isPlayer ? '#2ecc71' : (entity.uuid ? '#ff4757' : '#3498db');
+          ctx.font = 'bold 12px monospace';
+          ctx.textAlign = 'center';
+          ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+          ctx.lineWidth = 3;
+          ctx.strokeText(textToShow, sx, sy - 10);
+          ctx.fillText(textToShow, sx, sy - 10);
+        }
+      }
+
+      if (showHealth) {
+        const hpPercent = Math.max(0, entity.hp / entity.maxHp);
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.fillRect(sx - 15, sy, 30, 4);
+        ctx.fillStyle = isPlayer ? '#2ecc71' : (entity.uuid ? '#ff4757' : '#3498db');
+        ctx.fillRect(sx - 15, sy, 30 * hpPercent, 4);
+        
+        if (entity.energy !== undefined && entity.maxEnergy) {
+           const epPercent = Math.max(0, entity.energy / entity.maxEnergy);
+           ctx.fillStyle = '#0984e3';
+           ctx.fillRect(sx - 15, sy + 4, 30 * epPercent, 4);
+        }
+      }
+    };
+
+    eng.npcs.forEach(npc => drawNameplate(npc, false));
+    Object.values(eng.otherPlayers).forEach(op => drawNameplate(op, true));
+    drawNameplate(eng.player, true);
+
+    // --- Toggle Player / Entity POS ---
+    const drawPosDot = (entity, z, colorHex) => {
+      const p3d = new THREE.Vector3(entity.x, entity.y, z).project(this.camera);
+      const sx = (p3d.x + 1) / 2 * window.innerWidth;
+      const sy = -(p3d.y - 1) / 2 * window.innerHeight;
+      ctx.fillStyle = colorHex;
+      ctx.fillRect(sx - 2, sy - 2, 4, 4);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'left';
+      ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+      ctx.lineWidth = 3;
+      ctx.strokeText(`X:${Math.round(entity.x)} Y:${Math.round(entity.y)} Z:${Math.round(z)}`, sx + 10, sy);
+      ctx.fillText(`X:${Math.round(entity.x)} Y:${Math.round(entity.y)} Z:${Math.round(z)}`, sx + 10, sy);
+    };
+
+    if (eng.devOptions.showPlayerPos && eng.player) {
+      drawPosDot(eng.player, eng.player.z || 0, '#2ecc71');
     }
 
-    eng.floatingTexts.forEach(ft => {
-      const pos = eng.getScreenPos(ft.x, ft.y);
-      
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, ft.life);
-      ctx.font = 'bold 28px monospace';
-      ctx.textAlign = 'center';
-      
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 4;
-      const drawX = pos.x + (ft.rndX || 0);
-      const drawY = pos.y - ft.offsetY + (ft.rndY || 0);
-      ctx.strokeText(ft.text, drawX, drawY);
-      ctx.fillStyle = ft.color;
-      ctx.fillText(ft.text, drawX, drawY);
-      ctx.restore();
-    });
+    if (eng.devOptions.showEntityPos) {
+      eng.npcs.forEach(npc => {
+        if (npc.state !== 'dead') {
+          drawPosDot(npc, npc.z || 0, '#ff4757');
+        }
+      });
+      Object.values(eng.otherPlayers).forEach(op => {
+        if (op.state !== 'death') {
+          drawPosDot(op, op.z || 0, '#3498db');
+        }
+      });
+    }
 
+    // --- Toggle Chunk Boundaries ---
     if (eng.devOptions.showChunk) {
       const chunkSize = 1024;
       const cx = Math.floor(eng.player.x / chunkSize);
       const cy = Math.floor(eng.player.y / chunkSize);
       
-      const minX = cx * chunkSize;
-      const minY = cy * chunkSize;
-      const maxX = minX + chunkSize;
-      const maxY = minY + chunkSize;
-
-      const pNW = eng.getScreenPos(minX, minY);
-      const pNE = eng.getScreenPos(maxX, minY);
-      const pSE = eng.getScreenPos(maxX, maxY);
-      const pSW = eng.getScreenPos(minX, maxY);
+      const minX = cx * chunkSize; const minY = cy * chunkSize;
+      const p3d = new THREE.Vector3(minX, minY, eng.player.z || 0).project(this.camera);
+      const sx = (p3d.x + 1) / 2 * window.innerWidth;
+      const sy = -(p3d.y - 1) / 2 * window.innerHeight;
 
       ctx.save();
-      ctx.strokeStyle = 'rgba(155, 89, 182, 0.8)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(pNW.x, pNW.y);
-      ctx.lineTo(pNE.x, pNE.y);
-      ctx.lineTo(pSE.x, pSE.y);
-      ctx.lineTo(pSW.x, pSW.y);
-      ctx.closePath();
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(155, 89, 182, 0.05)';
-      ctx.fill();
-
-      ctx.strokeStyle = '#2ecc71';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(pNW.x, pNW.y);
-      ctx.lineTo(pNW.x, pNW.y - 300);
-      ctx.stroke();
-      
-      ctx.fillStyle = '#2ecc71';
-      ctx.font = 'bold 16px monospace';
-      ctx.textAlign = 'center';
-      ctx.lineJoin = 'round';
-      ctx.strokeStyle = 'rgba(0,0,0,0.9)';
-      ctx.lineWidth = 4;
-      ctx.strokeText(`Chunk [${cx}, ${cy}] NW`, pNW.x, pNW.y - 315);
-      ctx.fillText(`Chunk [${cx}, ${cy}] NW`, pNW.x, pNW.y - 315);
-      ctx.restore();
-    }
-
-    if (eng.devOptions.showMelee) {
-      drawIsoCircle(eng.player.x, eng.player.y, eng.player.z || 0, 200, '#f39c12', 0.1);
-      
-      let facingAngle = 0;
-      if (eng.player.dir === 'up') facingAngle = -Math.PI * 0.75;
-      else if (eng.player.dir === 'down') facingAngle = Math.PI * 0.25;
-      else if (eng.player.dir === 'left') facingAngle = Math.PI * 0.75;
-      else if (eng.player.dir === 'right') facingAngle = -Math.PI * 0.25;
-
-      const fov = Math.PI / 3;
-      const pos = eng.getScreenPos(eng.player.x, eng.player.y, eng.player.z || 0);
-      
-      ctx.save();
-      ctx.transform(1, eng.tilt, -1, eng.tilt, pos.x, pos.y);
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, 200, facingAngle - fov, facingAngle + fov);
-      ctx.closePath();
-      ctx.strokeStyle = '#e74c3c';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.globalAlpha = 0.2;
-      ctx.fillStyle = '#e74c3c';
-      ctx.fill();
-      ctx.restore();
-    }
-
-    if (eng.devOptions.showLoS) {
-      let facingAngle = 0;
-      if (eng.player.dir === 'up') facingAngle = -Math.PI * 0.75;
-      else if (eng.player.dir === 'down') facingAngle = Math.PI * 0.25;
-      else if (eng.player.dir === 'left') facingAngle = Math.PI * 0.75;
-      else if (eng.player.dir === 'right') facingAngle = -Math.PI * 0.25;
-
-      const fov = (eng.devOptions.losAngle !== undefined ? eng.devOptions.losAngle : 60) * Math.PI / 180;
-      const maxDist = eng.devOptions.losDistance !== undefined ? eng.devOptions.losDistance : 400; 
-      const rayCount = 120; 
-      const pz = eng.player.z || 0;
-      
-      const pos = eng.getScreenPos(eng.player.x, eng.player.y, pz);
-      
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(pos.x, pos.y);
-      
-      for (let i = 0; i <= rayCount; i++) {
-        const angle = facingAngle - fov + (i / rayCount) * (fov * 2);
-        let hitX = eng.player.x;
-        let hitY = eng.player.y;
-        
-        const dx = Math.cos(angle);
-        const dy = Math.sin(angle);
-        const stepSize = 8;
-        
-        for (let d = 0; d <= maxDist; d += stepSize) {
-           const sampleX = eng.player.x + dx * d;
-           const sampleY = eng.player.y + dy * d;
-           const tz = eng.getTerrainZ(sampleX, sampleY);
-           
-           if (tz >= pz + 32) break; 
-           
-           hitX = sampleX;
-           hitY = sampleY;
-        }
-        
-        const hitPos = eng.getScreenPos(hitX, hitY, pz);
-        ctx.lineTo(hitPos.x, hitPos.y);
-      }
-      
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(255, 240, 150, 0.2)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 240, 150, 0.5)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 16px monospace';
+      ctx.textAlign = 'center'; ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.lineWidth = 4;
+      ctx.strokeText(`Chunk [${cx}, ${cy}] NW`, sx, sy - 20);
+      ctx.fillText(`Chunk [${cx}, ${cy}] NW`, sx, sy - 20);
       ctx.restore();
     }
 
     if (eng.devOptions.showHitboxes) {
       ctx.lineWidth = 2;
       const drawRect = (entity, color) => {
-        const pos = eng.getScreenPos(entity.x, entity.y, entity.z || 0);
+        const p3d = new THREE.Vector3(entity.x, entity.y, entity.z || 0).project(this.camera);
+        const sx = (p3d.x + 1) / 2 * window.innerWidth;
+        const sy = -(p3d.y - 1) / 2 * window.innerHeight;
         ctx.strokeStyle = color;
-        ctx.strokeRect(pos.x - 30, pos.y - 145, 60, 180);
+        ctx.strokeRect(sx - 30, sy - 145, 60, 180);
       };
 
       drawRect(eng.player, '#2ecc71');
       Object.values(eng.otherPlayers).forEach(op => { if (op.state !== 'death') drawRect(op, '#3498db'); });
       eng.npcs.forEach(npc => { if (npc.state !== 'dead') drawRect(npc, '#ff4757'); });
     }
-
-    if (eng.devOptions.showPlayerTile) {
-      if ((eng.player.z || 0) > 0) {
-        drawTileHighlight(eng.player.x, eng.player.y, 'rgba(46, 204, 113, 0.05)', 'rgba(46, 204, 113, 0.4)', 'rgba(46, 204, 113, 0.8)', 0, true); 
-      }
-      drawTileHighlight(eng.player.x, eng.player.y, 'rgba(46, 204, 113, 0.2)', '#2ecc71', '#2ecc71', eng.player.z || 0, false);
-    }
-
-    if (eng.devOptions.showEntityTile) {
-      const drawEntTile = (entity, colorHex, colorRgbaBase) => {
-        if ((entity.z || 0) > 0) {
-          drawTileHighlight(entity.x, entity.y, `${colorRgbaBase}0.05)`, `${colorRgbaBase}0.4)`, `${colorRgbaBase}0.8)`, 0, true); 
-        }
-        drawTileHighlight(entity.x, entity.y, `${colorRgbaBase}0.2)`, colorHex, colorHex, entity.z || 0, false);
-      };
-      eng.npcs.forEach(npc => { if (npc.state !== 'dead') drawEntTile(npc, '#ff4757', 'rgba(255, 71, 87, '); });
-      Object.values(eng.otherPlayers).forEach(op => { if (op.state !== 'death') drawEntTile(op, '#3498db', 'rgba(52, 152, 219, '); });
-    }
-
-    if (eng.devOptions.showPlayerPos) {
-      const drawPosDot = (z, isBase) => {
-        const pPos = eng.getScreenPos(eng.player.x, eng.player.y, z);
-        ctx.fillStyle = isBase ? 'rgba(255, 71, 87, 0.4)' : '#ff4757';
-        ctx.fillRect(pPos.x - 2, pPos.y - 2, 4, 4);
-        
-        ctx.fillStyle = isBase ? 'rgba(255, 255, 255, 0.5)' : '#fff';
-        ctx.font = 'bold 12px monospace';
-        ctx.textAlign = 'left';
-        ctx.lineJoin = 'round';
-        const dispZ = isBase ? 0 : Math.round(z);
-        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-        ctx.lineWidth = 3;
-        ctx.strokeText(`X:${Math.round(eng.player.x)} Y:${Math.round(eng.player.y)} Z:${dispZ}`, pPos.x + 10, pPos.y);
-        ctx.fillText(`X:${Math.round(eng.player.x)} Y:${Math.round(eng.player.y)} Z:${dispZ}`, pPos.x + 10, pPos.y);
-      };
-
-      if ((eng.player.z || 0) > 0) drawPosDot(0, true);
-      drawPosDot(eng.player.z || 0, false);
-    }
-
-    if (eng.devOptions.showEntityPos) {
-      const drawPosDot = (entity, z, isBase, colorHex, colorRgbaBase) => {
-        const pPos = eng.getScreenPos(entity.x, entity.y, z);
-        ctx.fillStyle = isBase ? `${colorRgbaBase}0.4)` : colorHex;
-        ctx.fillRect(pPos.x - 2, pPos.y - 2, 4, 4);
-        
-        ctx.fillStyle = isBase ? 'rgba(255, 255, 255, 0.5)' : '#fff';
-        ctx.font = 'bold 12px monospace';
-        ctx.textAlign = 'left';
-        ctx.lineJoin = 'round';
-        const dispZ = isBase ? 0 : Math.round(z);
-        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-        ctx.lineWidth = 3;
-        ctx.strokeText(`X:${Math.round(entity.x)} Y:${Math.round(entity.y)} Z:${dispZ}`, pPos.x + 10, pPos.y);
-        ctx.fillText(`X:${Math.round(entity.x)} Y:${Math.round(entity.y)} Z:${dispZ}`, pPos.x + 10, pPos.y);
-      };
-      eng.npcs.forEach(npc => {
-        if (npc.state !== 'dead') {
-          if ((npc.z || 0) > 0) drawPosDot(npc, 0, true, '#ff4757', 'rgba(255, 71, 87, ');
-          drawPosDot(npc, npc.z || 0, false, '#ff4757', 'rgba(255, 71, 87, ');
-        }
-      });
-      Object.values(eng.otherPlayers).forEach(op => {
-        if (op.state !== 'death') {
-          if ((op.z || 0) > 0) drawPosDot(op, 0, true, '#3498db', 'rgba(52, 152, 219, ');
-          drawPosDot(op, op.z || 0, false, '#3498db', 'rgba(52, 152, 219, ');
-        }
-      });
-    }
-
-    if (eng.devOptions.showMousePos || eng.devOptions.showTile) {
-      const ray = eng.getIsoRaycast(eng.input.mousePos.x, eng.input.mousePos.y);
-      const worldX = ray.gx * 32;
-      const worldY = ray.gy * 32;
-      const zOff = ray.z * 32;
-
-      if (eng.devOptions.showTile) {
-        if (ray.z > 0) {
-          drawTileHighlight(worldX, worldY, 'rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.4)', 'rgba(255, 255, 255, 0.8)', 0, true);
-        }
-        drawTileHighlight(worldX, worldY, 'rgba(255, 255, 255, 0.2)', '#fff', '#f1c40f', zOff, false);
-      }
+    
+    // Render Combat Floating Texts
+    eng.floatingTexts.forEach(ft => {
+      const p3d = new THREE.Vector3(ft.x, ft.y, ft.z || 0).project(this.camera);
+      const sx = (p3d.x + 1) / 2 * window.innerWidth;
+      const sy = -(p3d.y - 1) / 2 * window.innerHeight;
       
-      if (eng.devOptions.showMousePos) {
-        const drawMouseDot = (z, isBase) => {
-          const mPos = eng.getScreenPos(ray.exactX, ray.exactY, z);
-          ctx.fillStyle = isBase ? 'rgba(255, 71, 87, 0.4)' : '#ff4757';
-          ctx.fillRect(mPos.x - 2, mPos.y - 2, 4, 4);
-          
-          ctx.fillStyle = isBase ? 'rgba(255, 255, 255, 0.5)' : '#fff';
-          ctx.font = 'bold 14px monospace';
-          ctx.textAlign = 'left';
-          ctx.lineJoin = 'round';
-          const dispZ = isBase ? 0 : Math.round(z / 32);
-          ctx.strokeStyle = isBase ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.9)';
-          ctx.lineWidth = 4;
-          ctx.strokeText(`X:${Math.round(ray.exactX)} Y:${Math.round(ray.exactY)} Z:${dispZ}`, mPos.x + 10, mPos.y);
-          ctx.fillText(`X:${Math.round(ray.exactX)} Y:${Math.round(ray.exactY)} Z:${dispZ}`, mPos.x + 10, mPos.y);
-        };
-        
-        if (ray.z > 0) drawMouseDot(0, true);
-        drawMouseDot(ray.z * 32, false);
-      }
-    }
-
-    if (eng.devOptions.showDistPlayerToMouse) {
-      const p = eng.player;
-      const pPos = eng.getScreenPos(p.x, p.y, p.z || 0);
-      const ray = eng.getIsoRaycast(eng.input.mousePos.x, eng.input.mousePos.y);
-      const mouseZ = ray.clickedZ > 0 ? ray.clickedZ * 32 : ray.z * 32;
-      const mPos = eng.getScreenPos(ray.exactX, ray.exactY, mouseZ);
-
-      const dx = ray.exactX - p.x;
-      const dy = ray.exactY - p.y;
-      const dz = mouseZ - (p.z || 0);
-      const dist3D = Math.hypot(Math.hypot(dx, dy), dz);
-      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-
+      const zoom = this.camera.zoom;
+      const zScale = Math.pow(zoom, 0.6); // Scale text gently to prevent it from getting massively bloated
       ctx.save();
-      ctx.strokeStyle = '#2ecc71';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
-      ctx.beginPath();
-      ctx.moveTo(pPos.x, pPos.y);
-      ctx.lineTo(mPos.x, mPos.y);
-      ctx.stroke();
-
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 12px monospace';
+      ctx.globalAlpha = Math.max(0, ft.life);
+      ctx.font = `bold ${Math.max(12, 18 * zScale)}px monospace`;
       ctx.textAlign = 'center';
-      ctx.lineWidth = 3;
       ctx.strokeStyle = '#000';
-      const midX = (pPos.x + mPos.x) / 2;
-      const midY = (pPos.y + mPos.y) / 2;
-      const text = `Dist: ${Math.round(dist3D)} | XYZ: ${Math.round(dx)}, ${Math.round(dy)}, ${Math.round(dz)} | Ang: ${Math.round(angle)}°`;
-      ctx.strokeText(text, midX, midY - 10);
-      ctx.fillText(text, midX, midY - 10);
+      ctx.lineWidth = Math.max(2, 3 * zScale);
+      const drawX = sx + ((ft.rndX || 0) * zScale);
+      const drawY = sy - (ft.offsetY * zScale) + ((ft.rndY || 0) * zScale);
+      ctx.strokeText(ft.text, drawX, drawY);
+      ctx.fillStyle = ft.color;
+      ctx.fillText(ft.text, drawX, drawY);
       ctx.restore();
-    }
-
-    if ((eng.devOptions.showDistToNPC || eng.devOptions.showDistNpcToMouse) && eng.selectedTarget && eng.selectedTarget.type === 'npc') {
-      const npc = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
-      if (npc && npc.state !== 'dead') {
-        const npcPos = eng.getScreenPos(npc.x, npc.y, npc.z || 0);
-
-        if (eng.devOptions.showDistToNPC) {
-          const p = eng.player;
-          const pPos = eng.getScreenPos(p.x, p.y, p.z || 0);
-          const dx = npc.x - p.x;
-          const dy = npc.y - p.y;
-          const dz = (npc.z || 0) - (p.z || 0);
-          const dist3D = Math.hypot(Math.hypot(dx, dy), dz);
-          const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-
-          ctx.save();
-          ctx.strokeStyle = '#f1c40f';
-          ctx.lineWidth = 2;
-          ctx.setLineDash([5, 5]);
-          ctx.beginPath();
-          ctx.moveTo(pPos.x, pPos.y);
-          ctx.lineTo(npcPos.x, npcPos.y);
-          ctx.stroke();
-
-          ctx.fillStyle = '#fff';
-          ctx.font = 'bold 12px monospace';
-          ctx.textAlign = 'center';
-          ctx.lineWidth = 3;
-          ctx.strokeStyle = '#000';
-          const midX = (pPos.x + npcPos.x) / 2;
-          const midY = (pPos.y + npcPos.y) / 2;
-          const text = `Dist: ${Math.round(dist3D)} | XYZ: ${Math.round(dx)}, ${Math.round(dy)}, ${Math.round(dz)} | Ang: ${Math.round(angle)}°`;
-          ctx.strokeText(text, midX, midY - 10);
-          ctx.fillText(text, midX, midY - 10);
-          ctx.restore();
-        }
-
-        if (eng.devOptions.showDistNpcToMouse) {
-          const ray = eng.getIsoRaycast(eng.input.mousePos.x, eng.input.mousePos.y);
-          const mouseZ = ray.z * 32;
-          const mPos = eng.getScreenPos(ray.exactX, ray.exactY, mouseZ);
-          const dx = ray.exactX - npc.x;
-          const dy = ray.exactY - npc.y;
-          const dz = mouseZ - (npc.z || 0);
-          const dist3D = Math.hypot(Math.hypot(dx, dy), dz);
-          const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-
-          ctx.save();
-          ctx.strokeStyle = '#e74c3c';
-          ctx.lineWidth = 2;
-          ctx.setLineDash([5, 5]);
-          ctx.beginPath();
-          ctx.moveTo(npcPos.x, npcPos.y);
-          ctx.lineTo(mPos.x, mPos.y);
-          ctx.stroke();
-
-          ctx.fillStyle = '#fff';
-          ctx.font = 'bold 12px monospace';
-          ctx.textAlign = 'center';
-          ctx.lineWidth = 3;
-          ctx.strokeStyle = '#000';
-          const midX = (npcPos.x + mPos.x) / 2;
-          const midY = (npcPos.y + mPos.y) / 2;
-          const text = `Dist: ${Math.round(dist3D)} | XYZ: ${Math.round(dx)}, ${Math.round(dy)}, ${Math.round(dz)} | Ang: ${Math.round(angle)}°`;
-          ctx.strokeText(text, midX, midY - 10);
-          ctx.fillText(text, midX, midY - 10);
-          ctx.restore();
-        }
-      }
-    }
-
-    ctx.restore();
-    if (eng.clientSettings.showMinimap && (!eng.mapOverlay || !eng.mapOverlay.active)) {
-      eng.minimap.draw(ctx);
-    }
-
-    let overlayText = [];
-    if (eng.clientSettings.showCoords) overlayText.push(`X: ${Math.round(eng.player.x)} | Y: ${Math.round(eng.player.y)} | Z: ${Math.round(eng.player.z || 0)}`);
-    if (eng.clientSettings.showFPS) overlayText.push(`FPS: ${eng.fps}`);
-    if (eng.clientSettings.showPing) overlayText.push(`Ping: ${eng.ping}ms`);
-
-    if (overlayText.length > 0) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-      ctx.fillRect(20, 100, 200, overlayText.length * 20 + 10);
-      ctx.fillStyle = '#00d2ff';
-      ctx.font = '14px monospace';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      overlayText.forEach((text, idx) => ctx.fillText(text, 30, 105 + idx * 20));
-    }
+    });
   }
 }

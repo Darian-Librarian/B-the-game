@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>B - The Arrival</title>
+  <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/ui.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+        "engine": "./src/ui/game/engine.js?v=new-engine-240"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="game-container">
+    <section id="creation-screen" class="ui-screen">
+      <div class="screen-scaler">
+      <div class="sidebar">
+        <img src="assets/images/ui/launcher/launcher-banner.png" alt="B Logo" class="launcher-banner">
+        
+        <div id="auth-form">
+          <div class="input-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" maxlength="20" placeholder="...">
+            <div class="checkbox-group">
+              <input type="checkbox" id="remember-user">
+              <label for="remember-user">Remember Me</label>
+            </div>
+          </div>
+
+          <div class="input-group" id="email-group" style="display: none;">
+            <label for="email">Email</label>
+            <input type="email" id="email" placeholder="...">
+            <div class="checkbox-group" style="margin-top: 5px;">
+              <input type="checkbox" id="no-email">
+              <label for="no-email">No thanks, skip welcome email</label>
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="...">
+          </div>
+
+          <button id="btn-main" class="btn-primary">Login</button>
+          <p class="toggle-text">Don't Have An Account? <span id="toggle-auth">Sign Up!</span></p>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <section id="selection-screen" class="ui-screen" style="display: none;">
+      <div class="screen-scaler">
+      <div class="sidebar left-align">
+        <h2 class="header-text">Character Selection</h2>
+        <div id="character-list" class="scroll-list"></div>
+        <div class="selection-controls">
+          <button id="btn-play" class="btn-primary">Play</button>
+          <button id="btn-delete" class="btn-secondary" style="border-color: var(--rainbow-red); color: var(--rainbow-red);">Delete</button>
+          <button id="btn-back" class="btn-secondary">Back</button>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <section id="character-creator-screen" class="ui-screen customizer-layout" style="display: none;">
+      <div class="screen-scaler">
+      <nav class="customizer-nav">
+        <div class="nav-item active" data-step="body">Body</div>
+        <div class="nav-item" data-step="costume">Costume</div>
+        <div class="nav-item" data-step="style">Player Style</div>
+        <div class="nav-item" data-step="archetype">Archetype</div>
+        <div class="nav-item" data-step="finalize">Registration</div>
+      </nav>
+
+      <main class="customizer-content">
+        <div id="step-body" class="step-panel active">
+          <aside class="heritage-col left">
+            <h3 class="panel-header">Heritage</h3>
+            <div class="selection-list" id="class-list">
+              <div class="list-item active" data-class="standard">
+                <h4>Standard</h4>
+              </div>
+              <div class="list-item" data-class="primal">
+                <h4>Primal</h4>
+              </div>
+              <div class="list-item" data-class="mutated">
+                <h4>Mutated</h4>
+              </div>
+              <div class="list-item locked" data-class="hybrid">
+                <h4>Hybrid</h4>
+              </div>
+            </div>
+            <div class="gender-group" style="margin-top: auto;">
+              <h3 class="panel-header">Gender</h3>
+              <div class="selection-list" id="gender-list" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <div class="list-item active" data-gender="male" style="flex: 1; text-align: center; padding: 10px 5px; margin: 0; font-size: 0.8rem;">Male</div>
+                <div class="list-item locked" data-gender="female" style="flex: 1; text-align: center; padding: 10px 5px; margin: 0; font-size: 0.8rem;">Female</div>
+                <div class="list-item locked" data-gender="non-binary" style="flex: 1; text-align: center; padding: 10px 5px; margin: 0; font-size: 0.8rem;">Non-Binary</div>
+                <div class="list-item locked" data-gender="other" style="flex: 1; text-align: center; padding: 10px 5px; margin: 0; font-size: 0.8rem;">Other</div>
+              </div>
+            </div>
+            <div class="slider-group height-adjustment">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label for="height-slider">Height Adjustment</label>
+                <span id="height-display" style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">5'10"</span>
+              </div>
+              <input type="range" id="height-slider" min="0.5" max="1.4" step="0.01" value="1.0">
+            </div>
+          </aside>
+
+          <section class="heritage-display">
+            <div class="preview-stage">
+              <div class="integrity-vertical-group">
+                <div class="integrity-readouts">
+                  <div class="integrity-label-box">
+                    <h4>Synthetic</h4>
+                    <span id="synthetic-percentage">0%</span>
+                  </div>
+                </div>
+
+                <div class="scrollbar-wrapper">
+                  <input type="range" id="integrity-scrollbar" class="integrity-scrollbar" min="-100" max="100" value="0">
+                </div>
+
+                <div class="integrity-readouts">
+                  <div class="integrity-label-box">
+                    <h4>Mutation</h4>
+                    <span id="mutated-percentage">0%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="heritage-showcase">
+                <img id="heritage-splash" src="assets/images/ui/creator/splashes/standard.png" alt="Heritage Showcase" class="showcase-image">
+              </div>
+                <div id="heritage-description" class="showcase-description">
+                  <p>Select A Heritage To View Its Details.</p>
+                </div>
+              <div id="player-preview" class="sprite-idle-down"></div>
+            </div>
+          </section>
+
+          <aside class="heritage-col right">
+            <h3 class="panel-header">Affinity</h3>
+            <div class="selection-list" id="affinity-list">
+              </div>
+          </aside>
+        </div>
+
+        <div id="step-costume" class="step-panel" style="display: none;">
+          <aside class="heritage-col left">
+            <h3 class="panel-header">Apparel</h3>
+            <div class="selection-list">
+              <div class="list-item locked">
+                <h4>Coming Soon</h4>
+                <p>Costume options will be available here.</p>
+              </div>
+            </div>
+          </aside>
+
+          <section class="heritage-display">
+            <div class="preview-stage">
+              <div id="costume-player-preview"></div>
+            </div>
+          </section>
+
+          <aside class="heritage-col right">
+            <h3 class="panel-header">Colors</h3>
+            <div class="selection-list">
+              <div class="list-item locked">
+                <h4>Palette</h4>
+                <p>Color selections will be available here.</p>
+              </div>
+            </div>
+          </aside>
+        </div>
+        <div id="step-style" class="step-panel" style="display: none;">
+          <aside class="heritage-col left">
+            <h3 class="panel-header">Player Style</h3>
+            <div class="selection-list" id="style-list">
+              <div class="list-item active" data-style="standard">
+                <h4>Standard</h4>
+              </div>
+              <div class="list-item" data-style="ironman">
+                <h4>Ironman</h4>
+              </div>
+              <div class="list-item" data-style="neural">
+                <h4>Neural</h4>
+              </div>
+            </div>
+          </aside>
+          <section class="heritage-display">
+            <div class="preview-stage">
+              <div class="equipment-loadout">
+                <h4>Starting Loadout</h4>
+                <div class="equip-slots" id="style-equip-slots">
+                  <div class="equip-slot" data-slot="helmet" title="Helmet"></div>
+                  <div class="equip-slot" data-slot="chest" title="Chest"></div>
+                  <div class="equip-slot" data-slot="legs" title="Legs"></div>
+                  <div class="equip-slot" data-slot="feet" title="Feet"></div>
+                  <div class="equip-slot" data-slot="gloves" title="Gloves"></div>
+                  <div class="equip-slot" data-slot="left-hand" title="Left Handed Item"></div>
+                  <div class="equip-slot" data-slot="right-hand" title="Right Handed Item"></div>
+                  <div class="equip-slot" data-slot="belt" title="Belt"></div>
+                  <div class="equip-slot" data-slot="backpack" title="Backpack"></div>
+                  <div class="equip-slot" data-slot="amulet" title="Amulet"></div>
+                </div>
+                <div class="equip-details-box" id="equip-details-box">
+                  <p>Hover over an item to view its details. This area can now hold significantly more text about the item's stats, history, and Integrity requirements without breaking your UI layout. If it gets too long, it will simply scroll!</p>
+                </div>
+              </div>
+              <div class="heritage-showcase">
+                <img id="style-splash" src="assets/images/ui/creator/splashes/standard.png" alt="Style Showcase" class="showcase-image">
+              </div>
+              <div id="style-description" class="showcase-description">
+                <p>Select A Style To View Its Details.</p>
+              </div>
+              <div id="style-player-preview" class="sprite-idle-down"></div>
+            </div>
+          </section>
+          <aside class="heritage-col right">
+            <h3 class="panel-header">Inherited Skills</h3>
+            <div class="selection-list" id="style-skills-list"></div>
+          </aside>
+        </div>
+        <div id="step-archetype" class="step-panel" style="display: none;">
+          <aside class="heritage-col left">
+            <h3 class="panel-header">Archetype</h3>
+            <div class="selection-list" id="archetype-list"></div>
+            <button id="btn-skip-archetype" class="btn-secondary" style="margin-top: auto;">Skip (Civilian)</button>
+          </aside>
+          <section class="heritage-display">
+            <div class="preview-stage">
+              <div class="powerset-columns-container" id="powerset-columns-container"></div>
+              <div id="archetype-player-preview" class="sprite-idle-down"></div>
+            </div>
+          </section>
+          <aside class="heritage-col right">
+            <h3 class="panel-header">Power Details</h3>
+            <div id="power-description" class="power-description-box">
+              <p>Select A Power To View Its Details.</p>
+            </div>
+          </aside>
+        </div>
+        <div id="step-finalize" class="step-panel" style="display: none;">
+          <aside class="heritage-col left">
+            <h3 class="panel-header">Deployment Status</h3>
+            <div id="deployment-warning" class="deployment-warning standard">
+              <strong class="deployment-title">Standard Deployment</strong><br><br>Your alignment and city choice are stable. You will blend in reasonably well with the local forces.
+            </div>
+          </aside>
+          <section class="heritage-display">
+            <div class="preview-stage">
+              <div id="finalize-player-preview" class="sprite-idle-down"></div>
+              <div class="id-card">
+                <div class="id-card-header">
+                  <h2>Galactic Federation of B</h2>
+                  <h4>Citizen Identification</h4>
+                </div>
+                <div class="id-card-body">
+                  <div class="id-card-details">
+                    <div class="id-card-field">
+                      <label class="id-card-label">Citizen Name</label>
+                      <input type="text" id="id-card-name" class="id-card-value name-value" placeholder="PENDING..." maxlength="16">
+                    </div>
+                    <div class="id-card-row">
+                      <div class="id-card-field">
+                        <label class="id-card-label">Alignment</label>
+                        <select id="id-card-alignment" class="id-card-select">
+                          <option value="hero">Hero</option>
+                          <option value="vigilante">Vigilante</option>
+                          <option value="villain">Villain</option>
+                        </select>
+                      </div>
+                      <div class="id-card-field">
+                        <label class="id-card-label">Location</label>
+                        <select id="id-card-city" class="id-card-select">
+                          <option value="atlas">Atlas City</option>
+                          <option value="lemon">Lemon City</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="id-card-field bio-field">
+                      <label class="id-card-label">Biography / Directives</label>
+                      <textarea id="char-bio" class="id-card-textarea" placeholder="Enter your character's backstory here..."></textarea>
+                    </div>
+                  </div>
+                </div>
+                <div class="id-card-barcode"></div>
+              </div>
+            </div>
+          </section>
+          <aside class="heritage-col right">
+            <h3 class="panel-header">Verification</h3>
+            <p style="color: var(--text-dim); font-size: 0.9rem; line-height: 1.6; padding: 10px 0;">Review your Federation Identification card carefully.<br><br>Your Alignment and Starting City will dictate how the factions of B respond to your presence in the simulation.<br><br>Ensure your name is registered below, and click Finalize to log your identity into the persistent roster.</p>
+          </aside>
+        </div>
+      </main>
+
+      <footer class="customizer-footer">
+        <div class="footer-left">
+          <button id="btn-cancel-create" class="btn-secondary">Back</button>
+        </div>
+        <div class="name-container">
+          <div class="footer-meta" style="display: flex; flex-direction: column; align-items: flex-end; padding-right: 20px; border-right: 1px solid var(--text-dim);">
+            <div id="footer-archetype-display" style="color: var(--accent-neon); font-family: var(--font-header); font-size: 1.2rem; letter-spacing: 1px; text-transform: uppercase;">Civilian</div>
+            <div id="footer-integrity-display" style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.85rem;">Integrity: 0%</div>
+          </div>
+          <span>Enter Player Name</span>
+          <div class="input-wrapper">
+            <input type="text" id="char-name" maxlength="16" placeholder="...">
+            <img src="assets/images/ui/shared/magnifier-icon.png" class="name-check" title="Check Availability">
+          </div>
+        </div>
+        <div class="footer-actions">
+          <button id="btn-next-step" class="btn-secondary">Next</button>
+          <button id="btn-save-char" class="btn-secondary" style="display: none;">Finalize</button>
+        </div>
+      </footer>
+      </div>
+    </section>
+
+    <section id="game-screen" class="ui-screen" style="display: none; background: #000;">
+      <canvas id="game-canvas" style="display: block; width: 100vw; height: 100vh;"></canvas>
+
+      <!-- Target Window HUD -->
+      <div id="target-window" class="target-window" style="display: none;">
+        <div class="target-header">
+          <span id="target-name">Target Name</span>
+        </div>
+        <div class="target-stats">
+          <div class="stat-bar-container small">
+            <div id="target-health-fill" class="stat-bar-fill health-fill"></div>
+            <div id="target-health-text" class="stat-bar-text small"></div>
+          </div>
+          <div class="stat-bar-container small">
+            <div id="target-energy-fill" class="stat-bar-fill energy-fill"></div>
+            <div id="target-energy-text" class="stat-bar-text small"></div>
+          </div>
+        </div>
+        <div id="target-actions" style="display: none; padding: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <button id="btn-target-talk" class="btn-primary" style="font-size: 0.9rem; height: 30px; width: 100%;">Talk</button>
+        </div>
+      </div>
+      
+      <!-- Side HUD Icons -->
+      <div class="game-side-hud" style="position: absolute; right: 20px; top: 350px; display: flex; flex-direction: column; gap: 10px; z-index: 90;">
+        <button id="btn-inventory" class="btn-secondary" style="width: 45px; height: 45px; font-weight: bold; background: rgba(0,0,0,0.8); border-color: var(--accent-neon); color: var(--accent-neon); border-radius: 4px; font-size: 1.2rem;">I</button>
+        <button id="btn-powers" class="btn-secondary" style="width: 45px; height: 45px; font-weight: bold; background: rgba(0,0,0,0.8); border-color: #9b59b6; color: #9b59b6; border-radius: 4px; font-size: 1.2rem;">P</button>
+      </div>
+      
+      <!-- Top Right Game Menu -->
+      <div class="game-top-bar">
+        <button id="btn-game-menu" class="btn-secondary" style="background: rgba(0,0,0,0.8); border-color: var(--accent-neon); color: var(--accent-neon);">Menu ▼</button>
+        <div id="game-dropdown" class="game-dropdown-menu" style="display: none;">
+          <div class="dropdown-item" id="btn-edit-id">Citizen <u>I</u>D</div>
+          <div class="dropdown-item" id="btn-settings"><u>S</u>ettings</div>
+          <div class="dropdown-item" id="btn-char-select"><u>C</u>haracter Select</div>
+          <div class="dropdown-item" id="btn-logout"><u>Q</u>uit</div>
+        </div>
+      </div>
+      
+      <!-- Developer Panel -->
+      <div id="dev-panel" class="dev-panel" style="display: none;">
+        <div class="dev-panel-header">
+          <span>Developer Tools</span>
+          <button id="btn-close-dev">X</button>
+        </div>
+        <div class="dev-panel-body">
+          <button id="btn-dev-player" class="btn-secondary">Toggle Player Pos</button>
+          <button id="btn-dev-player-tile" class="btn-secondary">Toggle Player Tile</button>
+          <button id="btn-dev-mouse" class="btn-secondary">Toggle Mouse Raytrace</button>
+          <button id="btn-dev-melee" class="btn-secondary">Toggle Melee Range</button>
+          <button id="btn-dev-hitbox" class="btn-secondary">Toggle Entity Hitboxes</button>
+          <button id="btn-dev-tile" class="btn-secondary">Toggle Tile Highlighter</button>
+          <button id="btn-dev-chunk" class="btn-secondary">Toggle Chunk Boundaries</button>
+          <button id="btn-dev-edit-target" class="btn-secondary" style="margin-top: 10px; border-color: #f39c12; color: #f39c12; opacity: 0.5; cursor: not-allowed;">Edit Selected NPC</button>
+          <button id="btn-dev-npc-manager" class="btn-secondary" style="margin-top: 10px; border-color: #9b59b6; color: #9b59b6;">Manage NPCs</button>
+        </div>
+      </div>
+      
+      <!-- Builder Panel -->
+      <div id="builder-panel" class="dev-panel" style="display: none; right: 20px; left: auto; border-color: #3498db; box-shadow: 0 0 15px rgba(52, 152, 219, 0.2);">
+        <div class="dev-panel-header" style="background: rgba(52, 152, 219, 0.8);">
+          <span>Builder Tools</span>
+          <button id="btn-close-builder">X</button>
+        </div>
+        <div class="dev-panel-body">
+          <button id="btn-build-tile" class="btn-secondary">Tile Grid</button>
+          <button id="btn-build-chunk" class="btn-secondary">Chunk Boundaries</button>
+          <button id="btn-build-coords" class="btn-secondary">Coordinates</button>
+        </div>
+      </div>
+      
+      <!-- NPC Manager Panel -->
+      <div id="npc-manager-panel" class="dev-panel" style="display: none; top: 100px; left: 50%; transform: translateX(-50%); width: 850px; border-color: #9b59b6; box-shadow: 0 0 15px rgba(155, 89, 182, 0.2); z-index: 250;">
+        <div class="dev-panel-header" style="background: rgba(155, 89, 182, 0.8);">
+          <span>NPC Manager</span>
+          <button id="btn-close-npc-manager">X</button>
+        </div>
+        <div class="dev-panel-body" id="npc-manager-list" style="max-height: 60vh; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background: rgba(5, 7, 10, 0.95);">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- NPC Edit Modal -->
+      <div id="npc-edit-modal" class="dev-panel" style="display: none; top: 150px; left: 50%; transform: translateX(-50%); width: 400px; border-color: #9b59b6; box-shadow: 0 0 15px rgba(155, 89, 182, 0.2); z-index: 260;">
+        <div class="dev-panel-header" style="background: rgba(155, 89, 182, 0.8);">
+          <span>Edit NPC</span>
+          <button id="btn-close-npc-edit">X</button>
+        </div>
+        <div class="dev-panel-body" style="background: rgba(5, 7, 10, 0.95); padding: 15px; display: flex; flex-direction: column; gap: 10px;">
+          <input type="hidden" id="edit-npc-uuid">
+          
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <label style="color: var(--accent); font-family: var(--font-header);">Name</label>
+            <input type="text" id="edit-npc-name" style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
+          </div>
+          
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+              <label style="color: var(--accent); font-family: var(--font-header);">HP (Cur / Max)</label>
+              <div style="display: flex; gap: 5px;">
+                <input type="number" id="edit-npc-hp" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
+                <input type="number" id="edit-npc-maxhp" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
+              </div>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+              <label style="color: var(--accent); font-family: var(--font-header);">Energy</label>
+              <input type="number" id="edit-npc-energy" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label style="color: var(--accent); font-family: var(--font-header);">Location (X, Y, Z)</label>
+              <button id="btn-edit-npc-tp-me" class="btn-secondary" style="padding: 2px 8px; font-size: 0.75rem; width: auto; height: auto; border-color: #3498db; color: #3498db;">TP to Me</button>
+            </div>
+            <div style="display: flex; gap: 5px;">
+              <input type="number" id="edit-npc-x" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
+              <input type="number" id="edit-npc-y" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
+              <input type="number" id="edit-npc-z" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+              <label style="color: var(--accent); font-family: var(--font-header);">Type</label>
+              <select id="edit-npc-type" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
+                <option value="idle">Idle</option>
+                <option value="trainer">Trainer</option>
+              </select>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+              <label style="color: var(--accent); font-family: var(--font-header);">Direction</label>
+              <select id="edit-npc-dir" style="width: 100%; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--text-dim); padding: 5px; font-family: var(--font-mono);">
+                <option value="down">Down</option>
+                <option value="up">Up</option>
+                <option value="left">Left</option>
+                <option value="right">Right</option>
+              </select>
+            </div>
+          </div>
+          
+          <button id="btn-save-npc-edit" class="btn-primary" style="margin-top: 10px; border-color: #9b59b6; color: #9b59b6; background: rgba(155, 89, 182, 0.1);">Close</button>
+        </div>
+      </div>
+
+      <!-- Inventory Panel -->
+      <div id="inventory-panel" class="dev-panel" style="display: none; right: 80px; top: 350px; left: auto; border-color: #f1c40f; box-shadow: 0 0 15px rgba(241, 196, 15, 0.2); width: 235px;">
+        <div class="dev-panel-header" style="background: rgba(241, 196, 15, 0.8);">
+          <span style="color: #000;">Inventory</span>
+          <button id="btn-close-inventory" style="color: #000;">X</button>
+        </div>
+        <div class="dev-panel-body" id="inventory-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; padding: 10px;">
+          <!-- Slots populated by JS -->
+        </div>
+        <div style="padding: 10px; border-top: 1px solid rgba(255,255,255,0.1); text-align: right; color: #2ecc71; font-family: var(--font-mono); font-weight: bold; font-size: 1.1rem;">
+          $<span id="inv-currency">0</span>
+        </div>
+      </div>
+
+      <!-- Builder Hotbar -->
+      <div id="builder-hotbar" class="builder-hotbar" style="display: none;">
+        <input type="color" id="build-color-picker" value="#ffffff" title="Tile Tint Color" style="width: 40px; height: 60px; padding: 0; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; background: transparent;">
+        <div class="hotbar-slot active" data-tex="grass" style="background-image: url('assets/tiles/base/floor/grass_block_top.png');"><span>Grass</span></div>
+        <div class="hotbar-slot" data-tex="dirt" style="background-image: url('assets/tiles/base/all-facing/dirt.png');"><span>Dirt</span></div>
+        <div class="hotbar-slot" data-tex="stone" style="background-image: url('assets/tiles/base/all-facing/stone.png');"><span>Stone</span></div>
+        <div class="hotbar-slot" data-tex="water" style="background-image: url('assets/tiles/base/fluid/water_still.png');"><span>Water</span></div>
+        <div class="hotbar-slot" data-tex="paint" style="background-image: url('assets/tiles/base/side/rough-paint.png');"><span>Paint</span></div>
+        <div class="hotbar-slot" data-tex="carpet" style="background-image: url('assets/tiles/base/all-facing/carpet.png');"><span>Carpet</span></div>
+        <div class="hotbar-slot" data-tex="level" style="color: #f1c40f; background-image: url('assets/images/ui/shared/ui-panel-bg.png');"><span>Level</span></div>
+        <div class="hotbar-slot" data-tex="erase" style="color: #ff4757; background-image: url('assets/images/ui/shared/ui-panel-bg.png');"><span>Erase</span></div>
+      </div>
+
+      <!-- In-Game Chat Overlay -->
+      <div id="game-chat-container">
+        <div id="chat-messages"></div>
+        <div class="chat-input-wrapper">
+          <input type="text" id="chat-input" placeholder="Press Enter to chat..." autocomplete="off">
+          <div class="chat-channel-selector">
+            <button id="btn-chat-channel" title="Select Channel">Gen ▾</button>
+            <div id="chat-channel-dropdown" class="game-dropdown-menu" style="display: none; bottom: 100%; top: auto; right: 0; min-width: 100px; margin-bottom: 5px;">
+              <div class="dropdown-item" data-channel="general">General</div>
+              <div class="dropdown-item" data-channel="local">Local</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Player Context Menu -->
+      <div id="player-context-menu" class="game-dropdown-menu" style="display: none; position: absolute; z-index: 300; min-width: 150px; right: auto;">
+        <div class="dropdown-item" id="ctx-btn-talk" style="display: none;">Talk</div>
+        <div class="dropdown-item" id="ctx-btn-trade">Trade Offer</div>
+      </div>
+
+      <!-- Trade Panel -->
+      <div id="trade-panel" class="dev-panel" style="display: none; top: 150px; left: 50%; transform: translateX(-50%); width: 450px; border-color: #3498db; box-shadow: 0 0 15px rgba(52, 152, 219, 0.2); z-index: 150;">
+        <div class="dev-panel-header" style="background: rgba(52, 152, 219, 0.8);">
+          <span style="color: #000; font-weight: bold;">Trade: <span id="trade-partner-name">Player</span></span>
+          <button id="btn-close-trade" style="color: #000;">X</button>
+        </div>
+        <div class="dev-panel-body" style="display: flex; gap: 10px; padding: 15px;">
+          <div style="flex: 1; border: 1px solid var(--text-dim); padding: 10px; border-radius: 4px; background: rgba(0,0,0,0.5);">
+            <h4 style="margin: 0 0 10px 0; text-align: center; color: var(--accent-neon); font-family: var(--font-header);">Your Offer</h4>
+            <div id="trade-grid-self" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;"></div>
+            <div style="margin-top: 10px; text-align: center;">
+              <input type="number" id="trade-offer-currency" min="0" value="0" style="width: 100%; box-sizing: border-box; text-align: right; background: rgba(0,0,0,0.8); color: #2ecc71; border: 1px solid var(--text-dim); border-radius: 4px; padding: 4px; font-family: var(--font-mono); font-weight: bold; font-size: 1rem; outline: none;">
+            </div>
+          </div>
+          <div style="flex: 1; border: 1px solid var(--text-dim); padding: 10px; border-radius: 4px; background: rgba(0,0,0,0.5);">
+            <h4 style="margin: 0 0 10px 0; text-align: center; color: var(--rainbow-red); font-family: var(--font-header);">Their Offer</h4>
+            <div id="trade-grid-partner" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;"></div>
+            <div style="margin-top: 10px; text-align: right; color: #2ecc71; font-family: var(--font-mono); font-weight: bold; font-size: 1rem; padding: 4px;">
+              $<span id="trade-partner-currency">0</span>
+            </div>
+          </div>
+        </div>
+        <div style="padding: 10px 15px 15px 15px; display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <button id="btn-trade-accept" class="btn-primary" style="flex: 1; height: 40px; font-size: 1.1rem;">Accept Trade</button>
+        </div>
+      </div>
+
+      <!-- Trainer Dialog Modal -->
+      <div id="trainer-dialog-modal" style="display: none; position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); width: 500px; background: rgba(5,7,10,0.95); border: 2px solid #3498db; border-radius: 8px; box-shadow: 0 0 20px rgba(52, 152, 219, 0.4); flex-direction: column; overflow: hidden; font-family: var(--font-mono); z-index: 100;">
+        <div class="dev-panel-header" style="background: rgba(52, 152, 219, 0.2); padding: 15px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center;">
+          <h3 id="trainer-dialog-name" style="margin: 0; color: #00d2ff; font-family: var(--font-header); letter-spacing: 1px;">Trainer</h3>
+          <button id="btn-close-trainer" style="background: transparent; border: none; color: #3498db; font-weight: bold; cursor: pointer; font-size: 1.2rem;">X</button>
+        </div>
+        <div id="trainer-dialog-view">
+          <div style="padding: 20px; color: #fff; font-size: 1.1rem; line-height: 1.5;" id="trainer-dialog-text">
+            "Hello, recruit. Ready to improve your skills?"
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 5px; padding: 15px; background: rgba(0,0,0,0.5); border-top: 1px solid rgba(255,255,255,0.1);">
+            <button id="btn-trainer-train" class="btn-primary" style="text-align: left; padding: 10px 15px; border-color: #3498db; color: #00d2ff; background: rgba(52, 152, 219, 0.1);">Select new abilities</button>
+            <button id="btn-trainer-leave" class="btn-secondary" style="text-align: left; padding: 10px 15px; border-color: var(--text-dim);">Leave (close)</button>
+          </div>
+        </div>
+        <div id="trainer-training-view" style="display: none; padding: 15px; flex-direction: column; gap: 10px;">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Powers Panel -->
+      <div id="powers-panel" class="dev-panel" style="display: none; top: 100px; left: 50%; transform: translateX(-50%); width: 700px; height: 500px; border-color: #9b59b6; box-shadow: 0 0 15px rgba(155, 89, 182, 0.2); z-index: 250;">
+        <div class="dev-panel-header" style="background: rgba(155, 89, 182, 0.8);">
+          <span style="color: #fff; font-weight: bold;">Powers & Abilities</span>
+          <button id="btn-close-powers">X</button>
+        </div>
+        <div class="dev-panel-body" style="display: flex; flex-direction: row; gap: 15px; padding: 15px; height: calc(100% - 35px); box-sizing: border-box; background: rgba(5, 7, 10, 0.95);">
+          
+          <div style="flex: 1; border: 1px solid var(--text-dim); padding: 15px; border-radius: 4px; background: rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 10px;">
+            <h3 style="margin: 0; color: var(--accent-neon); font-family: var(--font-header); text-align: center; border-bottom: 1px solid rgba(116, 185, 255, 0.2); padding-bottom: 10px;">Progression Info</h3>
+            <div style="font-family: var(--font-mono); font-size: 0.9rem; color: #fff; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between;"><span>Current Level:</span> <strong id="powers-level-text" style="color: #2ecc71;">1</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Powersets Learned:</span> <strong id="powersets-learned-text" style="color: #9b59b6;">1</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Unspent Power Picks:</span> <strong id="powers-picks-text" style="color: #f39c12;">0</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Unspent Powerset Picks:</span> <strong id="powersets-picks-text" style="color: #f39c12;">0</strong></div>
+              <div style="display: flex; justify-content: space-between;"><span>Enhancement Slots:</span> <strong id="powers-slots-text" style="color: #3498db;">0</strong></div>
+            </div>
+            <div style="margin-top: auto; font-family: var(--font-mono); font-size: 0.75rem; color: #aaa; line-height: 1.5; border-top: 1px solid var(--text-dim); padding-top: 10px;">
+              <span style="color: #f39c12;">• Every Even Level:</span> +1 Power Pick<br>
+              <span style="color: #e74c3c;">• Every 10 Levels:</span> +1 Powerset Pick<br>
+              <span style="color: #3498db;">• Every Odd Level:</span> +2 Enhancement Slots<br>
+            </div>
+          </div>
+          
+          <div style="flex: 1.5; border: 1px solid var(--text-dim); border-radius: 4px; background: rgba(0,0,0,0.5); display: flex; flex-direction: column; overflow: hidden;">
+            <h4 style="margin: 0; padding: 10px; background: rgba(116, 185, 255, 0.1); border-bottom: 1px solid var(--text-dim); text-align: center; font-family: var(--font-header); color: var(--accent);">Active Powers</h4>
+            <div id="powers-list-container" style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom HTML Tooltip -->
+      <div id="item-tooltip" class="item-tooltip" style="display: none;"></div>
+      
+      <!-- Bottom HUD: Health and Energy Bars -->
+      <div class="game-bottom-hud">
+        <div class="stat-bar-container">
+          <div id="health-bar-fill" class="stat-bar-fill health-fill"></div>
+          <div class="stat-bar-markers"></div>
+          <div id="health-bar-text" class="stat-bar-text">1000 / 1000</div>
+        </div>
+        <div class="stat-bar-container">
+          <div id="energy-bar-fill" class="stat-bar-fill energy-fill"></div>
+          <div class="stat-bar-markers"></div>
+          <div id="energy-bar-text" class="stat-bar-text">1000 / 1000</div>
+        </div>
+      </div>
+    </section>
+
+    <div id="custom-modal" class="modal-overlay" style="display: none;">
+      <div class="screen-scaler" style="justify-content: center; align-items: center;">
+      <div class="modal-content">
+        <h3 id="modal-title">System Alert</h3>
+        <p id="modal-body">Message goes here...</p>
+        <button id="modal-close" class="btn-secondary">Ok</button>
+      </div>
+      </div>
+    </div>
+
+    <div id="delete-modal" class="modal-overlay" style="display: none;">
+      <div class="screen-scaler" style="justify-content: center; align-items: center;">
+      <div class="modal-content">
+        <h3 style="font-family: var(--font-header); color: var(--rainbow-red); margin-top: 0;">Delete Character</h3>
+        <p style="font-family: var(--font-mono); font-size: 0.9rem;">Type the character's name to confirm deletion. This cannot be undone.</p>
+        <input type="text" id="delete-confirm-input" placeholder="Character Name" style="width: 100%; box-sizing: border-box; margin-top: 10px; text-align: center;">
+        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+          <button id="confirm-delete-yes" class="btn-primary" style="flex: 1; border-color: var(--rainbow-red); color: var(--rainbow-red); background: rgba(255, 71, 87, 0.1);">Delete</button>
+          <button id="confirm-delete-no" class="btn-secondary" style="flex: 1;">Cancel</button>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <div id="in-game-id-modal" class="modal-overlay" style="display: none;">
+      <div class="screen-scaler" style="justify-content: center; align-items: center;">
+        <div class="id-card" style="position: relative; right: auto; top: auto; margin: auto; height: auto;">
+          <button id="btn-close-id" class="btn-secondary" style="position: absolute; top: 15px; right: 15px; padding: 5px 15px; z-index: 10;">X</button>
+          <div class="id-card-header">
+            <h2>Galactic Federation of B</h2>
+            <h4>Citizen Identification</h4>
+          </div>
+          <div class="id-card-body">
+            <div class="id-card-details">
+              <div class="id-card-field">
+                <label class="id-card-label">Citizen Name</label>
+                <input type="text" id="ig-id-name" class="id-card-value name-value" readonly style="color: #555; pointer-events: none;">
+              </div>
+              <div class="id-card-row">
+                <div class="id-card-field">
+                  <label class="id-card-label">Alignment</label>
+                  <select id="ig-id-alignment" class="id-card-select" disabled style="color: #555; pointer-events: none; appearance: none;">
+                    <option value="hero">Hero</option>
+                    <option value="vigilante">Vigilante</option>
+                    <option value="villain">Villain</option>
+                  </select>
+                </div>
+                <div class="id-card-field">
+                  <label class="id-card-label">Location</label>
+                  <select id="ig-id-city" class="id-card-select" disabled style="color: #555; pointer-events: none; appearance: none;">
+                    <option value="atlas">Atlas City</option>
+                    <option value="lemon">Lemon City</option>
+                  </select>
+                </div>
+              </div>
+              <div class="id-card-field bio-field" style="margin-top: 15px;">
+                <label class="id-card-label">Biography / Directives</label>
+                <textarea id="ig-char-bio" class="id-card-textarea" placeholder="Update your character's backstory here..." style="min-height: 150px;"></textarea>
+              </div>
+              <button id="btn-save-ig-id" class="btn-primary" style="margin-top: 20px;">Save Updates</button>
+            </div>
+          </div>
+          <div class="id-card-barcode"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay" style="display: none;">
+      <div class="screen-scaler" style="justify-content: center; align-items: center;">
+        <div class="modal-content" style="width: 800px; height: auto; min-height: 400px; justify-content: flex-start; gap: 20px; position: relative; background-image: none;">
+          <button id="btn-close-settings" class="btn-secondary" style="position: absolute; top: 15px; right: 15px; padding: 5px 15px; z-index: 10;">X</button>
+          <h3 style="font-family: var(--font-header); color: var(--accent-neon); margin-top: 0; text-align: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px;">Settings</h3>
+          
+          <div style="display: flex; width: 100%; min-height: 300px;">
+            <div class="settings-tabs" style="width: 220px; border-right: 2px solid var(--text-dim); padding-right: 20px; display: flex; flex-direction: column; gap: 10px;">
+              <button class="btn-secondary settings-tab-btn active" data-tab="settings-gameplay" style="text-align: left; padding: 10px; border-color: var(--accent-neon); color: var(--accent-neon); background: rgba(116, 185, 255, 0.1);">Gameplay & Camera</button>
+              <button class="btn-secondary settings-tab-btn" data-tab="settings-interface" style="text-align: left; padding: 10px;">Interface & Chat</button>
+              <button class="btn-secondary settings-tab-btn" data-tab="settings-nameplates" style="text-align: left; padding: 10px;">Nameplates & Health</button>
+              <button class="btn-secondary settings-tab-btn" data-tab="settings-misc" style="text-align: left; padding: 10px;">Miscellaneous</button>
+            </div>
+            
+            <div class="settings-panels" style="flex: 1; padding-left: 20px;">
+              <div id="settings-gameplay" class="settings-tab-panel" style="display: flex; flex-direction: column; gap: 10px;">
+                <div id="row-toggle-cam-jump" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Camera Follows Jump</span>
+                  <button id="btn-toggle-cam-jump" class="btn-primary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Enabled</button>
+                </div>
+                <div id="row-toggle-click-move" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Click To Move</span>
+                  <button id="btn-toggle-click-move" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
+                </div>
+                <div id="row-toggle-always-sprint" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Toggle Sprint</span>
+                  <button id="btn-toggle-always-sprint" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
+                </div>
+              </div>
+
+              <div id="settings-interface" class="settings-tab-panel" style="display: none; flex-direction: column; gap: 10px;">
+                <div id="row-toggle-minimap" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Show Minimap</span>
+                  <button id="btn-toggle-minimap" class="btn-primary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Enabled</button>
+                </div>
+                <div id="row-toggle-combat-chat" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Show Combat Chat</span>
+                  <button id="btn-toggle-combat-chat" class="btn-primary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Enabled</button>
+                </div>
+              </div>
+
+              <div id="settings-nameplates" class="settings-tab-panel" style="display: none; flex-direction: column; gap: 10px;">
+                <div id="row-toggle-player-names" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Show Player Names</span>
+                  <button id="btn-toggle-player-names" class="btn-primary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Enabled</button>
+                </div>
+                <div id="row-toggle-player-health" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Show Player Health</span>
+                  <button id="btn-toggle-player-health" class="btn-primary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Enabled</button>
+                </div>
+                <div id="row-toggle-entity-names" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Show Entity Names</span>
+                  <button id="btn-toggle-entity-names" class="btn-primary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Enabled</button>
+                </div>
+                <div id="row-toggle-entity-health" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Show Entity Health</span>
+                  <button id="btn-toggle-entity-health" class="btn-primary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Enabled</button>
+                </div>
+              </div>
+
+              <div id="settings-misc" class="settings-tab-panel" style="display: none; flex-direction: column; gap: 10px;">
+                <div id="row-toggle-coords" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Show Coordinates</span>
+                  <button id="btn-toggle-coords" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
+                </div>
+                <div id="row-toggle-fps" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Show FPS</span>
+                  <button id="btn-toggle-fps" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
+                </div>
+                <div id="row-toggle-ping" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Show Ping Latency</span>
+                  <button id="btn-toggle-ping" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
+                </div>
+                <div id="row-toggle-baseplates" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Show Entity Baseplates</span>
+                  <button id="btn-toggle-baseplates" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="confirm-modal" class="modal-overlay" style="display: none;">
+      <div class="screen-scaler" style="justify-content: center; align-items: center;">
+      <div class="modal-content">
+        <h3 style="font-family: var(--font-header); color: var(--accent-neon); margin-top: 0;">Confirmation</h3>
+        <p style="font-family: var(--font-mono); font-size: 0.9rem;">Are you sure you're finished with your character here?</p>
+        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+          <button id="confirm-yes" class="btn-primary" style="flex: 1;">Yes</button>
+          <button id="confirm-no" class="btn-secondary" style="flex: 1;">No</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+  <script type="module" src="src/ui/creator.js?v=2"></script>
+</body>
+</html>
