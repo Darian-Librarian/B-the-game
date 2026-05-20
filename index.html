@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B - The Arrival</title>
+  <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/ui.css">
+</head>
+<body>
+  <div id="game-container">
+    <section id="creation-screen" class="ui-screen">
+      <div class="screen-scaler">
+      <div class="sidebar">
+        <img src="assets/images/ui/launcher/launcher-banner.png" alt="B Logo" class="launcher-banner">
+        
+        <div id="auth-form">
+          <div class="input-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" maxlength="20" placeholder="...">
+            <div class="checkbox-group">
+              <input type="checkbox" id="remember-user">
+              <label for="remember-user">Remember Me</label>
+            </div>
+          </div>
+
+          <div class="input-group" id="email-group" style="display: none;">
+            <label for="email">Email</label>
+            <input type="email" id="email" placeholder="...">
+          </div>
+
+          <div class="input-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" placeholder="...">
+          </div>
+
+          <button id="btn-main" class="btn-primary">Login</button>
+          <p class="toggle-text">Don't Have An Account? <span id="toggle-auth">Sign Up!</span></p>
+          <button id="btn-dev-skip" class="btn-secondary" style="margin-top: 15px; width: 100%;">Dev: Skip To Creator</button>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <section id="selection-screen" class="ui-screen" style="display: none;">
+      <div class="screen-scaler">
+      <div class="sidebar left-align">
+        <h2 class="header-text">Character Selection</h2>
+        <div id="character-list" class="scroll-list"></div>
+        <div class="selection-controls">
+          <button id="btn-play" class="btn-primary">Play</button>
+          <button id="btn-back" class="btn-secondary">Back</button>
+        </div>
+      </div>
+      </div>
+    </section>
+
+    <section id="character-creator-screen" class="ui-screen customizer-layout" style="display: none;">
+      <div class="screen-scaler">
+      <nav class="customizer-nav">
+        <div class="nav-item active" data-step="heritage">Heritage</div>
+        <div class="nav-item" data-step="integrity">Integrity</div>
+        <div class="nav-item" data-step="costume">Costume</div>
+        <div class="nav-item" data-step="style">Player Style</div>
+        <div class="nav-item" data-step="archetype">Archetype</div>
+        <div class="nav-item" data-step="finalize">Registration</div>
+      </nav>
+
+      <main class="customizer-content">
+        <div id="step-heritage" class="step-panel active">
+          <aside class="heritage-col left">
+            <h3 class="panel-header">Heritage</h3>
+            <div class="selection-list" id="class-list">
+              <div class="list-item active" data-class="standard">
+                <h4>Standard</h4>
+              </div>
+              <div class="list-item" data-class="primal">
+                <h4>Primal</h4>
+              </div>
+              <div class="list-item" data-class="mutated">
+                <h4>Mutated</h4>
+              </div>
+              <div class="list-item locked" data-class="hybrid">
+                <h4>Hybrid</h4>
+              </div>
+            </div>
+            <div class="discovery-note">
+              <p>To Transcend: Seek Ptouille Or The Neon Girl</p>
+            </div>
+            <div class="gender-group" style="margin-top: auto;">
+              <h3 class="panel-header">Gender</h3>
+              <div class="selection-list" id="gender-list" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <div class="list-item active" data-gender="male" style="flex: 1; text-align: center; padding: 10px 5px; margin: 0; font-size: 0.8rem;">Male</div>
+                <div class="list-item locked" data-gender="female" style="flex: 1; text-align: center; padding: 10px 5px; margin: 0; font-size: 0.8rem;">Female</div>
+                <div class="list-item locked" data-gender="non-binary" style="flex: 1; text-align: center; padding: 10px 5px; margin: 0; font-size: 0.8rem;">Non-Binary</div>
+                <div class="list-item locked" data-gender="other" style="flex: 1; text-align: center; padding: 10px 5px; margin: 0; font-size: 0.8rem;">Other</div>
+              </div>
+            </div>
+            <div class="slider-group height-adjustment">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <label for="height-slider">Height Adjustment</label>
+                  <span id="height-display" style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">5'10"</span>
+                </div>
+                <input type="range" id="height-slider" min="0.5" max="1.4" step="0.01" value="1.0">
+            </div>
+          </aside>
+
+          <section class="heritage-display">
+            <div class="preview-stage">
+              <div class="equipment-loadout">
+                <h4>Starting Loadout</h4>
+                <div class="equip-slots" id="style-equip-slots">
+                  <div class="equip-slot" data-slot="helmet" title="Helmet"></div>
+                  <div class="equip-slot" data-slot="chest" title="Chest"></div>
+                  <div class="equip-slot" data-slot="legs" title="Legs"></div>
+                  <div class="equip-slot" data-slot="feet" title="Feet"></div>
+                  <div class="equip-slot" data-slot="gloves" title="Gloves"></div>
+                  <div class="equip-slot" data-slot="left-hand" title="Left Handed Item"></div>
+                  <div class="equip-slot" data-slot="right-hand" title="Right Handed Item"></div>
+                  <div class="equip-slot" data-slot="belt" title="Belt"></div>
+                  <div class="equip-slot" data-slot="backpack" title="Backpack"></div>
+                  <div class="equip-slot" data-slot="amulet" title="Amulet"></div>
+                </div>
+                <div class="equip-details-box" id="equip-details-box">
+                  <p>Hover over an item to view its details. This area can now hold significantly more text about the item's stats, history, and Integrity requirements without breaking your UI layout. If it gets too long, it will simply scroll!</p>
+                </div>
+              </div>
+              <div class="heritage-showcase">
+                <img id="heritage-splash" src="assets/images/ui/creator/splashes/standard.png" alt="Heritage Showcase" class="showcase-image">
+              </div>
+                <div id="heritage-description" class="showcase-description">
+                  <p>Select A Heritage To View Its Details.</p>
+                </div>
+              <div id="player-preview" class="sprite-idle-down"></div>
+            </div>
+          </section>
+
+          <aside class="heritage-col right">
+            <h3 class="panel-header">Affinity</h3>
+            <div class="selection-list" id="affinity-list">
+              </div>
+          </aside>
+        </div>
+
+        <div id="step-costume" class="step-panel" style="display: none;">
+          <aside class="heritage-col left">
+            <h3 class="panel-header">Apparel</h3>
+            <div class="selection-list">
+              <div class="list-item locked">
+                <h4>Coming Soon</h4>
+                <p>Costume options will be available here.</p>
+              </div>
+            </div>
+          </aside>
+
+          <section class="heritage-display">
+            <div class="preview-stage">
+              <div id="costume-player-preview"></div>
+            </div>
+          </section>
+
+          <aside class="heritage-col right">
+            <h3 class="panel-header">Colors</h3>
+            <div class="selection-list">
+              <div class="list-item locked">
+                <h4>Palette</h4>
+                <p>Color selections will be available here.</p>
+              </div>
+            </div>
+          </aside>
+        </div>
+        <div id="step-style" class="step-panel" style="display: none;"></div>
+        <div id="step-archetype" class="step-panel" style="display: none;"></div>
+        <div id="step-finalize" class="step-panel" style="display: none;"></div>
+      </main>
+
+      <footer class="customizer-footer">
+        <div class="name-container">
+          <span>Enter Player Name</span>
+          <div class="input-wrapper">
+            <input type="text" id="char-name" maxlength="16" placeholder="...">
+            <img src="assets/images/ui/shared/magnifier-icon.png" class="name-check" title="Check Availability">
+          </div>
+        </div>
+        <div class="footer-actions">
+          <button id="btn-cancel-create" class="btn-secondary">Back</button>
+          <button id="btn-next-step" class="btn-secondary">Next</button>
+          <button id="btn-save-char" class="btn-secondary" style="display: none;">Finalize</button>
+        </div>
+      </footer>
+      </div>
+    </section>
+
+    <div id="custom-modal" class="modal-overlay" style="display: none;">
+      <div class="screen-scaler" style="justify-content: center; align-items: center;">
+      <div class="modal-content">
+        <h3 id="modal-title">System Alert</h3>
+        <p id="modal-body">Message goes here...</p>
+        <button id="modal-close" class="btn-secondary">Ok</button>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/ui/creator.js?v=new-engine-240"></script>
+</body>
+</html>
