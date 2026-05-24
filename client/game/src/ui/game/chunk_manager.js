@@ -1,5 +1,5 @@
 
-import { TerrainGenerator } from './generator.js?v=new-engine-240';
+import { TerrainGenerator } from './generator.js?v=new-engine-311';
 
 export class MapManager {
   constructor(engine) {
@@ -28,7 +28,7 @@ export class MapManager {
     return this.voxels.get(`${localX}_${localY}_${localZ}`);
   }
 
-  setVoxelAt(worldX, worldY, worldZ, blockId, broadcast = true) {
+  setVoxelAt(worldX, worldY, worldZ, voxelData, broadcast = true) {
     const localX = Math.round(worldX / 32);
     const localY = Math.round(worldY / 32);
     const localZ = Math.round(worldZ / 32);
@@ -37,10 +37,10 @@ export class MapManager {
 
     const key = `${localX}_${localY}_${localZ}`;
     // Treat 0, null, or undefined as air/deletion
-    if (blockId === null || blockId === undefined || blockId === 0) {
+    if (voxelData === null || voxelData === undefined || voxelData === 0) {
       this.voxels.delete(key);
     } else {
-      this.voxels.set(key, blockId);
+      this.voxels.set(key, voxelData);
     }
     
     if (this.engine.renderer) {
@@ -49,7 +49,7 @@ export class MapManager {
     }
     
     if (broadcast && this.engine.socket) {
-      this.engine.network.sendUpdateBlock({ worldX, worldY, worldZ, blockId });
+      this.engine.network.sendUpdateBlock({ worldX, worldY, worldZ, voxelData });
     }
     return true;
   }

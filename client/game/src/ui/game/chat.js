@@ -1,4 +1,4 @@
-import { CHAT_CONFIG } from './chat-config.js?v=new-engine-240';
+import { CHAT_CONFIG } from './chat-config.js?v=new-engine-311';
 
 export class ChatManager {
   constructor(engine) {
@@ -157,6 +157,7 @@ export class ChatManager {
   }
 
   addMessage(type, name, text) {
+    if (type === 'system' && text !== 'server restarting in 2s') return;
     const chatMsgs = document.getElementById('chat-messages');
     if (!chatMsgs) return;
     const msgDiv = this.createMessageBase(type, name);
@@ -221,12 +222,12 @@ export class ChatManager {
     } else if (cmd === '/noclip') {
       if (!checkPerm('editmode')) return this.addMessage('system', 'System', 'You do not have permission to use /noclip.');
       eng.noclip = !eng.noclip;
-      this.addMessage('system', 'System', `Noclip ${eng.noclip ? 'ENABLED' : 'DISABLED'}.`);
     } else if (cmd === '/editmode') {
       if (!checkPerm('editmode')) return this.addMessage('system', 'System', 'You do not have permission to use /editmode.');
       eng.editMode = !eng.editMode;
       const bPanel = document.getElementById('builder-panel');
       const bHotbar = document.getElementById('builder-hotbar');
+      const bObjLib = document.getElementById('object-library-panel');
       if (bPanel) {
         bPanel.style.display = eng.editMode ? 'flex' : 'none';
         if (eng.editMode) {
@@ -245,47 +246,48 @@ export class ChatManager {
           }
         }
       }
-      if (bHotbar) bHotbar.style.display = eng.editMode ? 'flex' : 'none';
+      if (bHotbar) {
+        if (!eng.editMode) bHotbar.style.display = 'none';
+        if (eng.editMode) {
+          bHotbar.style.bottom = 'auto';
+          if (eng.clientSettings.lockBuilderPanel) {
+            const savedHotbarPos = localStorage.getItem('b_hotbar_pos');
+            if (savedHotbarPos) {
+              try {
+                const pos = JSON.parse(savedHotbarPos);
+                bHotbar.style.left = pos.left; bHotbar.style.top = pos.top; bHotbar.style.right = 'auto';
+              } catch(e) {}
+            } else {
+              bHotbar.style.top = '280px'; bHotbar.style.left = 'auto'; bHotbar.style.right = eng.clientSettings.showMinimap ? '290px' : '30px';
+            }
+          } else {
+            bHotbar.style.top = '280px'; bHotbar.style.left = 'auto'; bHotbar.style.right = eng.clientSettings.showMinimap ? '290px' : '30px';
+          }
+        }
+      }
+      if (bObjLib) {
+        if (!eng.editMode) bObjLib.style.display = 'none';
+        if (eng.editMode) {
+          if (eng.clientSettings.lockBuilderPanel) {
+            const savedPos = localStorage.getItem('b_objlib_pos');
+            if (savedPos) {
+              try {
+                const pos = JSON.parse(savedPos);
+                bObjLib.style.left = pos.left; bObjLib.style.top = pos.top; bObjLib.style.right = 'auto';
+              } catch(e) {}
+            } else {
+              bObjLib.style.top = '70px'; bObjLib.style.left = 'auto'; bObjLib.style.right = eng.clientSettings.showMinimap ? '570px' : '310px';
+            }
+          } else {
+            bObjLib.style.top = '70px'; bObjLib.style.left = 'auto'; bObjLib.style.right = eng.clientSettings.showMinimap ? '570px' : '310px';
+          }
+        }
+      }
       if (!eng.editMode) {
         eng.selectedTiles = [];
         eng.isDraggingSelection = false;
       }
-      this.addMessage('system', 'System', eng.editMode ? 'Edit Mode ENABLED.' : 'Edit Mode DISABLED.');
-    } else if (cmd === '/reload') {
-      if (!checkPerm('reload')) return this.addMessage('system', 'System', 'You do not have permission to use /reload.');
-      this.addMessage('system', 'System', 'Hot-reloading game engine...');
-      if (!eng.playerData.position) eng.playerData.position = {};
-      eng.playerData.position.x = eng.player.x;
-      eng.playerData.position.y = eng.player.y;
-      const oldEditMode = eng.editMode;
-      eng.stop(); 
-      import(`./engine.js?v=${Date.now()}`).then(module => {
-        window.currentGameEngine = new module.GameEngine(eng.canvas.id, eng.playerData, eng.accountUuid);
-        if (oldEditMode) {
-          window.currentGameEngine.editMode = true;
-          const bPanel = document.getElementById('builder-panel');
-          const bHotbar = document.getElementById('builder-hotbar');
-          if (bPanel) {
-            bPanel.style.display = 'flex';
-            if (window.currentGameEngine.clientSettings.lockBuilderPanel) {
-              const savedPos = localStorage.getItem('b_builder_pos');
-              if (savedPos) {
-                try {
-                  const pos = JSON.parse(savedPos);
-                  bPanel.style.left = pos.left; bPanel.style.top = pos.top; bPanel.style.right = 'auto';
-                } catch(e) {}
-              }
-            } else {
-              bPanel.style.top = '70px';
-              bPanel.style.left = 'auto';
-              bPanel.style.right = window.currentGameEngine.clientSettings.showMinimap ? '290px' : '30px';
-            }
-          }
-          if (bHotbar) bHotbar.style.display = 'flex';
-        }
-      });
-    } else if (cmd === '/forceupdate') {
-      if (!checkPerm('reload')) return this.addMessage('system', 'System', 'You do not have permission to use /forceupdate.');
+    } else if (cmd === '/reload' || cmd === '/forceupdate') {
       this.addMessage('system', 'System', 'Pushing update command to server...');
     } else if (cmd === '/dev') {
       if (!checkPerm('dev')) return this.addMessage('system', 'System', 'You do not have permission to use /dev.');

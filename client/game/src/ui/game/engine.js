@@ -1,15 +1,16 @@
-//yeah we're not gonna talk about that version number
-import { ChatManager } from './chat.js?v=new-engine-240';
-import { NetworkManager } from './network.js?v=new-engine-240';
-import { UIManager } from './ui.js?v=new-engine-240';
-import { InputManager } from './input.js?v=new-engine-240';
-import { MinimapManager } from './minimap.js?v=new-engine-240';
-import { Renderer } from './renderer.js?v=new-engine-240';
-import { CombatManager } from './combat.js?v=new-engine-240';
-import { EntityManager } from './entity_manager.js?v=new-engine-240';
-import { MapOverlayManager } from './map_overlay.js?v=new-engine-240';
-import { MapManager } from './chunk_manager.js?v=new-engine-240';
-import { getBlockProps } from './blocks.js?v=new-engine-240';
+
+import { ChatManager } from './chat.js?v=new-engine-311';
+import { NetworkManager } from './network.js?v=new-engine-311';
+import { UIManager } from './ui.js?v=new-engine-311';
+import { InputManager } from './input.js?v=new-engine-311';
+import { MinimapManager } from './minimap.js?v=new-engine-311';
+import { Renderer } from './renderer.js?v=new-engine-311';
+import { CombatManager } from './combat.js?v=new-engine-311';
+import { EntityManager } from './entity_manager.js?v=new-engine-311';
+import { MapOverlayManager } from './map_overlay.js?v=new-engine-311';
+import { MapManager } from './chunk_manager.js?v=new-engine-311';
+import { getBlockProps } from './blocks.js?v=new-engine-311';
+import { FURNITURE_REGISTRY, POWERSET_REGISTRY, POWER_REGISTRY } from './registry.js?v=new-engine-311';
 
 export class GameEngine {
   constructor(canvasId, playerData, accountUuid) {
@@ -21,23 +22,27 @@ export class GameEngine {
     this.canvas.height = window.innerHeight;
 
             if (!this.playerData.powersets) this.playerData.powersets = [];
-    if (!this.playerData.powersets.includes('Inherited') && !this.playerData.powersets.includes('inherited')) {
+    const psIdx = this.playerData.powersets.indexOf('Inherited');
+    if (psIdx !== -1) this.playerData.powersets[psIdx] = 'inherited';
+    if (!this.playerData.powersets.includes('inherited')) {
       this.playerData.powersets.push('Inherited');
     }
+
     if (!this.playerData.powers) this.playerData.powers = [];
-    if (!this.playerData.powers.includes('Brawl')) {
-      this.playerData.powers.push('Brawl');
+    const brIdx = this.playerData.powers.indexOf('Brawl');
+    if (brIdx !== -1) this.playerData.powers[brIdx] = 'brawl';
+    const taIdx = this.playerData.powers.indexOf('Throw Airplane');
+    if (taIdx !== -1) this.playerData.powers[taIdx] = 'throw_airplane';
+
+    if (!this.playerData.powers.includes('brawl')) {
+      this.playerData.powers.push('brawl');
     }
-    const airplaneIdx = this.playerData.powers.indexOf('Throw Airplane');
-    if (airplaneIdx !== -1) {
-      this.playerData.powers[airplaneIdx] = 'Throw Airplane';
-    }
-    if (!this.playerData.powers.includes('Throw Airplane')) {
-      this.playerData.powers.push('Throw Airplane');
+    if (!this.playerData.powers.includes('throw_airplane')) {
+      this.playerData.powers.push('throw_airplane');
     }
 
     const savedSettingsStr = localStorage.getItem('b_client_settings');
-    const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraRotation: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, keybinds: { undo: 'z', redo: 'y', picker: '' } };
+    const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraRotation: false, invertDragRotation: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x' } };
     this.clientSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
     this.tilt = 0.5;
     this.selectedTarget = null;
@@ -58,11 +63,12 @@ export class GameEngine {
     this.lastFpsTime = performance.now();
     this.ping = 0;
 
-    const maxMapSize = 128 * 32;
-    const mapCenter = maxMapSize / 2;
+    const maxMapSize = 127 * 32;
+    const mapCenter = (128 * 32) / 2;
 
     let startX = this.playerData.position?.x;
     let startY = this.playerData.position?.y;
+    let startZ = this.playerData.position?.z;
 
     if (startX === undefined || (startX === 0 && startY === 0)) {
       startX = mapCenter;
@@ -73,14 +79,21 @@ export class GameEngine {
     startY = Math.max(0, Math.min(startY, maxMapSize));
 
     if (this.playerData.name && this.playerData.name.toLowerCase() === 'tim') {
+      if (!this.playerData.powersets.includes('developer')) {
+        this.playerData.powersets.push('developer');
+      }
+      ['dev_noclip', 'dev_heal', 'dev_smite'].forEach(p => {
+        if (!this.playerData.powers.includes(p)) this.playerData.powers.push(p);
+      });
       startX = mapCenter;
       startY = mapCenter;
-      console.log("Welcome back, Tim. Spawning at map center.");
+      console.log("Welcome back, Tim. Spawning at map center and granting Developer powers.");
     }
 
     this.player = {
       x: startX,
       y: startY,
+      z: startZ,
       vx: 0,
       vy: 0,
       speed: 180,
@@ -102,10 +115,11 @@ export class GameEngine {
       hp: (this.playerData.stats && this.playerData.stats.hp > 10) ? this.playerData.stats.hp : 1000,
       maxHp: 1000,
       energy: (this.playerData.stats && (this.playerData.stats.energy > 10 || this.playerData.stats.mp > 10)) ? (this.playerData.stats.energy || this.playerData.stats.mp) : 1000,
-      maxEnergy: 1000
+      maxEnergy: 1000,
+      activePowers: this.playerData.activePowers ? [...this.playerData.activePowers] : []
     };
     this.screenFade = 0;
-    this.lastEmit = { x: this.player.x, y: this.player.y, state: this.player.state, dir: this.player.dir, hp: this.player.hp };
+    this.lastEmit = { x: this.player.x, y: this.player.y, z: this.player.z, state: this.player.state, dir: this.player.dir, hp: this.player.hp, activePowers: this.player.activePowers.join(',') };
 
     this.camera = {
       x: this.player.x,
@@ -123,13 +137,26 @@ export class GameEngine {
     this.mousePos = this.input.mousePos;
 
     this.handleResize = () => {
-      this.canvas.width = window.innerWidth;
-      this.canvas.height = window.innerHeight;
+      if (this.renderer && this.renderer.handleResize) this.renderer.handleResize();
     };
+
+    window.addEventListener('keydown', (e) => {
+      const isInput = ['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName) || document.activeElement.isContentEditable;
+      if (e.key.toLowerCase() === 'n' && !isInput) {
+        const newState = !this.clientSettings.showPlayerNames;
+        this.clientSettings.showPlayerNames = newState;
+        this.clientSettings.showPlayerHealth = newState;
+        this.clientSettings.showEntityNames = newState;
+        this.clientSettings.showEntityHealth = newState;
+        localStorage.setItem('b_client_settings', JSON.stringify(this.clientSettings));
+        this.chat.addMessage('system', 'System', `Nameplates are now ${newState ? 'ON' : 'OFF'}.`);
+      }
+    });
 
         window.addEventListener('resize', this.handleResize);
 
-        const defaultDev = { showPlayerPos: false, showPlayerTile: false, showEntityPos: false, showEntityTile: false, showMousePos: false, showMelee: false, showLoS: false, showHitboxes: false, showTile: false, showChunk: false, showDistToNPC: false, showDistNpcToMouse: false, showDistPlayerToMouse: false, losDistance: 400, losAngle: 60, useDebugTooltip: false, useBlockPreview: true };
+    const defaultDev = { showPlayerPos: false, showPlayerTile: false, showEntityPos: false, showEntityTile: false, showMelee: false, showLoS: false, showHitboxes: false, showTile: false, showChunk: false, showDistToNPC: false, showDistNpcToMouse: false, showDistPlayerToMouse: false, losDistance: 400, losAngle: 60, useDebugTooltip: false, useBlockPreview: true };
+    
     const savedDev = localStorage.getItem('b_dev_options');
     this.devOptions = savedDev ? Object.assign({}, defaultDev, JSON.parse(savedDev)) : defaultDev;
     this.editMode = false;
@@ -167,14 +194,22 @@ export class GameEngine {
       level: this.playerData.level || 1,
       alignment: this.playerData.alignment || 'hero',
       race: this.playerData.race || 'Human',
-      integrity: this.playerData.integrity || 0
+      integrity: this.playerData.integrity || 0,
+      activePowers: this.player.activePowers
     });
 
     this.syncTimer = setInterval(() => {
       if (this.socket && this.socket.connected && this.accountUuid) {
-        this.network.sendPlayerSync(this.accountUuid, this.playerData, { x: this.player.x, y: this.player.y });
+        this.playerData.activePowers = this.player.activePowers;
+        this.network.sendPlayerSync(this.accountUuid, this.playerData, { x: this.player.x, y: this.player.y, z: this.player.z });
       }
     }, 10000);
+
+    this.autoOpenedDoors = new Map();
+    this.player.doorPushTimer = 0;
+
+    
+    this.handleResize();
 
     this.lastTime = performance.now();
     this.loop = this.loop.bind(this);
@@ -198,6 +233,20 @@ export class GameEngine {
                             };
                         }
                     });
+        }
+        
+        for (const [id, ps] of Object.entries(POWERSET_REGISTRY)) {
+          if (!this.powersetsData[id]) {
+            this.powersetsData[id] = {
+              id: id,
+              name: ps.name,
+              category: 'Innate',
+              powers: ps.powers.map(pId => {
+                const pDef = POWER_REGISTRY[pId];
+                return { id: pId, name: pDef ? pDef.name : pId, desc: pDef ? pDef.description : '' };
+              })
+            };
+          }
         }
             }
         } catch (e) {
@@ -283,9 +332,6 @@ export class GameEngine {
       if (this.redoHistory.length > 30) this.redoHistory.shift();
       this.renderer.needsVoxelUpdate = true;
       updates.forEach(u => this.network.sendUpdateBlock(u));
-      this.chat.addMessage('system', 'System', `Undo successful (${lastAction.length} blocks reverted).`);
-    } else {
-      this.chat.addMessage('system', 'System', 'Nothing to undo.');
     }
   }
 
@@ -305,9 +351,6 @@ export class GameEngine {
       if (this.history.length > 30) this.history.shift();
       this.renderer.needsVoxelUpdate = true;
       updates.forEach(u => this.network.sendUpdateBlock(u));
-      this.chat.addMessage('system', 'System', `Redo successful (${redoAction.length} blocks reapplied).`);
-    } else {
-      this.chat.addMessage('system', 'System', 'Nothing to redo.');
     }
   }
 
@@ -362,14 +405,17 @@ export class GameEngine {
   getVoxelTop(voxel, zIndex, x, y) {
     if (!voxel) return -1000;
     if (voxel.shape === 'slab') return (zIndex * 32) + 0;
-    if (voxel.shape && voxel.shape.startsWith('ramp')) {
-      const lx = ((x % 32) + 32) % 32;
-      const ly = ((y % 32) + 32) % 32;
-      let factor = 1;
-      if (voxel.shape === 'ramp_s') factor = ly / 32;
-      else if (voxel.shape === 'ramp_n') factor = (32 - ly) / 32;
-      else if (voxel.shape === 'ramp_e') factor = lx / 32;
-      else if (voxel.shape === 'ramp_w') factor = (32 - lx) / 32;
+    if (FURNITURE_REGISTRY && FURNITURE_REGISTRY[voxel.shape]) return (zIndex * 32) + 0;
+    if (voxel.shape && (voxel.shape.startsWith('ramp') || voxel.shape.startsWith('stair'))) {
+      const vx = Math.round(x / 32) * 32;
+      const vy = Math.round(y / 32) * 32;
+      const localX = x - vx;
+      const localY = y - vy;
+      let factor = 0.5;
+      if (voxel.shape.endsWith('_s')) factor = (localY + 16) / 32;
+      else if (voxel.shape.endsWith('_n')) factor = (16 - localY) / 32;
+      else if (voxel.shape.endsWith('_e')) factor = (localX + 16) / 32;
+      else if (voxel.shape.endsWith('_w')) factor = (16 - localX) / 32;
       return (zIndex * 32) - 16 + (32 * factor);
     }
     return (zIndex * 32) + 16;
@@ -383,7 +429,7 @@ export class GameEngine {
       { dx: -radius, dy: radius }, { dx: radius, dy: radius }
     ];
 
-    const maxZ = currentZ !== undefined ? currentZ + 16 : 10000; 
+    const maxZ = currentZ !== undefined ? currentZ + 24 : 10000; 
 
     for (let z = 15; z >= -10; z--) {
       let highestZ = -96;
@@ -405,6 +451,89 @@ export class GameEngine {
     return -96;
   }
 
+  findSafeSpawn() {
+    if (this.noclip) return;
+
+    if (this.player.z === undefined) {
+      this.player.z = this.getTerrainZ(this.player.x, this.player.y);
+    }
+    
+    if (!this.checkCollision(this.player.x, this.player.y, this.player.z)) {
+      return; 
+    }
+
+    console.log("[Engine] Player is obstructed at spawn. Finding safe location...");
+    const pZ = this.player.z;
+    const startGridX = Math.round(this.player.x / 32);
+    const startGridY = Math.round(this.player.y / 32);
+    const startGridZ = Math.round(pZ / 32);
+
+    const maxRadius = 6; 
+    let safeSpot = null;
+
+    for (let r = 0; r <= maxRadius; r++) {
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dy = -r; dy <= r; dy++) {
+          if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue; 
+          
+          const checkX = startGridX + dx;
+          const checkY = startGridY + dy;
+
+          for (let zOffset = 0; zOffset <= 15; zOffset++) {
+             const zDirs = zOffset === 0 ? [0] : [zOffset, -zOffset];
+             
+             for (let dz of zDirs) {
+                const checkZ = startGridZ + dz;
+                if (checkZ > 15 || checkZ < -10) continue;
+
+                let hasFloor = false;
+                const floorVoxel = this.mapManager.getVoxelAt(checkX * 32, checkY * 32, (checkZ - 1) * 32);
+                if (floorVoxel && getBlockProps(floorVoxel.tex).isSolid) {
+                   hasFloor = true;
+                } else if (checkZ <= -3) { 
+                   hasFloor = true;
+                }
+                
+                if (hasFloor) {
+                   let isClear = true;
+                   for (let clearZ = 0; clearZ < 3; clearZ++) {
+                      const v = this.mapManager.getVoxelAt(checkX * 32, checkY * 32, (checkZ + clearZ) * 32);
+                      if (v && getBlockProps(v.tex).isSolid) {
+                         isClear = false;
+                         break;
+                      }
+                   }
+                   if (isClear) {
+                      safeSpot = { x: checkX * 32, y: checkY * 32, z: checkZ * 32 };
+                      break;
+                   }
+                }
+             }
+             if (safeSpot) break;
+          }
+          if (safeSpot) break;
+        }
+        if (safeSpot) break;
+      }
+      if (safeSpot) break;
+    }
+
+    if (safeSpot) {
+       console.log("[Engine] Found safe 3x3 spawn clearance near", safeSpot);
+       this.player.x = safeSpot.x;
+       this.player.y = safeSpot.y;
+       this.player.z = safeSpot.z;
+    } else {
+       console.log("[Engine] Could not find 3x3 clearance nearby, moving to absolute top.");
+       const highestZ = this.getTerrainZ(this.player.x, this.player.y);
+       this.player.z = highestZ + 10;
+    }
+    
+    this.camera.x = this.player.x;
+    this.camera.y = this.player.y;
+    this.camera.z = this.player.z;
+  }
+
   checkCollision(nextX, nextY, overrideZ) {
     if (this.noclip) return false;
 
@@ -418,8 +547,8 @@ export class GameEngine {
 
     const pZ = overrideZ !== undefined ? overrideZ : (this.player.z || 0);
 
-    const currentGridZ = Math.max(0, Math.floor((pZ + 5) / 32));
-    const headGridZ = Math.max(0, Math.floor((pZ + 60) / 32)); 
+    const currentGridZ = Math.floor((pZ + 5) / 32);
+    const headGridZ = Math.floor((pZ + 60) / 32); 
 
     for (let c of corners) {
       for (let z = currentGridZ; z <= headGridZ; z++) {
@@ -429,8 +558,57 @@ export class GameEngine {
         if (voxel) {
           const props = getBlockProps(voxel.tex);
           if (props.isSolid) {
+            if (voxel.shape && voxel.shape.startsWith('door')) {
+              if (!voxel.shape.includes('_open')) {
+                this.player.doorPushTimer = (this.player.doorPushTimer || 0) + 16;
+                this.player.doorPushedThisFrame = true;
+                if (this.player.doorPushTimer > 150) {
+                  const openDoor = (tx, ty, tz) => {
+                    const v = this.mapManager.getVoxelAt(tx, ty, tz);
+                    if (v && v.shape && v.shape.startsWith('door') && !v.shape.includes('_open')) {
+                      v.shape += '_open';
+                      this.mapManager.setVoxelAt(tx, ty, tz, v);
+                      this.autoOpenedDoors.set(`${tx}_${ty}_${tz}`, { x: tx, y: ty, z: tz });
+                    }
+                  };
+                  openDoor(vx, vy, z * 32);
+                  openDoor(vx, vy, z * 32 + 32);
+                  openDoor(vx, vy, z * 32 - 32);
+                }
+              }
+              continue; // Let the precise broadphase check handle door collision blocking
+            }
+
+            if (voxel.shape && voxel.shape.endsWith('_open')) continue;
+            
             const blockTop = this.getVoxelTop(voxel, z, vx, vy);
-            if (blockTop > pZ + 5) return true; 
+            if (blockTop > pZ + 17) {
+              this.player.doorPushTimer = 0;
+              return true;
+            }
+          }
+        }
+      }
+    }
+
+    const cx = Math.round(nextX / 32) * 32;
+    const cy = Math.round(nextY / 32) * 32;
+    const cz = Math.round(pZ / 32) * 32;
+    for (let dx = -32; dx <= 32; dx += 32) {
+      for (let dy = -32; dy <= 32; dy += 32) {
+        for (let dz = -32; dz <= 64; dz += 32) {
+          const vx = cx + dx, vy = cy + dy, vz = cz + dz;
+          const voxel = this.mapManager.getVoxelAt(vx, vy, vz);
+          if (voxel && voxel.shape && voxel.shape.startsWith('door') && !voxel.shape.includes('_open')) {
+             let minX = vx - 16, maxX = vx + 16, minY = vy - 16, maxY = vy + 16;
+             if (voxel.shape.includes('door_e')) { minX = vx + 8; } 
+             else if (voxel.shape.includes('door_n')) { minY = vy + 8; } 
+             else if (voxel.shape.includes('door_w')) { maxX = vx - 8; }
+             else { maxY = vy - 8; } 
+             
+             if (nextX > minX - 14 && nextX < maxX + 14 && nextY > minY - 14 && nextY < maxY + 14) {
+                if (pZ < vz + 32 && pZ + 60 > vz - 16) return true;
+             }
           }
         }
       }
@@ -443,6 +621,7 @@ export class GameEngine {
       const op = this.otherPlayers[id];
       if (op.state !== 'death' && Math.hypot(op.x - nextX, op.y - nextY) < 55) return true;
     }
+
     return false;
   }
 
@@ -485,8 +664,25 @@ export class GameEngine {
       
       const props = getBlockProps(waterVoxel.tex);
       if (props.damagePerSecond && entity.hp !== undefined && entity.hp > 0 && entity.state !== 'death' && entity.state !== 'dead') {
-          entity.hp -= props.damagePerSecond * (dt / 1000);
+          const dmg = props.damagePerSecond * (dt / 1000);
+          entity.hp -= dmg;
           entity.hurtTimer = 100; 
+          
+          entity.envDamageAcc = (entity.envDamageAcc || 0) + dmg;
+          entity.envDamageTimer = (entity.envDamageTimer || 0) + dt;
+
+          if (entity.envDamageTimer >= 500) { // Accumulate text pops every half second
+              const tickDmg = Math.round(entity.envDamageAcc);
+              if (tickDmg > 0) {
+                  const isAcid = waterVoxel.tex === 'acid';
+                  this.floatingTexts.push({
+                      x: entity.x, y: entity.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40,
+                      text: tickDmg.toString(), life: 1.0, color: isAcid ? '#2ecc71' : '#ff5d00'
+                  });
+              }
+              entity.envDamageAcc = 0;
+              entity.envDamageTimer = 0;
+          }
           
           if (Math.random() > 0.4) {
               const isAcid = waterVoxel.tex === 'acid';
@@ -517,9 +713,58 @@ export class GameEngine {
           }
           if (entity === this.player) this.ui.update();
       }
+  } else if (entity.activePowers && entity.activePowers.includes('fly')) {
+      if (entity === this.player) {
+        if (this.keys && this.keys[' ']) {
+          entity.vz = 450;
+        } else if (this.keys && this.keys['x']) {
+          entity.vz = -450;
+        } else {
+          entity.vz = 0;
+          entity.z += Math.sin(performance.now() / 400) * 15 * (dt / 1000);
+        }
+        entity.z += entity.vz * (dt / 1000);
+      } else {
+        entity.vz = 0;
+      }
+      
+      if (Math.random() > 0.3) {
+        this.particles.push({
+          x: entity.x + (Math.random() - 0.5) * 20,
+          y: entity.y + (Math.random() - 0.5) * 20,
+          z: entity.z + Math.random() * 10,
+          vx: (Math.random() - 0.5) * 30,
+          vy: (Math.random() - 0.5) * 30,
+          vz: -20 - Math.random() * 30,
+          noGravity: true,
+          life: 0.4 + Math.random() * 0.4,
+          maxLife: 0.8,
+          color: '#9b59b6',
+          size: 2 + Math.random() * 3
+        });
+      }
     } else {
       if (entity.z > blockTop || entity.vz > 0) {
-        entity.vz -= 2000 * (dt / 1000);
+        let grav = 2000;
+        if (entity.activePowers && entity.activePowers.includes('super_jump')) {
+          grav = 900;
+          if (Math.random() > 0.2) {
+            this.particles.push({
+              x: entity.x + (Math.random() - 0.5) * 20,
+              y: entity.y + (Math.random() - 0.5) * 20,
+              z: entity.z + 10 + Math.random() * 20,
+              vx: -(entity.momentumX || 0) * 0.1 + (Math.random() - 0.5) * 15,
+              vy: -(entity.momentumY || 0) * 0.1 + (Math.random() - 0.5) * 15,
+              vz: -(entity.vz || 0) * 0.2 + (Math.random() - 0.5) * 15,
+              noGravity: true,
+              life: 0.3 + Math.random() * 0.4,
+              maxLife: 0.7,
+              color: 'rgba(255, 255, 255, 0.4)',
+              size: 2 + Math.random() * 3
+            });
+          }
+        }
+        entity.vz -= grav * (dt / 1000);
         entity.z += entity.vz * (dt / 1000);
       }
     }
@@ -800,67 +1045,137 @@ export class GameEngine {
     this.entityManager.update(dt);
     this.mapManager.update(dt);
 
+    if (this.autoOpenedDoors) {
+        for (const [key, data] of this.autoOpenedDoors.entries()) {
+            const dist = Math.hypot(this.player.x - data.x, this.player.y - data.y);
+            if (dist > 80) {
+                const currentVoxel = this.mapManager.getVoxelAt(data.x, data.y, data.z);
+                if (currentVoxel && currentVoxel.shape && currentVoxel.shape.includes('_open')) {
+                    currentVoxel.shape = currentVoxel.shape.replace('_open', '');
+                    this.mapManager.setVoxelAt(data.x, data.y, data.z, currentVoxel);
+                }
+                this.autoOpenedDoors.delete(key);
+            }
+        }
+    }
+
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       let proj = this.projectiles[i];
       let distToMove = proj.speed * (dt / 1000);
       proj.distTravelled += distToMove;
-      if (proj.distTravelled >= proj.maxDist) {
-        if (proj.onHit) proj.onHit();
-        this.projectiles.splice(i, 1);
-      } else {
-        let ratio = proj.distTravelled / proj.maxDist;
+      
+      let ratio = Math.min(1.0, proj.distTravelled / proj.maxDist);
+      
+      let baseRatio = ratio;
+      if (proj.isCritLoop) {
+        if (ratio < 0.25) {
+          baseRatio = ratio * 2;
+        } else if (ratio < 0.75) {
+          baseRatio = 0.5;
+        } else {
+          baseRatio = 0.5 + (ratio - 0.75) * 2;
+        }
+      }
+
+      proj.x = proj.startX + (proj.targetX - proj.startX) * baseRatio;
+      proj.y = proj.startY + (proj.targetY - proj.startY) * baseRatio;
+      proj.z = proj.startZ + (proj.targetZ - proj.startZ) * baseRatio;
+
+      if (proj.isCritLoop) {
+        if (ratio >= 0.25 && ratio <= 0.75) {
+          const loopRatio = (ratio - 0.25) / 0.5;
+          const R = 60; 
+          const theta = -Math.PI / 2 + (loopRatio * Math.PI * 2);
+
+          const dx = proj.targetX - proj.startX;
+          const dy = proj.targetY - proj.startY;
+          const dist = Math.hypot(dx, dy) || 1;
+
+          const forwardOffset = Math.cos(theta) * R;
+          const zOffset = R + Math.sin(theta) * R;
+
+          proj.x += (dx / dist) * forwardOffset;
+          proj.y += (dy / dist) * forwardOffset;
+          proj.z += zOffset;
+
+          proj.loopPitch = loopRatio * Math.PI * 2;
+        } else {
+          proj.loopPitch = 0;
+        }
+      }
+
+      let hitTarget = null;
+      const hitRadius = 32;
+
+      for (let npc of this.npcs) {
+        if (npc.state !== 'dead' && Math.hypot(proj.x - npc.x, proj.y - npc.y) < hitRadius && Math.abs(proj.z - (npc.z || 0)) < 48) {
+          hitTarget = { type: 'npc', entity: npc };
+          break;
+        }
+      }
+
+      if (!hitTarget) {
+        for (let id in this.otherPlayers) {
+          let op = this.otherPlayers[id];
+          if (op.state !== 'death' && Math.hypot(proj.x - op.x, proj.y - op.y) < hitRadius && Math.abs(proj.z - (op.z || 0)) < 48) {
+            hitTarget = { type: 'player', id: id, entity: op };
+            break;
+          }
+        }
+      }
+
+      if (hitTarget) {
+        proj.distTravelled = proj.maxDist;
         
-        let baseRatio = ratio;
-        if (proj.isCritLoop) {
-          if (ratio < 0.25) {
-            baseRatio = ratio * 2;
-          } else if (ratio < 0.75) {
-            baseRatio = 0.5;
-          } else {
-            baseRatio = 0.5 + (ratio - 0.75) * 2;
-          }
-        }
-
-        proj.x = proj.startX + (proj.targetX - proj.startX) * baseRatio;
-        proj.y = proj.startY + (proj.targetY - proj.startY) * baseRatio;
-        proj.z = proj.startZ + (proj.targetZ - proj.startZ) * baseRatio;
-
-        if (proj.isCritLoop) {
-          if (ratio >= 0.25 && ratio <= 0.75) {
-            const loopRatio = (ratio - 0.25) / 0.5;
-            const R = 60; 
-            const theta = -Math.PI / 2 + (loopRatio * Math.PI * 2);
-
-            const dx = proj.targetX - proj.startX;
-            const dy = proj.targetY - proj.startY;
-            const dist = Math.hypot(dx, dy) || 1;
-
-            const forwardOffset = Math.cos(theta) * R;
-            const zOffset = R + Math.sin(theta) * R;
-
-            proj.x += (dx / dist) * forwardOffset;
-            proj.y += (dy / dist) * forwardOffset;
-            proj.z += zOffset;
-
-            proj.loopPitch = loopRatio * Math.PI * 2;
-          } else {
-            proj.loopPitch = 0;
-          }
-        }
-
-        if (proj.trail) {
-          const particleCount = Math.random() > 0.5 ? 2 : 1;
-          for (let pIdx = 0; pIdx < particleCount; pIdx++) {
-            this.particles.push({
-              x: proj.x + (Math.random() - 0.5) * 8,
-              y: proj.y + (Math.random() - 0.5) * 8,
-              z: proj.z + (Math.random() - 0.5) * 8,
-              life: 0.3 + Math.random() * 0.2,
-              maxLife: 0.5,
-              color: proj.trailColor || 'rgba(255, 255, 255, 0.8)',
-              size: proj.trailSize || 2
+        if (!proj.hasHit) {
+          proj.hasHit = true;
+          
+          if (proj.isAirplane) {
+            this.floatingTexts.push({
+              x: hitTarget.entity.x,
+              y: hitTarget.entity.y,
+              offsetY: 90,
+              rndX: (Math.random() - 0.5) * 50,
+              rndY: (Math.random() - 0.5) * 40,
+              text: proj.isCrit ? 'CRITICAL BONK!' : 'BONK!',
+              life: 1.0,
+              color: proj.isCrit ? '#f39c12' : '#ffffff'
             });
           }
+          
+          let isOurs = proj.senderId === (this.socket && this.socket.id);
+          if (!isOurs && !proj.senderId && this.myRecentThrows) {
+            isOurs = this.myRecentThrows.some(t => Math.hypot(proj.startX - t.x, proj.startY - t.y) < 10);
+          }
+          if (!isOurs && !proj.senderId) {
+            isOurs = Math.hypot(proj.startX - this.player.x, proj.startY - this.player.y) < 64;
+          }
+          
+          if (isOurs) {
+            if (hitTarget.type === 'npc') {
+              this.network.sendNpcHit({ targetUuid: hitTarget.entity.uuid, damage: proj.damage || 1, isCrit: proj.isCrit || false });
+            } else if (hitTarget.type === 'player') {
+              this.network.sendPlayerHit({ targetId: hitTarget.id, damage: proj.damage || 1, isCrit: proj.isCrit || false });
+            }
+          }
+        }
+      }
+
+      if (proj.distTravelled >= proj.maxDist) {
+        if (proj.onHit && !proj.hasHit) proj.onHit();
+        this.projectiles.splice(i, 1);
+      } else if (proj.trail) {
+        const particleCount = Math.random() > 0.5 ? 2 : 1;
+        for (let pIdx = 0; pIdx < particleCount; pIdx++) {
+          this.particles.push({
+            x: proj.x + (Math.random() - 0.5) * 8,
+            y: proj.y + (Math.random() - 0.5) * 8,
+            z: proj.z + (Math.random() - 0.5) * 8,
+            life: 0.3 + Math.random() * 0.2,
+            maxLife: 0.5,
+            color: proj.trailColor || 'rgba(255, 255, 255, 0.8)',
+            size: proj.trailSize || 2
+          });
         }
       }
     }
@@ -868,16 +1183,18 @@ export class GameEngine {
     if (
       Math.abs(this.player.x - this.lastEmit.x) > 1 || 
       Math.abs(this.player.y - this.lastEmit.y) > 1 || 
+      (this.player.z !== undefined && this.lastEmit.z !== undefined && Math.abs(this.player.z - this.lastEmit.z) > 1) || 
       Math.abs(this.player.hp - this.lastEmit.hp) >= 1 || 
       this.player.state !== this.lastEmit.state || 
-      this.player.dir !== this.lastEmit.dir
+      this.player.dir !== this.lastEmit.dir ||
+      this.player.activePowers.join(',') !== this.lastEmit.activePowers
     ) {
       this.network.sendPlayerMoved({
-        x: this.player.x, y: this.player.y,
+        x: this.player.x, y: this.player.y, z: this.player.z,
         state: this.player.state, dir: this.player.dir,
-        hp: this.player.hp
+        hp: this.player.hp, activePowers: this.player.activePowers
       });
-      this.lastEmit = { x: this.player.x, y: this.player.y, state: this.player.state, dir: this.player.dir, hp: this.player.hp };
+      this.lastEmit = { x: this.player.x, y: this.player.y, z: this.player.z, state: this.player.state, dir: this.player.dir, hp: this.player.hp, activePowers: this.player.activePowers.join(',') };
     }
 
     this.applyGravity(this.player, dt);

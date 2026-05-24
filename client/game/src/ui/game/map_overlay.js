@@ -1,3 +1,5 @@
+const SCREEN_ANGLES = { 'right': 0, 'down-right': Math.PI/4, 'down': Math.PI/2, 'down-left': Math.PI*0.75, 'left': Math.PI, 'up-left': -Math.PI*0.75, 'up': -Math.PI/2, 'up-right': -Math.PI/4 };
+
 export class MapOverlayManager {
   constructor(engine) {
     this.engine = engine;
@@ -95,6 +97,7 @@ export class MapOverlayManager {
 
     this.wheelListener = (e) => {
       if (!this.active) return;
+      if (e.target !== this.engine.canvas) return;
       if (e.deltaY < 0) {
         this.zoom = Math.min(this.zoom + 1, 16);
       } else {
@@ -204,8 +207,7 @@ export class MapOverlayManager {
       ctx.stroke();
 
       if (isPlayer) {
-        const screenAngles = { 'right': 0, 'down-right': Math.PI/4, 'down': Math.PI/2, 'down-left': Math.PI*0.75, 'left': Math.PI, 'up-left': -Math.PI*0.75, 'up': -Math.PI/2, 'up-right': -Math.PI/4 };
-        const pAngle = screenAngles[eng.player.dir] || 0;
+        const pAngle = SCREEN_ANGLES[eng.player.dir] || 0;
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.lineTo(Math.cos(pAngle) * Math.max(8, mmTileSize), Math.sin(pAngle) * Math.max(8, mmTileSize));

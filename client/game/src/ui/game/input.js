@@ -1,4 +1,5 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+import { FURNITURE_REGISTRY } from './registry.js?v=new-engine-311';
 
 export class InputManager {
   constructor(engine) {
@@ -16,8 +17,17 @@ export class InputManager {
 
     this.handleKeyDown = (e) => {
       const chatInput = document.getElementById('chat-input');
+      
+      const activeEl = document.activeElement;
+      const isInputFocused = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && activeEl.offsetParent !== null;
+      
+      if (isInputFocused && activeEl !== chatInput) {
+        if (e.key === 'Enter') activeEl.blur();
+        return;
+      }
+
       if (e.key === 'Enter') {
-        if (chatInput && document.activeElement !== chatInput) {
+        if (chatInput && activeEl !== chatInput) {
           chatInput.focus();
           e.preventDefault();
         }
@@ -25,17 +35,17 @@ export class InputManager {
       }
       
       if (e.key === '/') {
-        if (chatInput && document.activeElement !== chatInput) {
+        if (chatInput && activeEl !== chatInput) {
           chatInput.focus();
           chatInput.value = '/';
           e.preventDefault();
         }
       }
-      if (chatInput && document.activeElement === chatInput) return;
+      if (chatInput && activeEl === chatInput) return;
 
       const key = e.key.toLowerCase();
       
-      const kbs = eng.clientSettings.keybinds || { undo: 'z', redo: 'y', picker: '' };
+      const kbs = eng.clientSettings.keybinds || { undo: 'z', redo: 'y', picker: '', flyDown: 'x' };
 
       if (e.ctrlKey) {
         if (key === kbs.undo) {
@@ -76,8 +86,13 @@ export class InputManager {
           const powers = eng.playerData.powers || [];
           const powerName = powers[slotIndex];
           if (powerName) {
-             if (powerName === 'Brawl') eng.combat?.triggerAttack();
-             else if (powerName === 'Throw Airplane') eng.combat?.triggerThrowAirplane();
+             if (powerName === 'brawl') eng.combat?.triggerAttack();
+             else if (powerName === 'throw_airplane') eng.combat?.triggerThrowAirplane();
+             else if (powerName === 'dev_noclip') eng.chat.processCommand('/noclip');
+             else if (powerName === 'dev_heal') eng.chat.processCommand('/heal');
+             else if (powerName === 'dev_smite') eng.combat?.triggerSmite();
+             else if (['fly', 'super_jump', 'super_speed'].includes(powerName)) eng.combat?.toggleTravelPower(powerName);
+             else if (powerName === 'teleport') eng.combat?.triggerTeleport();
           }
         }
       }
@@ -87,7 +102,7 @@ export class InputManager {
         const pPanel = document.getElementById('powers-panel');
         if (pPanel) {
           pPanel.style.display = pPanel.style.display === 'none' ? 'flex' : 'none';
-          if (pPanel.style.display === 'flex') eng.ui.renderPowersUI();
+          if (pPanel.style.display === 'flex') eng.ui.powerbar.renderPowersUI();
         }
       }
 
@@ -108,12 +123,20 @@ export class InputManager {
       this.keys[e.key.toLowerCase()] = false;
     };
 
+     this.handleBlur = () => {
+      for (const key in this.keys) {
+        this.keys[key] = false;
+      }
+    };
+
     this.handleContextMenu = (e) => e.preventDefault();
 
     this.handleBeforeUnload = (e) => {
           };
 
     this.handleWheel = (e) => {
+      if (e.target !== eng.canvas) return; // Ignore scrolling over UI elements
+      if (eng.mapOverlay && eng.mapOverlay.active) return; // Prevent zooming the 3D camera while the map is open
       if (!eng.renderer || !eng.renderer.camera) return;
       const zoomDelta = e.deltaY > 0 ? -0.1 : 0.1;
       const camera = eng.renderer.camera;
@@ -125,8 +148,18 @@ export class InputManager {
       this.mousePos.x = e.clientX;
       this.mousePos.y = e.clientY;
 
-      const chatInput = document.getElementById('chat-input');
-      if (chatInput) chatInput.blur(); 
+      if (e.button === 1 && eng.clientSettings.middleMouseRotation !== false) {
+        e.preventDefault();
+        this.isDraggingCamera = true;
+        this.lastMouseX = e.clientX;
+        document.body.style.cursor = 'grabbing';
+        if (eng.canvas) eng.canvas.style.cursor = 'grabbing';
+        return;
+      }
+
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) {
+        document.activeElement.blur();
+      }
       
       const ctxMenu = document.getElementById('player-context-menu');
       if (ctxMenu) ctxMenu.style.display = 'none';
@@ -142,7 +175,7 @@ export class InputManager {
 
       let clickedTarget = null;
       
-      if (eng.renderer.entityMeshes) {
+      if (!eng.editMode && eng.renderer.entityMeshes) {
         const groups = Array.from(eng.renderer.entityMeshes.values());
         const entityHits = raycaster.intersectObjects(groups, true);
         
@@ -162,56 +195,56 @@ export class InputManager {
       }
 
       if (e.button === 0) {
+        if (eng.targetingPower === 'teleport') {
+            if (eng.mouseWorldPos) {
+               eng.combat?.executeTeleport(eng.mouseWorldPos.x, eng.mouseWorldPos.y);
+            }
+            eng.targetingPower = null;
+            document.body.style.cursor = '';
+            if (eng.canvas) eng.canvas.style.cursor = '';
+            return;
+        }
+
         eng.selectedTarget = clickedTarget;
         eng.ui.update();
 
         if (eng.editMode && e.ctrlKey && eng.cursorGridPos) {
+          if (eng.editShape === 'none') return;
           eng.isDraggingSelection = true;
-          eng.selectionStart = { ...eng.cursorGridPos };
-          eng.selectionEnd = { ...eng.cursorGridPos };
+          
+          const activeSlot = document.querySelector('.hotbar-slot.active');
+          const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
+          const isDeleting = this.keys['shift'] || tex === 'erase';
+          const isPicker = tex === 'picker' || this.keys['alt'];
+
+          let startPos = { x: eng.cursorGridPos.x, y: eng.cursorGridPos.y, z: eng.cursorGridPos.z };
+          if (!isDeleting && !isPicker && eng.cursorGridPos.hitExisting && eng.cursorGridPos.normal) {
+             startPos.x += eng.cursorGridPos.normal.x * 32;
+             startPos.y += eng.cursorGridPos.normal.y * 32;
+             startPos.z += eng.cursorGridPos.normal.z * 32;
+          }
+          
+          eng.selectionStart = startPos;
+          eng.selectionEnd = { ...startPos };
           eng.updateSelectionArea();
           return;
         }
 
-        const buildMeshes = [eng.renderer.voxelMesh, eng.renderer.slabMesh, eng.renderer.rampMesh].filter(Boolean);
-
         if (!clickedTarget && eng.editMode) {
-          const blockHits = buildMeshes.length > 0 ? raycaster.intersectObjects(buildMeshes) : [];
-          let position = new THREE.Vector3();
-          let normal = new THREE.Vector3(0, 0, 1);
-          let didHit = false;
-          let hitExistingBlock = false;
-          
-          if (blockHits.length > 0) {
-            const hit = blockHits[0];
-            const matrix = new THREE.Matrix4();
-            hit.object.getMatrixAt(hit.instanceId, matrix);
-            position.setFromMatrixPosition(matrix);
-            const rawNormal = hit.face ? hit.face.normal.clone() : new THREE.Vector3(0, 0, 1);
-            const absX = Math.abs(rawNormal.x); const absY = Math.abs(rawNormal.y); const absZ = Math.abs(rawNormal.z);
-            if (absZ >= absX && absZ >= absY) normal.set(0, 0, Math.sign(rawNormal.z));
-            else if (absX > absY) normal.set(Math.sign(rawNormal.x), 0, 0);
-            else normal.set(0, Math.sign(rawNormal.y), 0);
-            didHit = true;
-            hitExistingBlock = true;
-          } else {
-            const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -(eng.player.z || 0));
-            if (raycaster.ray.intersectPlane(plane, position)) {
-              didHit = true;
-              normal.set(0, 0, 1);
-            }
-          }
-          
-          if (didHit) {
+          if (eng.cursorGridPos) {
+            if (eng.editShape === 'none') return;
+            const position = new THREE.Vector3(eng.cursorGridPos.x, eng.cursorGridPos.y, eng.cursorGridPos.z);
+            const normal = eng.cursorGridPos.normal.clone();
+            const hitExistingBlock = eng.cursorGridPos.hitExisting;
             
             const activeSlot = document.querySelector('.hotbar-slot.active');
             const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
             const isDeleting = this.keys['shift'] || tex === 'erase';
-            const isPicker = tex === 'picker';
+            const isPicker = tex === 'picker' || this.keys['alt'];
             
-            let targetX = Math.round(position.x / 32) * 32;
-            let targetY = Math.round(position.y / 32) * 32;
-            let targetZ = Math.round(position.z / 32) * 32;
+            let targetX = position.x;
+            let targetY = position.y;
+            let targetZ = position.z;
 
             if (isPicker) {
               const clickedVoxel = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
@@ -237,12 +270,62 @@ export class InputManager {
                     tabs.forEach(t => { if (t.innerText === s.dataset.cat) t.click(); });
                   }
                 });
-                const colorPicker = document.getElementById('build-color-picker');
-                if (colorPicker && clickedVoxel.color) {
-                  colorPicker.value = clickedVoxel.color;
-                  colorPicker.dispatchEvent(new Event('input'));
+                const pickedColor = clickedVoxel.color || '#ffffff';
+                eng.buildColor = pickedColor;
+                document.querySelectorAll('.shared-color-picker').forEach(cp => { cp.value = pickedColor; });
+                
+                let matchShape = clickedVoxel.shape || 'cube';
+                let matchDir = 'n';
+                let matchFlip = false;
+                if (matchShape.startsWith('ramp_') || matchShape.startsWith('stair_')) {
+                  const parts = matchShape.split('_');
+                  matchShape = parts[0];
+                  matchDir = parts[1] || 'n';
+                } else if (matchShape.startsWith('door_')) {
+                  const parts = matchShape.split('_');
+                  matchShape = 'door';
+                  matchDir = parts[1] || 'n';
+                  matchFlip = matchShape.includes('_flip') || clickedVoxel.shape.includes('_flip');
+                } else if (FURNITURE_REGISTRY[matchShape]) {
+                  matchDir = clickedVoxel.dir || 'n';
+                } else if (matchShape.endsWith('_player')) {
+                  const parts = matchShape.split('_');
+                  matchShape = parts[0];
                 }
-                eng.chat.addMessage('system', 'System', `Sampled block: ${clickedVoxel.tex}`);
+                eng.editShapeBase = matchShape;
+                eng.editShapeDir = matchDir;
+                eng.editShapeRelative = false;
+                eng.editShapeFlip = matchFlip;
+                eng.editShape = clickedVoxel.shape || 'cube';
+                if (eng.editShape.includes('_open')) eng.editShape = eng.editShape.replace('_open', '');
+                
+                const shapeBtn = document.getElementById('build-shape-btn');
+                const dirBtn = document.getElementById('build-dir-btn');
+                const relBtn = document.getElementById('build-rel-btn');
+                const flipBtn = document.getElementById('build-flip-btn');
+                if (shapeBtn) shapeBtn.innerText = 'Shape: ' + matchShape.toUpperCase();
+                if (matchShape === 'door') {
+                    if (dirBtn) dirBtn.style.display = 'block';
+                    if (relBtn) relBtn.style.display = 'none';
+                    if (flipBtn) {
+                        flipBtn.style.display = 'block';
+                        flipBtn.style.background = matchFlip ? 'rgba(46, 204, 113, 0.2)' : 'transparent';
+                    }
+                } else if (FURNITURE_REGISTRY[matchShape]) {
+                    if (dirBtn) dirBtn.style.display = 'block';
+                    if (relBtn) relBtn.style.display = 'none';
+                    if (flipBtn) flipBtn.style.display = 'none';
+                } else if (matchShape === 'ramp' || matchShape === 'stair') {
+                    if (dirBtn) dirBtn.style.display = 'block';
+                    if (relBtn) relBtn.style.display = 'block';
+                    if (flipBtn) flipBtn.style.display = 'none';
+                } else {
+                    if (dirBtn) dirBtn.style.display = 'none';
+                    if (relBtn) relBtn.style.display = 'none';
+                    if (flipBtn) flipBtn.style.display = 'none';
+                }
+                if (dirBtn) dirBtn.innerText = matchDir.toUpperCase();
+                if (relBtn) relBtn.style.background = 'transparent';
               }
             } else if (isDeleting) {
               const clickedVoxelOld = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
@@ -255,6 +338,17 @@ export class InputManager {
               const pTex = clickedVoxelOld ? clickedVoxelOld.tex : 'stone';
               const pCol = clickedVoxelOld ? (clickedVoxelOld.color || '#ffffff') : '#ffffff';
               eng.mapManager.setVoxelAt(targetX, targetY, targetZ, null);
+              eng.network.sendUpdateBlock({ worldX: targetX, worldY: targetY, worldZ: targetZ, voxelData: null });
+              
+              if (clickedVoxelOld && clickedVoxelOld.tex === 'wood-door-bottom') {
+                eng.mapManager.setVoxelAt(targetX, targetY, targetZ + 32, null);
+                eng.network.sendUpdateBlock({ worldX: targetX, worldY: targetY, worldZ: targetZ + 32, voxelData: null });
+              } else if (clickedVoxelOld && clickedVoxelOld.tex === 'wood-door-top') {
+                eng.mapManager.setVoxelAt(targetX, targetY, targetZ - 32, null);
+                eng.network.sendUpdateBlock({ worldX: targetX, worldY: targetY, worldZ: targetZ - 32, voxelData: null });
+              }
+              
+              eng.renderer.needsVoxelUpdate = true;
               // Deletion particle effect
               for (let i = 0; i < 25; i++) {
                 eng.particles.push({
@@ -277,13 +371,14 @@ export class InputManager {
             } else {
               const clickedVoxel = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
               let placeShape = eng.editShape || 'cube';
-              if (placeShape === 'ramp_player') {
+              if (placeShape.endsWith('_player')) {
+                const base = placeShape.split('_')[0];
                 const pDir = eng.player.dir;
-                if (pDir.includes('up')) placeShape = 'ramp_n';
-                else if (pDir.includes('down')) placeShape = 'ramp_s';
-                else if (pDir.includes('right')) placeShape = 'ramp_e';
-                else if (pDir.includes('left')) placeShape = 'ramp_w';
-                else placeShape = 'ramp_s';
+                if (pDir.includes('up')) placeShape = base + '_n';
+                else if (pDir.includes('down')) placeShape = base + '_s';
+                else if (pDir.includes('right')) placeShape = base + '_e';
+                else if (pDir.includes('left')) placeShape = base + '_w';
+                else placeShape = base + '_s';
               }
               
               if (hitExistingBlock) {
@@ -296,8 +391,7 @@ export class InputManager {
                 }
               }
               
-              const colorPicker = document.getElementById('build-color-picker');
-              const color = colorPicker ? colorPicker.value : '#ffffff';
+              const color = eng.buildColor || '#ffffff';
 
               const clickedVoxelOld = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
               eng.history = eng.history || [];
@@ -308,7 +402,21 @@ export class InputManager {
               let finalTex = tex;
               if (finalTex === 'water' && eng.editFluid === 'flow') finalTex = 'water_flow';
 
-              eng.mapManager.setVoxelAt(targetX, targetY, targetZ, { tex: finalTex, color, shape: placeShape });
+              if (finalTex.includes('door') && !placeShape.startsWith('door')) {
+                placeShape = 'door_' + eng.editShapeDir + (eng.editShapeFlip ? '_flip' : '');
+              } else if (!finalTex.includes('door') && placeShape.startsWith('door')) {
+                placeShape = 'cube';
+              }
+
+              eng.mapManager.setVoxelAt(targetX, targetY, targetZ, { tex: finalTex, color, shape: placeShape, dir: eng.editShapeDir });
+              eng.network.sendUpdateBlock({ worldX: targetX, worldY: targetY, worldZ: targetZ, voxelData: { tex: finalTex, color, shape: placeShape, dir: eng.editShapeDir } });
+              
+              if (finalTex === 'wood-door-bottom') {
+                eng.mapManager.setVoxelAt(targetX, targetY, targetZ + 32, { tex: 'wood-door-top', color, shape: placeShape, dir: eng.editShapeDir });
+                eng.network.sendUpdateBlock({ worldX: targetX, worldY: targetY, worldZ: targetZ + 32, voxelData: { tex: 'wood-door-top', color, shape: placeShape, dir: eng.editShapeDir } });
+              }
+              
+              eng.renderer.needsVoxelUpdate = true;
               // Todo: Creation particle effect
               for (let i = 0; i < 15; i++) {
                 eng.particles.push({
@@ -331,16 +439,119 @@ export class InputManager {
             }
           }
         } else if (!eng.mapOverlay || !eng.mapOverlay.active) {
-          if (this.keys['v'] || (eng.clientSettings.clickToMove && !clickedTarget && !eng.editMode)) {
-            const blockHits = raycaster.intersectObjects(buildMeshes);
-            if (blockHits.length > 0) {
-              eng.player.moveTarget = { x: blockHits[0].point.x, y: blockHits[0].point.y, sprint: !!this.keys['shift'], timer: 15 };
-            }
+          if ((this.keys['v'] || (eng.clientSettings.clickToMove && !clickedTarget && !eng.editMode)) && eng.mouseWorldPos) {
+            // Use the pre-calculated world position from the renderer's raycast
+            eng.player.moveTarget = { x: eng.mouseWorldPos.x, y: eng.mouseWorldPos.y, sprint: !!this.keys['shift'], timer: 15 };
           }
         }
       } else if (e.button === 2) {
         e.preventDefault();
         
+        if (eng.targetingPower) {
+           eng.targetingPower = null;
+           eng.chat.addMessage('system', 'System', 'Targeting cancelled.');
+           document.body.style.cursor = '';
+           if (eng.canvas) eng.canvas.style.cursor = '';
+           return;
+        }
+        
+        let clickedVoxel = null;
+        let rootX, rootY, rootZ;
+        
+        if (eng.cursorGridPos && eng.cursorGridPos.hitExisting) {
+          rootX = eng.cursorGridPos.x;
+          rootY = eng.cursorGridPos.y;
+          rootZ = eng.cursorGridPos.z;
+          let v = eng.mapManager.getVoxelAt(rootX, rootY, rootZ);
+          if (v && v.shape && (v.shape.startsWith('door') || FURNITURE_REGISTRY[v.shape])) {
+            clickedVoxel = v;
+          }
+        }
+
+        if (!clickedVoxel) {
+          const rc = eng.getIsoRaycast(e.clientX, e.clientY);
+          for (let dx = -32; dx <= 32; dx += 32) {
+            for (let dy = -32; dy <= 32; dy += 32) {
+              for (let dz = -96; dz <= 32; dz += 32) {
+                let v = eng.mapManager.getVoxelAt(rc.gx * 32 + dx, rc.gy * 32 + dy, rc.z * 32 + dz);
+                if (v && v.shape && (v.shape.startsWith('door') || FURNITURE_REGISTRY[v.shape])) {
+                  clickedVoxel = v;
+                  rootX = rc.gx * 32 + dx; rootY = rc.gy * 32 + dy; rootZ = rc.z * 32 + dz;
+                  break;
+                }
+              }
+              if (clickedVoxel) break;
+            }
+            if (clickedVoxel) break;
+          }
+        }
+
+        if (clickedVoxel && !eng.editMode) {
+          const dist = Math.hypot(eng.player.x - rootX, eng.player.y - rootY);
+          if (dist <= 160) {
+            if (clickedVoxel.shape.startsWith('door')) {
+              let entityInWay = false;
+              [...eng.npcs, ...Object.values(eng.otherPlayers), eng.player].forEach(ent => {
+                if (ent.state !== 'dead' && ent.state !== 'death') {
+                  if (Math.hypot(ent.x - rootX, ent.y - rootY) < 64) entityInWay = true;
+                }
+              });
+              
+              if (entityInWay) {
+                eng.chat.addMessage('system', 'System', 'Something is blocking the door!');
+                return;
+              }
+              
+              const isOp = clickedVoxel.shape.includes('_open');
+              const toggleDoor = (tx, ty, tz) => {
+                const v = eng.mapManager.getVoxelAt(tx, ty, tz);
+                if (v && v.shape && v.shape.startsWith('door')) {
+                  v.shape = isOp ? v.shape.replace('_open', '') : v.shape + '_open';
+                  eng.mapManager.setVoxelAt(tx, ty, tz, v);
+                }
+              };
+              toggleDoor(rootX, rootY, rootZ);
+              toggleDoor(rootX, rootY, rootZ + 32);
+              toggleDoor(rootX, rootY, rootZ - 32);
+              return;
+            } else if (FURNITURE_REGISTRY[clickedVoxel.shape]) {
+              let otherEntityInWay = false;
+              [...eng.npcs, ...Object.values(eng.otherPlayers)].forEach(ent => {
+                if (ent.state !== 'dead' && ent.state !== 'death') {
+                  if (Math.hypot(ent.x - rootX, ent.y - rootY) < 16) otherEntityInWay = true;
+                }
+              });
+              
+              if (otherEntityInWay) {
+                eng.chat.addMessage('system', 'System', 'Someone is already sitting there!');
+                return;
+              }
+              
+              if (!eng.player.isSitting) {
+                 eng.player.preSitPos = { x: eng.player.x, y: eng.player.y, z: eng.player.z };
+                 eng.player.isSitting = true;
+                 eng.player.x = rootX;
+                 eng.player.y = rootY;
+                 eng.player.z = rootZ;
+                 
+                 const dirMap = { 'n': 'up-right', 'e': 'down-right', 's': 'down-left', 'w': 'up-left' };
+                 eng.player.dir = dirMap[clickedVoxel.dir] || 'down';
+              }
+              return;
+            }
+          } else {
+             eng.chat.addMessage('system', 'System', 'You are too far away to interact with that.');
+          }
+        }
+
+        if (eng.editMode && !clickedTarget) {
+          const dirBtn = document.getElementById('build-dir-btn');
+          if (dirBtn && dirBtn.style.display !== 'none') {
+            dirBtn.click();
+            return;
+          }
+        }
+
         if (clickedTarget) {
           eng.contextTarget = clickedTarget;
           
@@ -361,12 +572,6 @@ export class InputManager {
             ctxMenu.style.display = 'flex';
           }
         }
-      } else if (e.button === 1 && eng.clientSettings.middleMouseRotation !== false) {
-        e.preventDefault();
-        this.isDraggingCamera = true;
-        this.lastMouseX = e.clientX;
-        document.body.style.cursor = 'grabbing';
-        eng.canvas.style.cursor = 'grabbing';
       }
     };
 
@@ -375,17 +580,35 @@ export class InputManager {
       this.mousePos.y = e.clientY;
       
       if (eng.isDraggingSelection && eng.cursorGridPos) {
-        if (!eng.selectionEnd || eng.selectionEnd.x !== eng.cursorGridPos.x || eng.selectionEnd.y !== eng.cursorGridPos.y || eng.selectionEnd.z !== eng.cursorGridPos.z) {
-          eng.selectionEnd = { ...eng.cursorGridPos };
+        const activeSlot = document.querySelector('.hotbar-slot.active');
+        const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
+        const isDeleting = this.keys['shift'] || tex === 'erase';
+        const isPicker = tex === 'picker' || this.keys['alt'];
+
+        let endPos = { x: eng.cursorGridPos.x, y: eng.cursorGridPos.y, z: eng.cursorGridPos.z };
+        if (!isDeleting && !isPicker && eng.cursorGridPos.hitExisting && eng.cursorGridPos.normal) {
+           endPos.x += eng.cursorGridPos.normal.x * 32;
+           endPos.y += eng.cursorGridPos.normal.y * 32;
+           endPos.z += eng.cursorGridPos.normal.z * 32;
+        }
+
+        // Lock the Z-axis during the drag to prevent the selection volume from 
+        // chaotically expanding into a massive 3D cube if the mouse brushes against walls or empty space
+        if (eng.selectionStart) {
+          endPos.z = eng.selectionStart.z;
+        }
+
+        if (!eng.selectionEnd || eng.selectionEnd.x !== endPos.x || eng.selectionEnd.y !== endPos.y || eng.selectionEnd.z !== endPos.z) {
+          eng.selectionEnd = endPos;
           eng.updateSelectionArea();
         }
       }
 
       if (this.isDraggingCamera && eng.renderer && eng.renderer.rotateCamera) {
         const deltaX = e.clientX - this.lastMouseX;
-        const invertCam = eng.clientSettings.invertCameraRotation ? -1 : 1;
+        const invertDrag = eng.clientSettings.invertDragRotation ? -1 : 1;
         const sensitivity = eng.clientSettings.dragRotationSensitivity !== undefined ? eng.clientSettings.dragRotationSensitivity : 0.25;
-        eng.renderer.rotateCamera(deltaX * sensitivity * invertCam);
+        eng.renderer.rotateCamera(deltaX * sensitivity * invertDrag);
         this.lastMouseX = e.clientX;
       }
     };
@@ -401,12 +624,13 @@ export class InputManager {
       if (e.button === 1) {
         this.isDraggingCamera = false;
         document.body.style.cursor = '';
-        eng.canvas.style.cursor = '';
+        if (eng.canvas) eng.canvas.style.cursor = '';
       }
     };
 
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
+    window.addEventListener('blur', this.handleBlur);
     document.addEventListener('contextmenu', this.handleContextMenu);
     eng.canvas.addEventListener('mousedown', this.handleMouseDown);
     window.addEventListener('mousemove', this.handleMouseMove);
@@ -418,6 +642,7 @@ export class InputManager {
   disconnect() {
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('keyup', this.handleKeyUp);
+    window.removeEventListener('blur', this.handleBlur);
     document.removeEventListener('contextmenu', this.handleContextMenu);
     this.engine.canvas.removeEventListener('mousedown', this.handleMouseDown);
     window.removeEventListener('mousemove', this.handleMouseMove);

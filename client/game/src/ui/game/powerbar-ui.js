@@ -1,3 +1,4 @@
+import { POWER_REGISTRY } from './registry.js?v=new-engine-311';
 export class PowerbarUIManager {
   constructor(engine, mainUIManager) {
     this.engine = engine;
@@ -54,12 +55,54 @@ export class PowerbarUIManager {
         };
         slot.onmouseleave = () => slot.style.background = 'rgba(0, 0, 0, 0.7)';
         
+        slot.draggable = true;
+        slot.ondragstart = (e) => {
+            const powers = this.engine.playerData.powers || [];
+            if (powers[i]) {
+                e.dataTransfer.setData('text/plain', JSON.stringify({ source: 'powerbar', index: i }));
+            } else {
+                e.preventDefault(); // Prevent dragging completely empty slots
+            }
+        };
+        slot.ondragover = (e) => e.preventDefault();
+        slot.ondrop = (e) => {
+            e.preventDefault();
+            try {
+                const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                if (data.source === 'powerbar') {
+                    const fromIdx = data.index;
+                    const toIdx = i;
+                    if (fromIdx !== toIdx) {
+                        const powers = this.engine.playerData.powers || [];
+                        while (powers.length <= Math.max(fromIdx, toIdx)) powers.push(null);
+                        
+                        const temp = powers[fromIdx];
+                        powers[fromIdx] = powers[toIdx];
+                        powers[toIdx] = temp;
+                        
+                        while(powers.length > 0 && powers[powers.length - 1] === null) powers.pop();
+                        
+                        this.engine.playerData.powers = powers;
+                        this.updatePowerbar();
+                        
+                        const pPanel = document.getElementById('powers-panel');
+                        if (pPanel && pPanel.style.display === 'flex') this.renderPowersUI();
+                    }
+                }
+            } catch (err) {}
+        };
+
         slot.onclick = () => {
             const powers = this.engine.playerData.powers || [];
             const powerName = powers[i];
             if (powerName) {
-                if (powerName === 'Brawl') this.engine.combat?.triggerAttack();
-                else if (powerName === 'Throw Airplane') this.engine.combat?.triggerThrowAirplane();
+                if (powerName === 'brawl') this.engine.combat?.triggerAttack();
+                else if (powerName === 'throw_airplane') this.engine.combat?.triggerThrowAirplane();
+                else if (powerName === 'dev_noclip') this.engine.chat.processCommand('/noclip');
+                else if (powerName === 'dev_heal') this.engine.chat.processCommand('/heal');
+                else if (powerName === 'dev_smite') this.engine.combat?.triggerSmite();
+                else if (['fly', 'super_jump', 'super_speed'].includes(powerName)) this.engine.combat?.toggleTravelPower(powerName);
+                else if (powerName === 'teleport') this.engine.combat?.triggerTeleport();
             }
         };
 
@@ -74,8 +117,9 @@ export class PowerbarUIManager {
       
       for (let i = 0; i < 10; i++) {
           const slotData = this.powerSlots[i];
-          const powerName = powers[i];
-          if (powerName) {
+          const powerId = powers[i];
+          if (powerId) {
+              const powerName = POWER_REGISTRY[powerId] ? POWER_REGISTRY[powerId].name : powerId;
               const words = powerName.split(' ');
               let displayTxt = powerName;
               if (displayTxt.length > 8) {
@@ -83,8 +127,15 @@ export class PowerbarUIManager {
                   if (words.length === 1) displayTxt = displayTxt.substring(0, 6) + '..';
               }
               slotData.iconEl.innerText = displayTxt;
-              slotData.element.style.borderColor = 'var(--accent-neon, #3498db)';
-              slotData.element.title = powerName;
+              const isActive = this.engine.player && this.engine.player.activePowers && this.engine.player.activePowers.includes(powerId);
+              if (isActive) {
+                  slotData.element.style.borderColor = '#2ecc71';
+                  slotData.element.style.boxShadow = '0 0 15px rgba(46, 204, 113, 0.6), inset 0 0 10px rgba(0,0,0,0.8)';
+              } else {
+                  slotData.element.style.borderColor = 'var(--accent-neon, #3498db)';
+                  slotData.element.style.boxShadow = 'inset 0 0 10px rgba(0,0,0,0.8)';
+              }
+              slotData.element.title = powerName + (isActive ? ' (Active)' : '');
           } else {
               slotData.iconEl.innerText = '';
               slotData.element.style.borderColor = '#444';
@@ -134,12 +185,18 @@ export class PowerbarUIManager {
     listContainer.innerHTML = '';
     const powers = pd.powers || [];
     
-    if (powers.length === 0) {
+    if (powers.filter(Boolean).length === 0) {
       listContainer.innerHTML = `<div style="text-align: center; color: var(--text-dim); padding: 20px; font-family: var(--font-mono); font-size: 0.9rem;">No powers selected.</div>`;
     } else {
-      powers.forEach(pName => {
+      powers.forEach((pId, idx) => {
+        if (!pId) return;
+        const pName = POWER_REGISTRY[pId] ? POWER_REGISTRY[pId].name : pId;
         const pDiv = document.createElement('div');
-        pDiv.style.cssText = 'background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); padding: 10px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono);';
+        pDiv.style.cssText = 'background: rgba(0,0,0,0.4); border: 1px solid var(--text-dim); padding: 10px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); cursor: grab;';
+        pDiv.draggable = true;
+        pDiv.ondragstart = (e) => {
+           e.dataTransfer.setData('text/plain', JSON.stringify({ source: 'powerbar', index: idx }));
+        };
         pDiv.innerHTML = `
           <span style="color: var(--accent-neon); font-weight: bold; font-size: 0.95rem;">${pName}</span>
           <div style="display: flex; gap: 5px;">

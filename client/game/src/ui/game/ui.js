@@ -1,9 +1,9 @@
-import { DevToolsUIManager } from './dev-tools-ui.js?v=new-engine-240';
-import { InventoryUIManager } from './inventory-ui.js?v=new-engine-240';
-import { PowerbarUIManager } from './powerbar-ui.js?v=new-engine-240';
-import { TrainerUIManager } from './trainer-ui.js?v=new-engine-240';
-import { PlayerListUIManager } from './player-list-ui.js?v=new-engine-240';
-import { GAME_TIPS } from './tips.js?v=new-engine-240';
+import { DevToolsUIManager } from './dev-tools-ui.js?v=new-engine-311';
+import { InventoryUIManager } from './inventory-ui.js?v=new-engine-311';
+import { PowerbarUIManager } from './powerbar-ui.js?v=new-engine-311';
+import { TrainerUIManager } from './trainer-ui.js?v=new-engine-311';
+import { PlayerListUIManager } from './player-list-ui.js?v=new-engine-311';
+import { GAME_TIPS } from './tips.js?v=new-engine-311';
 
 export class UIManager {
   constructor(engine) {
@@ -17,6 +17,24 @@ export class UIManager {
 
     this.setupContextMenu();
     this.setupLoadingScreen();
+    
+    // Cache frequently accessed elements to avoid DOM lookups in high-frequency update()
+    this.els = {
+      hpFill: document.getElementById('health-bar-fill'),
+      hpText: document.getElementById('health-bar-text'),
+      epFill: document.getElementById('energy-bar-fill'),
+      epText: document.getElementById('energy-bar-text'),
+      btnEditTarget: document.getElementById('btn-dev-edit-target'),
+      npcEditModal: document.getElementById('npc-edit-modal'),
+      targetWindow: document.getElementById('target-window'),
+      targetName: document.getElementById('target-name'),
+      targetHealthFill: document.getElementById('target-health-fill'),
+      targetHealthText: document.getElementById('target-health-text'),
+      targetEnergyFill: document.getElementById('target-energy-fill'),
+      targetEnergyText: document.getElementById('target-energy-text'),
+      targetActions: document.getElementById('target-actions'),
+      btnTargetTalk: document.getElementById('btn-target-talk')
+    };
   }
 
   setupLoadingScreen() {
@@ -96,6 +114,16 @@ export class UIManager {
           if (eng && eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
             localStorage.setItem('b_builder_pos', JSON.stringify({ left: panel.style.left, top: panel.style.top }));
           }
+        } else if (panelId === 'builder-hotbar') {
+          const eng = window.currentGameEngine;
+          if (eng && eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
+            localStorage.setItem('b_hotbar_pos', JSON.stringify({ left: panel.style.left, top: panel.style.top }));
+          }
+        } else if (panelId === 'object-library-panel') {
+          const eng = window.currentGameEngine;
+          if (eng && eng.clientSettings && eng.clientSettings.lockBuilderPanel) {
+            localStorage.setItem('b_objlib_pos', JSON.stringify({ left: panel.style.left, top: panel.style.top }));
+          }
         }
       };
 
@@ -135,33 +163,26 @@ export class UIManager {
 
   update() {
     const eng = this.engine;
-    const hpFill = document.getElementById('health-bar-fill');
-    const hpText = document.getElementById('health-bar-text');
-    const epFill = document.getElementById('energy-bar-fill');
-    const epText = document.getElementById('energy-bar-text');
 
-    if (hpFill) hpFill.style.width = `${(eng.player.hp / eng.player.maxHp) * 100}%`;
-    if (hpText) hpText.innerText = `${Math.floor(eng.player.hp)} / ${eng.player.maxHp}`;
+    if (this.els.hpFill) this.els.hpFill.style.width = `${(eng.player.hp / eng.player.maxHp) * 100}%`;
+    if (this.els.hpText) this.els.hpText.innerText = `${Math.floor(eng.player.hp)} / ${eng.player.maxHp}`;
     
-    if (epFill) epFill.style.width = `${(eng.player.energy / eng.player.maxEnergy) * 100}%`;
-    if (epText) epText.innerText = `${Math.floor(eng.player.energy)} / ${eng.player.maxEnergy}`;
+    if (this.els.epFill) this.els.epFill.style.width = `${(eng.player.energy / eng.player.maxEnergy) * 100}%`;
+    if (this.els.epText) this.els.epText.innerText = `${Math.floor(eng.player.energy)} / ${eng.player.maxEnergy}`;
 
-    const btnEditTarget = document.getElementById('btn-dev-edit-target');
-    if (btnEditTarget) {
+    if (this.els.btnEditTarget) {
       if (eng.selectedTarget && eng.selectedTarget.type === 'npc') {
-        btnEditTarget.disabled = false;
-        btnEditTarget.style.opacity = '1';
-        btnEditTarget.style.cursor = 'pointer';
+        this.els.btnEditTarget.disabled = false;
+        this.els.btnEditTarget.style.opacity = '1';
+        this.els.btnEditTarget.style.cursor = 'pointer';
       } else {
-        btnEditTarget.disabled = true;
-        btnEditTarget.style.opacity = '0.5';
-        btnEditTarget.style.cursor = 'not-allowed';
+        this.els.btnEditTarget.disabled = true;
+        this.els.btnEditTarget.style.opacity = '0.5';
+        this.els.btnEditTarget.style.cursor = 'not-allowed';
       }
     }
 
-    
-    const npcEditModal = document.getElementById('npc-edit-modal');
-    if (npcEditModal && npcEditModal.style.display !== 'none' && eng.selectedTarget && eng.selectedTarget.type === 'npc') {
+    if (this.els.npcEditModal && this.els.npcEditModal.style.display !== 'none' && eng.selectedTarget && eng.selectedTarget.type === 'npc') {
       const uuidField = document.getElementById('edit-npc-uuid');
       if (uuidField && uuidField.value !== eng.selectedTarget.id) {
         const npc = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
@@ -180,8 +201,7 @@ export class UIManager {
       }
     }
 
-    const targetWindow = document.getElementById('target-window');
-    if (eng.selectedTarget && targetWindow) {
+    if (eng.selectedTarget && this.els.targetWindow) {
       let targetObj = null;
       let tName = '';
       if (eng.selectedTarget.type === 'npc') {
@@ -196,33 +216,30 @@ export class UIManager {
       }
 
       if (targetObj && targetObj.state !== 'dead' && targetObj.state !== 'death') {
-        targetWindow.style.display = 'flex';
-        document.getElementById('target-name').innerText = tName;
+        this.els.targetWindow.style.display = 'flex';
+        this.els.targetName.innerText = tName;
         
         const hpPercent = Math.max(0, targetObj.hp / targetObj.maxHp);
-        document.getElementById('target-health-fill').style.width = `${hpPercent * 100}%`;
-        const hpTextEl = document.getElementById('target-health-text');
-        if (hpTextEl) hpTextEl.innerText = `${Math.floor(targetObj.hp)} / ${targetObj.maxHp}`;
+        this.els.targetHealthFill.style.width = `${hpPercent * 100}%`;
+        if (this.els.targetHealthText) this.els.targetHealthText.innerText = `${Math.floor(targetObj.hp)} / ${targetObj.maxHp}`;
 
         const maxEp = targetObj.maxEnergy || 1000;
         const epPercent = Math.max(0, (targetObj.energy || maxEp) / maxEp);
-        document.getElementById('target-energy-fill').style.width = `${epPercent * 100}%`;
-        const epTextEl = document.getElementById('target-energy-text');
-        if (epTextEl) epTextEl.innerText = `${Math.floor(targetObj.energy || maxEp)} / ${maxEp}`;
+        this.els.targetEnergyFill.style.width = `${epPercent * 100}%`;
+        if (this.els.targetEnergyText) this.els.targetEnergyText.innerText = `${Math.floor(targetObj.energy || maxEp)} / ${maxEp}`;
 
-        const targetActions = document.getElementById('target-actions');
-        if (targetObj.type === 'trainer' && targetActions) {
-            targetActions.style.display = 'block';
-            document.getElementById('btn-target-talk').onclick = () => this.trainer.openTrainerUI(targetObj);
-        } else if (targetActions) {
-            targetActions.style.display = 'none';
+        if (targetObj.type === 'trainer' && this.els.targetActions) {
+            this.els.targetActions.style.display = 'block';
+            if (this.els.btnTargetTalk) this.els.btnTargetTalk.onclick = () => this.trainer.openTrainerUI(targetObj);
+        } else if (this.els.targetActions) {
+            this.els.targetActions.style.display = 'none';
         }
       } else {
-        targetWindow.style.display = 'none';
+        this.els.targetWindow.style.display = 'none';
         eng.selectedTarget = null;
       }
-    } else if (targetWindow) {
-      targetWindow.style.display = 'none';
+    } else if (this.els.targetWindow) {
+      this.els.targetWindow.style.display = 'none';
     }
 
     if (eng.activeTrainer) {

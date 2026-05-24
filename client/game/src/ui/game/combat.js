@@ -1,14 +1,63 @@
+const DIRECTIONS = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up', 'up-left', 'left'];
+
 export class CombatManager {
   constructor(engine) {
     this.engine = engine;
   }
 
+  closeNearbyDoors(px, py, pz) {
+    const eng = this.engine;
+
+    for (let dx = -64; dx <= 64; dx += 32) {
+      for (let dy = -64; dy <= 64; dy += 32) {
+        for (let dz = -64; dz <= 64; dz += 32) {
+          const vx = Math.round((px + dx) / 32) * 32;
+          const vy = Math.round((py + dy) / 32) * 32;
+          const vz = Math.round((pz + dz) / 32) * 32;
+
+          const voxel = eng.mapManager.getVoxelAt(vx, vy, vz);
+
+          if (
+            voxel &&
+            voxel.shape &&
+            voxel.shape.startsWith('door') &&
+            voxel.shape.includes('_open')
+          ) {
+            voxel.shape = voxel.shape.replace('_open', '');
+            eng.mapManager.setVoxelAt(vx, vy, vz, voxel);
+          }
+        }
+      }
+    }
+  }
+
+  toggleTravelPower(powerName) {
+    const eng = this.engine;
+
+    if (!eng.player.activePowers) eng.player.activePowers = [];
+    const idx = eng.player.activePowers.indexOf(powerName);
+    if (idx !== -1) {
+      eng.player.activePowers.splice(idx, 1);
+      if (powerName === 'super_speed') eng.player.superSpeedMult = 1.0;
+    } else {
+      eng.player.activePowers.push(powerName);
+    }
+    
+    if (eng.ui && eng.ui.powerbar) eng.ui.powerbar.updatePowerbar();
+  }
+
   triggerAttack() {
     const eng = this.engine;
-    
-    if (eng.player.state === 'dash' || eng.player.state === 'death' || eng.player.actionTimer > 0) return;
+
+    if (
+      eng.player.state === 'dash' ||
+      eng.player.state === 'death' ||
+      (eng.player.actionTimer > 0 && eng.player.state !== 'jump') ||
+      eng.player.isSitting
+    ) return;
 
     if (eng.player.energy < 20) return;
+
     eng.player.energy -= 20;
     eng.ui.update();
 
@@ -16,11 +65,13 @@ export class CombatManager {
     eng.player.nextAttack = eng.player.nextAttack === 1 ? 2 : 1;
     eng.player.frame = 0;
     eng.player.frameTimer = 0;
-    eng.player.actionTimer = 7 * (eng.player.frameInterval / 2); 
+    eng.player.actionTimer = 7 * (eng.player.frameInterval / 2);
 
     const px = eng.player.x;
     const py = eng.player.y;
     const pz = eng.player.z || 0;
+
+    this.closeNearbyDoors(px, py, pz);
 
     let targetX = px;
     let targetY = py;
@@ -29,6 +80,7 @@ export class CombatManager {
       const dx = eng.mouseWorldPos.x - px;
       const dy = eng.mouseWorldPos.y - py;
       const dist = Math.hypot(dx, dy) || 1;
+
       targetX = px + (dx / dist) * 100;
       targetY = py + (dy / dist) * 100;
     }
@@ -38,42 +90,53 @@ export class CombatManager {
 
     let angle = Math.atan2(dy, dx);
     let normalizedAngle = angle + Math.PI / 8;
-    if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
-    const dirs = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up', 'up-left', 'left'];
-    eng.player.dir = dirs[Math.floor(normalizedAngle / (Math.PI / 4)) % 8];
 
-    let facingAngle = Math.atan2(dy, dx);
+    if (normalizedAngle < 0) {
+      normalizedAngle += Math.PI * 2;
+    }
+
+    eng.player.dir =
+      DIRECTIONS[Math.floor(normalizedAngle / (Math.PI / 4)) % 8];
+
+    const facingAngle = Math.atan2(dy, dx);
 
     const fov = Math.PI / 3;
 
     const checkHit = (tx, ty, tz) => {
       tz = tz || 0;
-      
-      if (Math.abs(pz - tz) > 48) return false; 
-      
+
+      if (Math.abs(pz - tz) > 48) return false;
+
       const dist = Math.hypot(tx - px, ty - py);
+
       if (dist > 200) return false;
 
       const angleToTarget = Math.atan2(ty - py, tx - px);
+
       let angleDiff = angleToTarget - facingAngle;
+
       while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
       while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-      
-      if (Math.abs(angleDiff) > fov) return false; 
+
+      if (Math.abs(angleDiff) > fov) return false;
 
       const steps = Math.ceil(dist / 16);
+
       for (let i = 1; i <= steps; i++) {
         const sampleX = px + ((tx - px) * (i / steps));
         const sampleY = py + ((ty - py) * (i / steps));
+
         const terrainZ = eng.getTerrainZ(sampleX, sampleY);
-        
-        if (terrainZ >= pz + 64 && terrainZ >= tz + 64) return false; 
+
+        if (terrainZ >= pz + 64 && terrainZ >= tz + 64) {
+          return false;
+        }
       }
 
       return true;
     };
 
-    const isCrit = Math.random() > 0.85;
+    const isCrit = Math.random() > 0.8;
     const dmg = isCrit ? 35 : 25;
 
     eng.npcs.forEach(npc => {
@@ -81,24 +144,47 @@ export class CombatManager {
         if (checkHit(npc.x, npc.y, npc.z)) {
           if (npc.type === 'trainer') {
             const words = ['Miss', 'Dodge', 'Deflect'];
-            const word = words[Math.floor(Math.random() * words.length)];
-            eng.floatingTexts.push({ x: npc.x, y: npc.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: word, life: 1.0, color: '#bdc3c7' });
+
+            const word =
+              words[Math.floor(Math.random() * words.length)];
+
+            eng.floatingTexts.push({
+              x: npc.x,
+              y: npc.y,
+              offsetY: 90,
+              rndX: (Math.random() - 0.5) * 50,
+              rndY: (Math.random() - 0.5) * 40,
+              text: word,
+              life: 1.0,
+              color: '#bdc3c7'
+            });
           } else {
-            eng.network.sendNpcHit({ targetUuid: npc.uuid, damage: dmg, isCrit: isCrit });
+            eng.network.sendNpcHit({
+              targetUuid: npc.uuid,
+              damage: dmg,
+              isCrit: isCrit
+            });
           }
         }
       }
     });
 
     const myAlignment = eng.playerData.alignment || 'hero';
+
     for (let id in eng.otherPlayers) {
       const op = eng.otherPlayers[id];
+
       if (op.state !== 'death') {
         const opAlignment = op.alignment || 'hero';
+
         if (myAlignment === 'hero' && opAlignment === 'hero') continue;
 
         if (checkHit(op.x, op.y, op.z)) {
-          eng.network.sendPlayerHit({ targetId: id, damage: dmg, isCrit: isCrit });
+          eng.network.sendPlayerHit({
+            targetId: id,
+            damage: dmg,
+            isCrit: isCrit
+          });
         }
       }
     }
@@ -106,8 +192,12 @@ export class CombatManager {
 
   triggerThrowAirplane() {
     const eng = this.engine;
-    
-    if (eng.player.state === 'dash' || eng.player.state === 'death' || eng.player.actionTimer > 0) return;
+    if (
+      eng.player.state === 'dash' ||
+      eng.player.state === 'death' ||
+      (eng.player.actionTimer > 0 && eng.player.state !== 'jump') ||
+      eng.player.isSitting
+    ) return;
 
     if (eng.player.energy < 15) return;
     eng.player.energy -= 15;
@@ -116,209 +206,101 @@ export class CombatManager {
     eng.player.state = 'throw_attack1';
     eng.player.frame = 0;
     eng.player.frameTimer = 0;
-    eng.player.actionTimer = 2.5 * eng.player.frameInterval; 
+    eng.player.actionTimer = 7 * (eng.player.frameInterval / 2);
 
     const px = eng.player.x;
     const py = eng.player.y;
     const pz = eng.player.z || 0;
 
-    let tx, ty;
-    let targetEntity = null;
-    let wasAutoAim = false;
+    this.closeNearbyDoors(px, py, pz);
 
-    if (eng.selectedTarget) {
-      let stx, sty, stz;
-      let sEntity = null;
-      if (eng.selectedTarget.type === 'npc') {
-        sEntity = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
-      } else if (eng.selectedTarget.type === 'player') {
-        sEntity = eng.otherPlayers[eng.selectedTarget.id];
-      }
-      
-      if (sEntity && sEntity.state !== 'dead' && sEntity.state !== 'death') {
-        stx = sEntity.x;
-        sty = sEntity.y;
-        stz = sEntity.z || 0;
-        
-        const pos = eng.getScreenPos(stx, sty, stz);
-        const mouseDist = Math.hypot(eng.mousePos.x - pos.x, eng.mousePos.y - pos.y);
-        
-        
-        if (mouseDist < 100) {
-          targetEntity = sEntity;
-          tx = stx;
-          ty = sty;
-          wasAutoAim = true;
-        }
-      }
+    let targetX = px;
+    let targetY = py;
+
+    if (eng.mouseWorldPos) {
+      targetX = eng.mouseWorldPos.x;
+      targetY = eng.mouseWorldPos.y;
     }
 
-    if (!targetEntity) {
-      if (eng.mouseWorldPos) {
-        const dx = eng.mouseWorldPos.x - px;
-        const dy = eng.mouseWorldPos.y - py;
-        const dist = Math.hypot(dx, dy) || 1;
-        tx = px + (dx / dist) * 400; // Project 400 units outward in the calculated direction
-        tx = px + (dx / dist) * 400;
-        ty = py + (dy / dist) * 400;
-      } else {
-        tx = px + 400;
-        ty = py;
-      }
-    }
-
-        tx += (Math.random() - 0.5) * 50;
-    ty += (Math.random() - 0.5) * 50;
-
-    const dx = tx - px;
-    const dy = ty - py;
-    let dist = Math.hypot(dx, dy);
-    if (dist < 1) dist = 1;
-
-        const distanceMultiplier = 0.9 + Math.random() * 2.1;
-    const finalDist = dist * distanceMultiplier;
-
-    const finalTx = px + (dx / dist) * finalDist;
-    const finalTy = py + (dy / dist) * finalDist;
-
+    const dx = targetX - px;
+    const dy = targetY - py;
     let angle = Math.atan2(dy, dx);
     let normalizedAngle = angle + Math.PI / 8;
     if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
-    const dirIndex = Math.floor(normalizedAngle / (Math.PI / 4)) % 8;
-    const dirs = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up', 'up-left', 'left'];
-    eng.player.dir = dirs[dirIndex];
+    eng.player.dir = DIRECTIONS[Math.floor(normalizedAngle / (Math.PI / 4)) % 8];
 
-    let facingAngle = Math.atan2(dy, dx);
-
-    const hitWidth = 45; 
-
-    let hitTarget = null;
-    let hitType = null;
-    let closestDist = finalDist;
-
+    const isCrit = Math.random() > 0.8;
     
-    const checkHit = (entity, type, id) => {
-      if (entity.state === 'dead' || entity.state === 'death') return;
-      const edx = entity.x - px;
-      const edy = entity.y - py;
-      const edist = Math.hypot(edx, edy);
-      
-      if (edist > finalDist || Math.abs(pz - (entity.z || 0)) > 48) return;
-
-      const angleToEntity = Math.atan2(edy, edx);
-      let angleDiff = angleToEntity - facingAngle;
-      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
-      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-      
-      const perpDist = Math.abs(edist * Math.sin(angleDiff));
-      if (perpDist <= hitWidth && Math.cos(angleDiff) > 0) {
-        let clear = true;
-        const steps = Math.ceil(edist / 16);
-        for (let i = 1; i <= steps; i++) {
-           const sampleX = px + (edx * (i / steps));
-           const sampleY = py + (edy * (i / steps));
-           const terrainZ = eng.getTerrainZ(sampleX, sampleY);
-           if (terrainZ >= pz + 64 && terrainZ >= (entity.z || 0) + 64) {
-             clear = false; break;
-           }
-        }
-        if (clear && edist < closestDist) {
-          closestDist = edist;
-          hitTarget = entity;
-           hitTarget.targetId = id;
-          hitType = type;
-        }
-      }
-    };
-
-    eng.npcs.forEach(npc => checkHit(npc, 'npc', npc.uuid));
-    for (let id in eng.otherPlayers) {
-      checkHit(eng.otherPlayers[id], 'player', id);
-    }
-
-    const destZ = hitTarget ? (hitTarget.z || 0) + 30 : eng.getTerrainZ(finalTx, finalTy) + 30;
-
-        const blockSteps = Math.ceil(finalDist / 16);
-    for (let i = 1; i <= blockSteps; i++) {
-      const sampleX = px + (dx / dist) * finalDist * (i / blockSteps);
-      const sampleY = py + (dy / dist) * finalDist * (i / blockSteps);
-      const terrainZ = eng.getTerrainZ(sampleX, sampleY);
-      
-      const currentProjZ = (pz + 30) + ((destZ - (pz + 30)) * (i / blockSteps));
-      
-      if (terrainZ >= currentProjZ) {
-        const bDist = finalDist * (i / blockSteps);
-        if (bDist < closestDist) {
-          closestDist = bDist;
-          hitTarget = { x: sampleX, y: sampleY, z: currentProjZ };
-          hitType = 'block';
-        }
-        break;
-      }
-    }
-
-    let targetX = hitTarget ? hitTarget.x : finalTx;
-    let targetY = hitTarget ? hitTarget.y : finalTy;
-    let targetZ;
-    if (hitTarget) {
-      targetZ = hitType === 'block' ? hitTarget.z : (hitTarget.z || 0) + 30;
-    } else {
-      targetZ = eng.getTerrainZ(finalTx, finalTy) + 30;
-    }
-
-    const isCritLoop = Math.random() <= 0.25;
+    if (!eng.myRecentThrows) eng.myRecentThrows = [];
+    eng.myRecentThrows.push({ x: px, y: py, time: performance.now() });
+    eng.myRecentThrows = eng.myRecentThrows.filter(t => performance.now() - t.time < 5000);
 
     eng.network.sendProjectile({
-      isAirplane: true,
-      isCritLoop: isCritLoop,
-      startX: px, startY: py, startZ: pz + 30,
-      targetX: targetX, targetY: targetY, targetZ: targetZ,
-      speed: 400
-    });
-
-    eng.projectiles.push({
-      isAirplane: true,
-      isCritLoop: isCritLoop,
-      startX: px, startY: py, startZ: pz + 30, // Adjusted from 45 to 30 to hit 1-block walls but clear slopes
-      startX: px, startY: py, startZ: pz + 30,
-      x: px, y: py, z: pz + 30,
-      targetX: targetX, targetY: targetY, targetZ: targetZ,
+      senderId: eng.socket && eng.socket.id,
+      startX: px, startY: py, startZ: pz + 24,
+      targetX: targetX, targetY: targetY, targetZ: (eng.getTerrainZ(targetX, targetY) || 0) + 10,
       speed: 400,
-      distTravelled: 0,
-      maxDist: Math.max(1, Math.hypot(targetX - px, targetY - py)),
-      trail: true,
-      trailColor: 'rgba(200, 230, 255, 0.6)',
-      trailSize: 2.5,
-      onHit: () => {
-        if (hitTarget) {
-          if (hitType === 'npc' && hitTarget.type === 'trainer') {
-            const words = ['Miss', 'Dodge', 'Deflect'];
-            const word = words[Math.floor(Math.random() * words.length)];
-            eng.floatingTexts.push({ x: hitTarget.x, y: hitTarget.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: word, life: 1.0, color: '#bdc3c7' });
-          } else if (hitType === 'npc') {
-            const dmg = isCritLoop ? Math.floor(Math.random() * 2) + 3 : Math.floor(Math.random() * 2) + 1;
-            eng.network.sendNpcHit({ targetUuid: hitTarget.uuid || hitTarget.targetId, damage: dmg, isCrit: isCritLoop });
-          } else if (hitType === 'player' || hitType === 'block') {
-            const dmg = isCritLoop ? Math.floor(Math.random() * 2) + 3 : Math.floor(Math.random() * 2) + 1;
-            eng.floatingTexts.push({ x: hitTarget.x, y: hitTarget.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: isCritLoop ? 'Crit Bonk!' : 'Bonk', life: 1.0, color: isCritLoop ? '#f39c12' : '#fff' });
-            if (hitType === 'player' && hitTarget.targetId) {
-              eng.network.sendPlayerHit({ targetId: hitTarget.targetId, damage: dmg, isCrit: isCritLoop });
-            }
-          }
-        }
-        
-        eng.debris.push({
-          x: targetX, y: targetY, z: targetZ,
-          vx: (Math.random() - 0.5) * 150,
-          vy: (Math.random() - 0.5) * 150,
-          vz: 100 + Math.random() * 150,
-          life: 5.0,
-          maxLife: 5.0,
-          crumpleTimer: 0.3,
-          wasteTex: Math.random() > 0.5 ? 'waste_1' : 'waste_2',
-          rotation: Math.random() * Math.PI * 2
-        });
-      }
+      isAirplane: true,
+      isCritLoop: isCrit,
+      isCrit: isCrit,
+      damage: isCrit ? 3 : 1
     });
+  }
+
+  triggerSmite() {
+    const eng = this.engine;
+    if (eng.selectedTarget) {
+      let targetEntity = null;
+      let targetId = null;
+      
+      if (eng.selectedTarget.type === 'npc') {
+        targetEntity = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
+        if (targetEntity) { targetId = targetEntity.uuid; eng.network.sendNpcHit({ targetUuid: targetId, damage: 9999, isCrit: true }); }
+      } else if (eng.selectedTarget.type === 'player') {
+        targetEntity = eng.otherPlayers[eng.selectedTarget.id];
+        if (targetEntity) { targetId = eng.selectedTarget.id; eng.network.sendPlayerHit({ targetId: targetId, damage: 9999, isCrit: true }); }
+      }
+      
+      if (targetEntity) {
+        eng.floatingTexts.push({ x: targetEntity.x, y: targetEntity.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: 'SMITED', life: 2.0, color: '#f1c40f' });
+        for (let i = 0; i < 30; i++) {
+          eng.particles.push({ x: targetEntity.x + (Math.random() - 0.5) * 32, y: targetEntity.y + (Math.random() - 0.5) * 32, z: targetEntity.z + Math.random() * 64, vx: (Math.random() - 0.5) * 200, vy: (Math.random() - 0.5) * 200, vz: 100 + Math.random() * 200, life: 0.5 + Math.random() * 0.5, maxLife: 1.0, color: '#f1c40f', size: 3 + Math.random() * 4 });
+        }
+      }
+    }
+  }
+
+  triggerTeleport() {
+    const eng = this.engine;
+    if (eng.targetingPower === 'teleport') {
+      eng.targetingPower = null;
+      eng.chat.addMessage('system', 'System', 'Teleport cancelled.');
+      if (eng.canvas) eng.canvas.style.cursor = '';
+      document.body.style.cursor = '';
+      return;
+    }
+    eng.targetingPower = 'teleport';
+    eng.chat.addMessage('system', 'System', 'Select a location to teleport.');
+    if (eng.canvas) eng.canvas.style.cursor = 'crosshair';
+    document.body.style.cursor = 'crosshair';
+  }
+
+  executeTeleport(targetX, targetY) {
+    const eng = this.engine;
+    if (eng.player.state === 'death' || eng.player.teleportTarget) return;
+
+    if (eng.player.energy < 30) {
+      eng.chat.addMessage('system', 'System', 'Not enough energy to teleport.');
+      return;
+    }
+    eng.player.energy -= 30;
+    eng.ui.update();
+
+    eng.player.teleportTarget = { x: targetX, y: targetY, timer: 0.5 };
+    eng.player.vx = 0;
+    eng.player.vy = 0;
+    eng.player.momentumX = 0;
+    eng.player.momentumY = 0;
+    eng.player.moveTarget = null;
   }
 }

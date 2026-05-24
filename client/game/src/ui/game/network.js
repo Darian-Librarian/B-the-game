@@ -24,6 +24,7 @@ export class NetworkManager {
     this.socket.on('connect', () => {
       console.log(`%c[Network] Securely connected to game server! (Session ID: ${this.socket.id})`, 'color: #2ecc71; font-weight: bold; font-size: 1.1em;');
       if (eng.chat) eng.chat.addMessage('system', 'System', 'Network connection established.');
+      this.sendRequestFullMap();
     });
 
     this.socket.on('disconnect', () => {
@@ -56,10 +57,12 @@ export class NetworkManager {
       if (eng.otherPlayers[player.id]) {
         eng.otherPlayers[player.id].x = player.x;
         eng.otherPlayers[player.id].y = player.y;
+        if (player.z !== undefined) eng.otherPlayers[player.id].z = player.z;
         eng.otherPlayers[player.id].state = player.state;
         eng.otherPlayers[player.id].dir = player.dir;
         if (player.hp !== undefined) eng.otherPlayers[player.id].hp = player.hp;
         if (player.level !== undefined) eng.otherPlayers[player.id].level = player.level;
+        if (player.activePowers !== undefined) eng.otherPlayers[player.id].activePowers = player.activePowers;
       }
     });
 
@@ -73,13 +76,15 @@ export class NetworkManager {
       });
     });
 
-    this.socket.on('full_map_data_received', ({ data }) => {
-      console.log(`[Network] Full Map Data Received (${data.length} voxels)`);
+    this.socket.on('full_map_data_received', (payload) => {
+      if (!payload) return;
+      const data = payload.data ? payload.data : payload;
+      const entries = Array.isArray(data) ? data : Object.entries(data);
+      console.log(`[Network] Full Map Data Received (${entries.length} voxels)`);
 
       if (eng.mapManager) {
-        const savedVoxels = new Map(data);
-        for (const [vKey, vData] of savedVoxels.entries()) {
-           if (vData === null) {
+        for (const [vKey, vData] of entries) {
+           if (vData === null || vData === undefined || (typeof vData === 'object' && Object.keys(vData).length === 0)) {
              eng.mapManager.voxels.delete(vKey);
            } else {
              if (!vData.shape) vData.shape = 'cube';
@@ -89,6 +94,9 @@ export class NetworkManager {
         if (eng.renderer) {
           eng.renderer.cacheOcclusion();
           eng.renderer.needsVoxelUpdate = true;
+        }
+        if (typeof eng.findSafeSpawn === 'function') {
+          eng.findSafeSpawn();
         }
       }
     });
@@ -100,7 +108,7 @@ export class NetworkManager {
     });
 
     this.socket.on('force_teleport', (data) => {
-      const maxMapSize = 128 * 32;
+      const maxMapSize = 127 * 32;
       eng.player.x = Math.max(0, Math.min(data.x, maxMapSize));
       eng.player.y = Math.max(0, Math.min(data.y, maxMapSize));
       if (data.z !== undefined) {
@@ -127,10 +135,10 @@ export class NetworkManager {
         npc.hp = data.hp;
         if (data.damage > 0) {
           npc.hurtTimer = 300;
-          const isCrit = data.isCrit || (data.damage >= 6 && data.damage <= 10) || data.damage >= 300;
+          const isCrit = data.isCrit || (data.damage >= 6 && data.damage <= 10) || data.damage >= 300 || data.damage === 35 || data.damage === 3;
           const color = isCrit ? '#f39c12' : '#ff4757';
-          const prefix = isCrit ? 'Crit! ' : '';
-          eng.floatingTexts.push({ x: npc.x, y: npc.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: prefix + data.damage.toString(), life: 1.0, color: color });
+          const textStr = data.damage.toString() + (isCrit ? '!' : '');
+          eng.floatingTexts.push({ x: npc.x, y: npc.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: textStr, life: 1.0, color: color });
         }
         if (data.isDead) { npc.state = 'dead'; npc.frame = 0; }
         eng.ui.update(); 
@@ -152,7 +160,8 @@ export class NetworkManager {
       eng.chat.addMessage(data.type, data.name, data.text);
       for (let id in eng.otherPlayers) {
         if (eng.otherPlayers[id].name === data.name) {
-          eng.otherPlayers[id].chatBubble = { text: data.text, timer: 4000 };
+          eng.otherPlayers[id].chatBubbles = eng.otherPlayers[id].chatBubbles || [];
+          eng.otherPlayers[id].chatBubbles.push({ text: data.text, timer: 4000 });
           break;
         }
       }
@@ -191,6 +200,23 @@ export class NetworkManager {
 
     this.socket.on('player_data_updated', (newCharData) => {
       Object.assign(eng.playerData, newCharData);
+      
+      // Keep the local cache synchronized with the server's fresh data
+      const savedAccountStr = localStorage.getItem('b_current_account');
+      if (savedAccountStr) {
+        try {
+          const acc = JSON.parse(savedAccountStr);
+          const charIdx = (acc.characters || []).findIndex(c => {
+            const cName = typeof c === 'object' ? c.name : c;
+            return cName && cName.trim().toLowerCase() === eng.playerData.name.trim().toLowerCase();
+          });
+          if (charIdx !== -1) {
+            acc.characters[charIdx] = eng.playerData;
+            localStorage.setItem('b_current_account', JSON.stringify(acc));
+          }
+        } catch (e) {}
+      }
+
       const powersPanel = document.getElementById('powers-panel');
       if (powersPanel && powersPanel.style.display === 'flex') {
           eng.ui.powerbar.renderPowersUI();
@@ -207,10 +233,10 @@ export class NetworkManager {
         eng.player.hp = data.hp; eng.lastEmit.hp = data.hp;
         if (data.damage > 0) {
           eng.player.hurtTimer = 300;
-          const isCrit = data.isCrit || (data.damage >= 6 && data.damage <= 10) || data.damage >= 300;
+          const isCrit = data.isCrit || (data.damage >= 6 && data.damage <= 10) || data.damage >= 300 || data.damage === 35 || data.damage === 3;
           const color = isCrit ? '#f39c12' : '#ff4757';
-          const prefix = isCrit ? 'Crit! ' : '';
-          eng.floatingTexts.push({ x: eng.player.x, y: eng.player.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: prefix + data.damage.toString(), life: 1.0, color: color });
+          const textStr = data.damage.toString() + (isCrit ? '!' : '');
+          eng.floatingTexts.push({ x: eng.player.x, y: eng.player.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: textStr, life: 1.0, color: color });
           eng.chat.addMessage('combat', 'Combat', `${data.attackerName} hit you for ${data.damage} damage!`);
           eng.ui.update();
         }
@@ -222,10 +248,11 @@ export class NetworkManager {
         const op = eng.otherPlayers[data.targetId];
         op.hp = data.hp;
         if (data.damage > 0) {
-          op.hurtTimer = 300;          const isCrit = data.isCrit || (data.damage >= 6 && data.damage <= 10) || data.damage >= 300;
+          op.hurtTimer = 300;
+          const isCrit = data.isCrit || (data.damage >= 6 && data.damage <= 10) || data.damage >= 300 || data.damage === 35 || data.damage === 3;
           const color = isCrit ? '#f39c12' : '#ff4757';
-          const prefix = isCrit ? 'Crit! ' : '';
-          eng.floatingTexts.push({ x: op.x, y: op.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: prefix + data.damage.toString(), life: 1.0, color: color });
+          const textStr = data.damage.toString() + (isCrit ? '!' : '');
+          eng.floatingTexts.push({ x: op.x, y: op.y, offsetY: 90, rndX: (Math.random() - 0.5) * 50, rndY: (Math.random() - 0.5) * 40, text: textStr, life: 1.0, color: color });
         }
         if (data.isDead) { op.state = 'death'; op.frame = 0; }
         eng.ui.update();
@@ -237,16 +264,34 @@ export class NetworkManager {
     });
 
     this.socket.on('spawn_projectile', (data) => {
-      const maxDist = Math.max(1, Math.hypot(data.targetX - data.startX, data.targetY - data.startY));
+      const startX = data.startX !== undefined ? data.startX : (data.x || 0);
+      const startY = data.startY !== undefined ? data.startY : (data.y || 0);
+      const startZ = data.startZ !== undefined ? data.startZ : ((eng.getTerrainZ(startX, startY) || 0) + 24);
+      const targetX = data.targetX !== undefined ? data.targetX : startX;
+      const targetY = data.targetY !== undefined ? data.targetY : startY;
+      const targetZ = data.targetZ !== undefined ? data.targetZ : ((eng.getTerrainZ(targetX, targetY) || 0) + 10);
+      const speed = data.speed || 400;
+
+      const maxDist = Math.max(1, Math.hypot(targetX - startX, targetY - startY));
+      
+      // The server may strip custom fields like `isAirplane`, so we infer it from speed
+      const isAirplane = data.isAirplane !== undefined ? data.isAirplane : (speed === 400);
+      const isCritLoop = data.isCritLoop !== undefined ? data.isCritLoop : (isAirplane && Math.random() > 0.8);
+      const isCrit = data.isCrit !== undefined ? data.isCrit : isCritLoop;
+      const damage = data.damage !== undefined ? data.damage : (isAirplane ? (isCrit ? 3 : 1) : 1);
+
       eng.projectiles.push({
-        isAirplane: data.isAirplane,
-        isCritLoop: data.isCritLoop,
-        startX: data.startX, startY: data.startY, startZ: data.startZ,
-        x: data.startX, y: data.startY, z: data.startZ,
-        targetX: data.targetX, targetY: data.targetY, targetZ: data.targetZ,
-        speed: data.speed,
+        isAirplane: isAirplane,
+        isCritLoop: isCritLoop,
+        startX: startX, startY: startY, startZ: startZ,
+        x: startX, y: startY, z: startZ,
+        targetX: targetX, targetY: targetY, targetZ: targetZ,
+        speed: speed,
         distTravelled: 0,
         maxDist: maxDist,
+        senderId: data.senderId,
+        damage: damage,
+        isCrit: isCrit,
         trail: true,
         trailColor: 'rgba(200, 230, 255, 0.6)',
         trailSize: 2.5,
@@ -268,28 +313,12 @@ export class NetworkManager {
     });
 
     this.socket.on('force_refresh', () => {
-      eng.chat.addMessage('system', 'System', 'SERVER UPDATE PUSHED! Reloading client in 3 seconds...');
+      eng.chat.addMessage('system', 'System', 'server restarting in 2s');
       
-      const savedAccountStr = localStorage.getItem('b_current_account');
-      if (savedAccountStr) {
-        try {
-          const acc = JSON.parse(savedAccountStr);
-          const charIdx = (acc.characters || []).findIndex(c => {
-            const cName = typeof c === 'object' ? c.name : c;
-            return cName && cName.trim().toLowerCase() === eng.playerData.name.trim().toLowerCase();
-          });
-          if (charIdx !== -1) {
-            eng.playerData.position = { x: eng.player.x, y: eng.player.y };
-            acc.characters[charIdx] = eng.playerData;
-            localStorage.setItem('b_current_account', JSON.stringify(acc));
-          }
-        } catch (e) {}
-      }
-
       setTimeout(() => {
         localStorage.setItem('b_auto_relog_char', eng.playerData.name);
         window.location.reload(true);
-      }, 3000);
+      }, 2000);
     });
   }
 

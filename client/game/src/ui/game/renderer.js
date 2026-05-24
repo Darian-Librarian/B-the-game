@@ -1,5 +1,7 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { BlockRegistry } from './registry.js?v=new-engine-240';
+import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'https://unpkg.com/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js';
+import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=new-engine-311';
 
 export class Renderer {
   constructor(engine) {
@@ -7,7 +9,7 @@ export class Renderer {
     
     THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
 
-    this.cameraAngle = 0; 
+    this.cameraAngle = this.engine.clientSettings.cameraAngle !== undefined ? this.engine.clientSettings.cameraAngle : 0; 
     this.needsVoxelUpdate = true;
     this.initialLoadComplete = false;
     
@@ -61,6 +63,8 @@ export class Renderer {
 
   rotateCamera(direction) {
     this.cameraAngle = (this.cameraAngle + direction + 360) % 360;
+    this.engine.clientSettings.cameraAngle = this.cameraAngle;
+    localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
     this.updateCameraRotation();
   }
 
@@ -93,6 +97,13 @@ export class Renderer {
     this.highlightBox.visible = false;
     this.scene.add(this.highlightBox);
     
+    const selBoxGeo = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
+    const selBoxMat = new THREE.LineBasicMaterial({ color: 0x3498db, depthTest: false, linewidth: 2 });
+    this.selectionBox = new THREE.LineSegments(selBoxGeo, selBoxMat);
+    this.selectionBox.renderOrder = 999;
+    this.selectionBox.visible = false;
+    this.scene.add(this.selectionBox);
+
     this.setupDebugMeshes();
   }
 
@@ -126,6 +137,7 @@ export class Renderer {
     const meleeHitMat = new THREE.MeshBasicMaterial({ color: 0xe74c3c, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false });
     this.meleeHitMesh = new THREE.InstancedMesh(meleeHitGeo, meleeHitMat, 100);
     this.meleeHitMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.meleeHitMesh.frustumCulled = false;
     this.meleeHitMesh.visible = false;
     this.debugMeshes.add(this.meleeHitMesh);
 
@@ -133,6 +145,7 @@ export class Renderer {
     const meleeHitEdgeMat = new THREE.MeshBasicMaterial({ color: 0xe74c3c, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false });
     this.meleeHitLineMesh = new THREE.InstancedMesh(meleeHitEdgeGeo, meleeHitEdgeMat, 100);
     this.meleeHitLineMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.meleeHitLineMesh.frustumCulled = false;
     this.meleeHitLineMesh.visible = false;
     this.debugMeshes.add(this.meleeHitLineMesh);
 
@@ -140,6 +153,7 @@ export class Renderer {
     const losMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false });
     this.losMesh = new THREE.InstancedMesh(losGeo, losMat, 100);
     this.losMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.losMesh.frustumCulled = false;
     this.losMesh.visible = false;
     this.debugMeshes.add(this.losMesh);
 
@@ -147,6 +161,7 @@ export class Renderer {
     const losEdgeMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false });
     this.losLineMesh = new THREE.InstancedMesh(losEdgeGeo, losEdgeMat, 100);
     this.losLineMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.losLineMesh.frustumCulled = false;
     this.losLineMesh.visible = false;
     this.debugMeshes.add(this.losLineMesh);
     
@@ -159,6 +174,7 @@ export class Renderer {
 
     this.debugTileMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(32, 32, 32), new THREE.MeshBasicMaterial({ color: 0xff4757, wireframe: true, depthTest: false }), 100);
     this.debugTileMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.debugTileMesh.frustumCulled = false;
     this.debugTileMesh.visible = false;
     this.debugMeshes.add(this.debugTileMesh);
     
@@ -176,20 +192,89 @@ export class Renderer {
       color: 0xffffff,
       alphaTest: 0.1
     }); 
-
     this.instancedMaterial.userData = { time: { value: 0 } };
 
-    this.instancedMaterial.onBeforeCompile = (shader) => {
-      shader.uniforms.uTime = this.instancedMaterial.userData.time;
+    this.glassMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0xffffff,
+      transparent: true,
+      alphaTest: 0.05,
+      depthWrite: false
+    }); 
+    this.glassMaterial.userData = { time: { value: 0 } };
+
+    this.modelMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, alphaTest: 0.1 });
+    this.modelMaterial.onBeforeCompile = (shader) => {
+      shader.vertexShader = `
+        attribute vec4 instanceUVTop;
+        varying vec4 vInstanceUVTop;
+        varying vec3 vWorldNormal;
+        varying vec3 vLocalPosition;
+      ` + shader.vertexShader.replace(
+        '#include <uv_vertex>',
+        `
+        #include <uv_vertex>
+        vInstanceUVTop = instanceUVTop;
+        vWorldNormal = normalize( mat3( modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz ) * normal );
+        vLocalPosition = position;
+        `
+      );
+      shader.fragmentShader = `
+        varying vec4 vInstanceUVTop;
+        varying vec3 vWorldNormal;
+        varying vec3 vLocalPosition;
+      ` + shader.fragmentShader.replace(
+        '#include <map_fragment>',
+        `
+        #ifdef USE_MAP
+          vec2 baseUV = vec2(0.0);
+          if (abs(vWorldNormal.z) > 0.5) {
+             baseUV = vec2(vLocalPosition.x, -vLocalPosition.y) / 32.0;
+          } else if (abs(vWorldNormal.x) > 0.5) {
+             baseUV = vec2(vWorldNormal.x > 0.0 ? -vLocalPosition.y : vLocalPosition.y, -vLocalPosition.z) / 32.0;
+          } else {
+             baseUV = vec2(vWorldNormal.y > 0.0 ? vLocalPosition.x : -vLocalPosition.x, -vLocalPosition.z) / 32.0;
+          }
+          vec2 modifiedUV = fract(baseUV) * vInstanceUVTop.zw + vInstanceUVTop.xy;
+          vec4 sampledDiffuseColor = texture2D( map, modifiedUV );
+          float lighting = 1.0;
+          if (abs(vWorldNormal.z) < 0.9) {
+             lighting = 0.75;
+             float luma = dot(sampledDiffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+             sampledDiffuseColor.rgb = mix(vec3(luma), sampledDiffuseColor.rgb, 1.35);
+          } else if (vWorldNormal.z < -0.9) {
+             lighting = 0.5;
+          }
+          sampledDiffuseColor.rgb *= lighting;
+          diffuseColor *= sampledDiffuseColor;
+        #endif
+        `
+      );
+    };
+
+    this.previewModelMaterial = this.modelMaterial.clone();
+    this.previewModelMaterial.onBeforeCompile = this.modelMaterial.onBeforeCompile;
+    this.previewModelMaterial.transparent = true;
+    this.previewModelMaterial.opacity = 0.6;
+    this.previewModelMaterial.depthTest = true;
+    this.previewModelMaterial.polygonOffset = true;
+    this.previewModelMaterial.polygonOffsetFactor = -2;
+    this.previewModelMaterial.polygonOffsetUnits = -2;
+
+    const setupShader = (shader, userData) => {
+      shader.uniforms.uTime = userData.time;
       shader.vertexShader = `
         attribute float isFluid;
         attribute vec4 instanceUVTop;
         attribute vec4 instanceUVSide;
         attribute vec4 instanceUVBottom;
+        attribute vec4 instanceNeighbors1;
+        attribute vec2 instanceNeighbors2;
         varying float vIsFluid;
         varying vec4 vInstanceUVTop;
         varying vec4 vInstanceUVSide;
         varying vec4 vInstanceUVBottom;
+        varying vec4 vInstanceNeighbors1;
+        varying vec2 vInstanceNeighbors2;
         varying vec3 vWorldNormal;
         varying vec3 vLocalPosition;
         varying vec3 vInstancePosition;
@@ -201,6 +286,8 @@ export class Renderer {
         vInstanceUVTop = instanceUVTop;
         vInstanceUVSide = instanceUVSide;
         vInstanceUVBottom = instanceUVBottom;
+        vInstanceNeighbors1 = instanceNeighbors1;
+        vInstanceNeighbors2 = instanceNeighbors2;
         vWorldNormal = normalize( mat3( modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz ) * normal );
         vLocalPosition = position;
         vInstancePosition = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -212,6 +299,8 @@ export class Renderer {
         varying vec4 vInstanceUVTop;
         varying vec4 vInstanceUVSide;
         varying vec4 vInstanceUVBottom;
+        varying vec4 vInstanceNeighbors1;
+        varying vec2 vInstanceNeighbors2;
         varying vec3 vWorldNormal;
         varying vec3 vLocalPosition;
         varying vec3 vInstancePosition;
@@ -230,11 +319,11 @@ export class Renderer {
             iuv = vInstanceUVSide;
             // Force ALL side faces to mathematically orient V directly downwards (-Z)
             if (abs(vWorldNormal.x) > 0.5) {
-                baseUV.x = vWorldNormal.x > 0.0 ? (0.5 - vLocalPosition.y / 32.0) : (vLocalPosition.y / 32.0 + 0.5);
+                baseUV.x = vWorldNormal.x > 0.0 ? fract(0.5 - vLocalPosition.y / 32.0) : fract(vLocalPosition.y / 32.0 + 0.5);
             } else {
-                baseUV.x = vWorldNormal.y > 0.0 ? (vLocalPosition.x / 32.0 + 0.5) : (0.5 - vLocalPosition.x / 32.0);
+                baseUV.x = vWorldNormal.y > 0.0 ? fract(vLocalPosition.x / 32.0 + 0.5) : fract(0.5 - vLocalPosition.x / 32.0);
             }
-            baseUV.y = vLocalPosition.z / 32.0 + 0.5;
+            baseUV.y = fract(vLocalPosition.z / 32.0 + 0.5);
           }
 
           // --- Fluid Animation Override ---
@@ -248,6 +337,17 @@ export class Renderer {
 
           vec2 modifiedUV = baseUV * iuv.zw + iuv.xy;
           vec4 sampledDiffuseColor = texture2D( map, modifiedUV );
+
+          // --- Interior Face Culling ---
+          float faceVis = 1.0;
+          if (vWorldNormal.z > 0.5) faceVis = vInstanceNeighbors2.x;
+          else if (vWorldNormal.z < -0.5) faceVis = vInstanceNeighbors2.y;
+          else if (vWorldNormal.x > 0.5) faceVis = vInstanceNeighbors1.x; // East
+          else if (vWorldNormal.x < -0.5) faceVis = vInstanceNeighbors1.y; // West
+          else if (vWorldNormal.y > 0.5) faceVis = vInstanceNeighbors1.z; // South
+          else if (vWorldNormal.y < -0.5) faceVis = vInstanceNeighbors1.w; // North
+
+          if (faceVis < 0.5) discard;
 
           // --- Fake AO/Lighting for Depth Perception ---
           float lighting = 1.0;
@@ -264,6 +364,9 @@ export class Renderer {
       );
     };
 
+    this.instancedMaterial.onBeforeCompile = (shader) => setupShader(shader, this.instancedMaterial.userData);
+    this.glassMaterial.onBeforeCompile = (shader) => setupShader(shader, this.glassMaterial.userData);
+
     const createMesh = (geometry, material = this.instancedMaterial) => {
       const uvsTop = new Float32Array(maxInstances * 4);
       geometry.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(uvsTop, 4));
@@ -273,6 +376,11 @@ export class Renderer {
       geometry.setAttribute('instanceUVBottom', new THREE.InstancedBufferAttribute(uvsBottom, 4));
       geometry.setAttribute('isFluid', new THREE.InstancedBufferAttribute(new Float32Array(maxInstances), 1));
       
+      const neighbors1 = new Float32Array(maxInstances * 4);
+      geometry.setAttribute('instanceNeighbors1', new THREE.InstancedBufferAttribute(neighbors1, 4));
+      const neighbors2 = new Float32Array(maxInstances * 2);
+      geometry.setAttribute('instanceNeighbors2', new THREE.InstancedBufferAttribute(neighbors2, 2));
+
       const mesh = new THREE.InstancedMesh(geometry, material, maxInstances);
       
       mesh.frustumCulled = false;
@@ -290,12 +398,16 @@ export class Renderer {
     cubeGeo.computeBoundingBox();
     cubeGeo.computeBoundingSphere();
     this.voxelMesh = createMesh(cubeGeo);
+    this.glassMesh = createMesh(cubeGeo.clone(), this.glassMaterial);
+    this.glassMesh.renderOrder = 1;
 
     const slabGeo = new THREE.BoxGeometry(32, 32, 16);
     slabGeo.translate(0, 0, -8);
     slabGeo.computeBoundingBox();
     slabGeo.computeBoundingSphere();
     this.slabMesh = createMesh(slabGeo);
+    this.glassSlabMesh = createMesh(slabGeo.clone(), this.glassMaterial);
+    this.glassSlabMesh.renderOrder = 1;
 
     const rampGeo = new THREE.BoxGeometry(32, 32, 32);
     let pos = rampGeo.attributes.position;
@@ -314,6 +426,84 @@ export class Renderer {
     rampGeo.computeBoundingBox();
     rampGeo.computeBoundingSphere();
     this.rampMesh = createMesh(rampGeo);
+    this.glassRampMesh = createMesh(rampGeo.clone(), this.glassMaterial);
+    this.glassRampMesh.renderOrder = 1;
+
+    // Merge two boxes manually to form a stair block
+    const stairGeo = new THREE.BufferGeometry();
+    const bottomBox = new THREE.BoxGeometry(32, 32, 16);
+    bottomBox.translate(0, 0, -8);
+    const topBox = new THREE.BoxGeometry(32, 16, 16);
+    topBox.translate(0, 8, 8);
+    
+    const pos1 = bottomBox.attributes.position.array;
+    const pos2 = topBox.attributes.position.array;
+    const mergedPos = new Float32Array(pos1.length + pos2.length);
+    mergedPos.set(pos1, 0); mergedPos.set(pos2, pos1.length);
+    stairGeo.setAttribute('position', new THREE.BufferAttribute(mergedPos, 3));
+    
+    const uv1 = bottomBox.attributes.uv.array;
+    const uv2 = topBox.attributes.uv.array;
+    const mergedUv = new Float32Array(uv1.length + uv2.length);
+    mergedUv.set(uv1, 0); mergedUv.set(uv2, uv1.length);
+    stairGeo.setAttribute('uv', new THREE.BufferAttribute(mergedUv, 2));
+    
+    const norm1 = bottomBox.attributes.normal.array;
+    const norm2 = topBox.attributes.normal.array;
+    const mergedNorm = new Float32Array(norm1.length + norm2.length);
+    mergedNorm.set(norm1, 0); mergedNorm.set(norm2, norm1.length);
+    stairGeo.setAttribute('normal', new THREE.BufferAttribute(mergedNorm, 3));
+    
+    const idx1 = bottomBox.index.array;
+    const idx2 = topBox.index.array;
+    const mergedIdx = new Uint16Array(idx1.length + idx2.length);
+    mergedIdx.set(idx1, 0);
+    const offset = pos1.length / 3;
+    for(let i = 0; i < idx2.length; i++) mergedIdx[idx1.length + i] = idx2[i] + offset;
+    stairGeo.setIndex(new THREE.BufferAttribute(mergedIdx, 1));
+    
+    stairGeo.computeBoundingBox();
+    stairGeo.computeBoundingSphere();
+    this.stairMesh = createMesh(stairGeo);
+    this.glassStairMesh = createMesh(stairGeo.clone(), this.glassMaterial);
+    this.glassStairMesh.renderOrder = 1;
+
+    const doorGeo = new THREE.BufferGeometry();
+    const doorBaseBox = new THREE.BoxGeometry(32, 4, 32);
+    const handleBox = new THREE.BoxGeometry(2, 6, 4);
+    handleBox.translate(12, 0, 0);
+    
+    const p1 = doorBaseBox.attributes.position.array;
+    const p2 = handleBox.attributes.position.array;
+    const mPos = new Float32Array(p1.length + p2.length);
+    mPos.set(p1, 0); mPos.set(p2, p1.length);
+    doorGeo.setAttribute('position', new THREE.BufferAttribute(mPos, 3));
+    
+    const u1 = doorBaseBox.attributes.uv.array;
+    const u2 = handleBox.attributes.uv.array;
+    const mUv = new Float32Array(u1.length + u2.length);
+    mUv.set(u1, 0); mUv.set(u2, u1.length);
+    doorGeo.setAttribute('uv', new THREE.BufferAttribute(mUv, 2));
+    
+    const n1 = doorBaseBox.attributes.normal.array;
+    const n2 = handleBox.attributes.normal.array;
+    const mNorm = new Float32Array(n1.length + n2.length);
+    mNorm.set(n1, 0); mNorm.set(n2, n1.length);
+    doorGeo.setAttribute('normal', new THREE.BufferAttribute(mNorm, 3));
+    
+    const i1 = doorBaseBox.index.array;
+    const i2 = handleBox.index.array;
+    const mIdx = new Uint16Array(i1.length + i2.length);
+    mIdx.set(i1, 0);
+    const off = p1.length / 3;
+    for(let i = 0; i < i2.length; i++) mIdx[i1.length + i] = i2[i] + off;
+    doorGeo.setIndex(new THREE.BufferAttribute(mIdx, 1));
+    
+    doorGeo.computeBoundingBox();
+    doorGeo.computeBoundingSphere();
+    this.doorMesh = createMesh(doorGeo);
+    this.glassDoorMesh = createMesh(doorGeo.clone(), this.glassMaterial);
+    this.glassDoorMesh.renderOrder = 1;
 
     this.previewMaterial = this.instancedMaterial.clone();
     this.previewMaterial.onBeforeCompile = this.instancedMaterial.onBeforeCompile;
@@ -325,19 +515,26 @@ export class Renderer {
     this.previewMaterial.polygonOffsetUnits = -2;
 
     const createPreviewMesh = (geometry) => {
-      geometry.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(new Float32Array(4), 4));
-      geometry.setAttribute('instanceUVSide', new THREE.InstancedBufferAttribute(new Float32Array(4), 4));
-      geometry.setAttribute('instanceUVBottom', new THREE.InstancedBufferAttribute(new Float32Array(4), 4));
-      geometry.setAttribute('isFluid', new THREE.InstancedBufferAttribute(new Float32Array(4), 1));
-      const mesh = new THREE.InstancedMesh(geometry, this.previewMaterial, 1);
+      const maxPreview = 4096;
+      geometry.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(new Float32Array(maxPreview * 4), 4));
+      geometry.setAttribute('instanceUVSide', new THREE.InstancedBufferAttribute(new Float32Array(maxPreview * 4), 4));
+      geometry.setAttribute('instanceUVBottom', new THREE.InstancedBufferAttribute(new Float32Array(maxPreview * 4), 4));
+      geometry.setAttribute('isFluid', new THREE.InstancedBufferAttribute(new Float32Array(maxPreview), 1));
+      const n1 = new Float32Array(maxPreview * 4); n1.fill(1);
+      geometry.setAttribute('instanceNeighbors1', new THREE.InstancedBufferAttribute(n1, 4));
+      const n2 = new Float32Array(maxPreview * 2); n2.fill(1);
+      geometry.setAttribute('instanceNeighbors2', new THREE.InstancedBufferAttribute(n2, 2));
+      const mesh = new THREE.InstancedMesh(geometry, this.previewMaterial, maxPreview);
       mesh.frustumCulled = false; mesh.count = 0; mesh.renderOrder = 998;
-      mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(3), 3);
+      mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maxPreview * 3), 3);
       this.scene.add(mesh); return mesh;
     };
     
     this.previewCubeMesh = createPreviewMesh(cubeGeo.clone());
     this.previewSlabMesh = createPreviewMesh(slabGeo.clone());
     this.previewRampMesh = createPreviewMesh(rampGeo.clone());
+    this.previewStairMesh = createPreviewMesh(stairGeo.clone());
+    this.previewDoorMesh = createPreviewMesh(doorGeo.clone());
 
     this.decorMaterial = this.instancedMaterial.clone();
     this.decorMaterial.side = THREE.DoubleSide;
@@ -346,6 +543,8 @@ export class Renderer {
     this.decorMaterial.onBeforeCompile = (shader) => {
       shader.vertexShader = `
         attribute vec4 instanceUVTop;
+        attribute vec4 instanceNeighbors1;
+        attribute vec2 instanceNeighbors2;
         varying vec4 vInstanceUVTop;
         varying vec3 vWorldNormal;
       ` + shader.vertexShader.replace(
@@ -403,6 +602,8 @@ export class Renderer {
       compass.onclick = () => {
         const snapAngle = this.engine.clientSettings.cameraAngleSnap !== undefined ? this.engine.clientSettings.cameraAngleSnap : 0;
         this.cameraAngle = parseInt(snapAngle, 10);
+        this.engine.clientSettings.cameraAngle = this.cameraAngle;
+        localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
         this.updateCameraRotation();
       };
       
@@ -456,6 +657,72 @@ export class Renderer {
     this.atlasMap = {};
     
     this.buildTextureAtlas();
+        
+    this.modelMaterial.map = this.atlasTexture;
+    if (this.previewModelMaterial) this.previewModelMaterial.map = this.atlasTexture;
+    
+    this.modelMeshes = {};
+    this.previewModelMeshes = {};
+    this.modelCounts = {};
+
+    const gltfLoader = new GLTFLoader();
+    for (const [id, data] of Object.entries(FURNITURE_REGISTRY)) {
+      gltfLoader.load(`models/${id}.glb`, (gltf) => {
+        gltf.scene.updateMatrixWorld(true);
+        const geometries = [];
+        gltf.scene.traverse((child) => {
+          if (child.isMesh) {
+            const geo = child.geometry.clone();
+            geo.applyMatrix4(child.matrixWorld);
+            for (const key in geo.attributes) {
+              if (key !== 'position' && key !== 'normal' && key !== 'uv') geo.deleteAttribute(key);
+            }
+            geometries.push(geo);
+          }
+        });
+        
+        if (geometries.length > 0) {
+          let geo = mergeGeometries(geometries, false);
+          geo.computeVertexNormals();
+          if (!geo.attributes.uv) geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(geo.attributes.position.count * 2), 2));
+          const uvArray = geo.attributes.uv.array;
+          for (let i = 1; i < uvArray.length; i += 2) uvArray[i] = 1.0 - uvArray[i];
+          geo.attributes.uv.needsUpdate = true;
+          geo.scale(2, 2, 2);
+          geo.rotateX(Math.PI / 2);
+          geo.center();
+          geo.computeBoundingBox();
+          geo.translate(0, 0, -16 - geo.boundingBox.min.z);
+          geo.computeBoundingBox();
+          geo.computeBoundingSphere();
+          
+          const meshGeo = geo.clone();
+          meshGeo.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(new Float32Array(10000 * 4), 4));
+
+          const mesh = new THREE.InstancedMesh(meshGeo, this.modelMaterial, 10000);
+          mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+          mesh.frustumCulled = false;
+          mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1000000);
+          meshGeo.boundingSphere = mesh.boundingSphere;
+          mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(10000 * 3), 3);
+          this.scene.add(mesh);
+          this.modelMeshes[id] = mesh;
+          this.needsVoxelUpdate = true;
+
+          const previewGeo = geo.clone();
+          previewGeo.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(new Float32Array(4096 * 4), 4));
+
+          const previewMesh = new THREE.InstancedMesh(previewGeo, this.previewModelMaterial, 4096);
+          previewMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+          previewMesh.frustumCulled = false; previewMesh.count = 0; previewMesh.renderOrder = 998;
+          previewMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(4096 * 3), 3);
+          this.scene.add(previewMesh);
+          this.previewModelMeshes[id] = previewMesh;
+        }
+      }, undefined, (error) => {
+        console.error(`[GLTFLoader] Critical Error: Failed to load ${id}.glb!`);
+      });
+    }
     
     const loader = new THREE.TextureLoader();
     const cb = '?v=phase2-3d';
@@ -497,7 +764,9 @@ export class Renderer {
       { state: 'attack2', file: 'attack-template', rows: 7 },
       { state: 'throw_attack1', file: 'attack-ranged', rows: 7 },
       { state: 'hurt', file: 'idle-template', rows: 12 },
-      { state: 'death', file: 'idle-template', rows: 12 }
+      { state: 'death', file: 'idle-template', rows: 12 },
+      { state: 'fly', file: 'fly-template', rows: 8 },
+      { state: 'fly-idle', file: 'fly-idle-template', rows: 8 }
     ];
 
     const path = 'assets/sprites/characters';
@@ -516,8 +785,8 @@ export class Renderer {
 
   buildTextureAtlas() {
     const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
+    canvas.width = 2048;
+    canvas.height = 2048;
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
 
@@ -527,9 +796,17 @@ export class Renderer {
       'mud2': { x: 3, y: 1 },
       'mud3': { x: 0, y: 2 },
       'bubble': { x: 2, y: 2 },
+      'glass': { x: 1, y: 1 },
+      'glass-stained': { x: 0, y: 3 },
       'smoke': { x: 0, y: 1 }, // Maps directly to the white square fallback
       'water_flow': { x: 1, y: 3 },
-      'lava_flow': { x: 3, y: 3 }
+      'lava_flow': { x: 3, y: 3 },
+      'stone-bricks1': { x: 0, y: 4 },
+      'stone-bricks2': { x: 1, y: 4 },
+      'stone-bricks3': { x: 2, y: 4 },
+      'stone-bricks4': { x: 3, y: 4 },
+      'stone-bricks5': { x: 4, y: 4 },
+      'stone-bricks6': { x: 5, y: 4 }
     };
 
     for (const id in BlockRegistry) {
@@ -549,6 +826,10 @@ export class Renderer {
     
     this.instancedMaterial.map = atlasTexture;
     this.instancedMaterial.needsUpdate = true;
+    if (this.glassMaterial) {
+      this.glassMaterial.map = atlasTexture;
+      this.glassMaterial.needsUpdate = true;
+    }
 
     this.atlasCtx = ctx;
     this.atlasTexture = atlasTexture;
@@ -583,6 +864,18 @@ export class Renderer {
           }
         }
       };
+      img.onerror = () => {
+        console.warn(`[Texture Atlas] Missing texture: ${src}`);
+        const pos = this.atlasMap[id];
+        if (pos) {
+          ctx.fillStyle = '#ff00ff';
+          ctx.fillRect(pos.x * 64, pos.y * 64, 64, 64);
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(pos.x * 64 + 32, pos.y * 64, 32, 32);
+          ctx.fillRect(pos.x * 64, pos.y * 64 + 32, 32, 32);
+          atlasTexture.needsUpdate = true;
+        }
+      };
     };
 
     loadTile('grass', 'assets/tiles/base/floor/grass_block_top.png');
@@ -597,8 +890,20 @@ export class Renderer {
     loadTile('acid', 'assets/tiles/base/fluid/water_still.png');
     loadTile('lava', 'assets/tiles/base/fluid/lava_still.png');
     loadTile('lava_flow', 'assets/tiles/base/fluid/lava_flow.png');
+    loadTile('glass', 'assets/tiles/base/all-facing/glass.png');
+    loadTile('glass-stained', 'assets/tiles/base/all-facing/glass-stained.png');
     loadTile('bubble', 'assets/sprites/fx/bubble-grayscale.png');
     
+    for (let i = 1; i <= 6; i++) {
+      loadTile(`stone-bricks${i}`, `assets/tiles/base/all-facing/stone-bricks${i}.png`);
+    }
+    
+    loadTile('wood-planks', 'assets/tiles/base/all-facing/wood-planks.png');
+    loadTile('wood-stripped', 'assets/tiles/base/all-facing/wood-stripped.png');
+    
+    loadTile('wood-door-bottom', 'assets/tiles/base/interactable/wood_door-bottom.png');
+    loadTile('wood-door-top', 'assets/tiles/base/interactable/wood_door-top.png');
+
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 64, 64, 64);
   }
@@ -636,7 +941,11 @@ export class Renderer {
     const cm = this.engine.mapManager;
     if (!cm) return false;
 
-    const getShape = (v) => v ? (v.shape || 'cube') : null;
+    const getShape = (v) => {
+      if (!v) return null;
+      if (v.tex && v.tex.startsWith('glass')) return 'transparent'; 
+      return v.shape || 'cube';
+    };
 
     const top = cm.getVoxelAt(x, y, z + 32);
     const bottom = z <= -96 ? { shape: 'cube' } : cm.getVoxelAt(x, y, z - 32);
@@ -694,18 +1003,21 @@ export class Renderer {
     if (!this.needsVoxelUpdate) return;
     this.needsVoxelUpdate = false;
 
+    this.doorMap = {};
+    if (this.doorPhysics) {
+      for (const key in this.doorPhysics) {
+        this.doorPhysics[key].initialized = false;
+      }
+    }
+
     const nameToId = {};
     for (const id in BlockRegistry) {
       nameToId[BlockRegistry[id].name] = id;
     }
 
-    let iCube = 0, iSlab = 0, iRamp = 0, iDecor = 0;
+    let iCube = 0, iSlab = 0, iRamp = 0, iStair = 0, iDecor = 0, iGlass = 0, iGlassSlab = 0, iGlassRamp = 0, iGlassStair = 0, iDoor = 0, iGlassDoor = 0;
+    for (const id in this.modelMeshes) this.modelCounts[id] = 0;
     const dummy = new THREE.Object3D();
-    
-    const fluidAttrCube = this.voxelMesh.geometry.attributes.isFluid;
-    const fluidAttrSlab = this.slabMesh.geometry.attributes.isFluid;
-    const fluidAttrRamp = this.rampMesh.geometry.attributes.isFluid;
-    const fluidAttrDecor = this.decorMesh.geometry.attributes.isFluid;
 
     this.engine.splashPoints = [];
     this.engine.lavaPoints = [];
@@ -746,46 +1058,83 @@ export class Renderer {
         }
 
         const shape = voxel.shape || 'cube';
-        let currentMesh, currentI, currentUVTop, currentUVSide, currentUVBottom, currentFluidAttr;
+        const isGlassBlock = voxel.tex && voxel.tex.startsWith('glass');
+        
+        let currentMesh, currentI, currentUVTop, currentUVSide, currentUVBottom, currentFluidAttr, currentN1, currentN2;
 
         dummy.rotation.set(0, 0, 0);
-        const isFluid = voxel.tex === 'water' || voxel.tex === 'water_flow' || voxel.tex === 'lava' || voxel.tex === 'acid';
+        let fluidType = 0.0;
+        if (voxel.tex === 'water' || voxel.tex === 'water_flow') fluidType = 1.0;
+        else if (voxel.tex === 'lava' || voxel.tex === 'lava_flow') fluidType = 2.0;
+        else if (voxel.tex === 'acid') fluidType = 3.0;
+        const isFluid = fluidType > 0.0;
 
         if (shape === 'decor') {
-          currentMesh = this.decorMesh; currentI = iDecor;
-          currentUVTop = this.decorMesh.geometry.attributes.instanceUVTop;
-          currentUVSide = this.decorMesh.geometry.attributes.instanceUVSide;
-          currentUVBottom = this.decorMesh.geometry.attributes.instanceUVBottom;
-          currentFluidAttr = fluidAttrDecor;
-          iDecor++;
+          currentMesh = this.decorMesh; currentI = iDecor; iDecor++;
+        } else if (this.modelMeshes && this.modelMeshes[shape]) {
+          currentMesh = this.modelMeshes[shape]; 
+          currentI = this.modelCounts[shape]; 
+          this.modelCounts[shape]++;
+          let rot = 0;
+          if (voxel.dir === 'e') rot = -Math.PI / 2;
+          else if (voxel.dir === 'n') rot = Math.PI;
+          else if (voxel.dir === 'w') rot = Math.PI / 2;
+          dummy.rotation.set(0, 0, rot);
+          currentUVSide = null; currentUVBottom = null;
+          currentFluidAttr = null; currentN1 = null; currentN2 = null;
         } else if (shape === 'slab') {
-          currentMesh = this.slabMesh; currentI = iSlab;
-          currentUVTop = this.slabMesh.geometry.attributes.instanceUVTop;
-          currentUVSide = this.slabMesh.geometry.attributes.instanceUVSide;
-          currentUVBottom = this.slabMesh.geometry.attributes.instanceUVBottom;
-          currentFluidAttr = fluidAttrSlab;
-          iSlab++;
+          if (isGlassBlock) { currentMesh = this.glassSlabMesh; currentI = iGlassSlab; iGlassSlab++; }
+          else { currentMesh = this.slabMesh; currentI = iSlab; iSlab++; }
         } else if (shape.startsWith('ramp')) {
-          currentMesh = this.rampMesh; currentI = iRamp;
-          currentUVTop = this.rampMesh.geometry.attributes.instanceUVTop;
-          currentUVSide = this.rampMesh.geometry.attributes.instanceUVSide;
-          currentUVBottom = this.rampMesh.geometry.attributes.instanceUVBottom;
-          currentFluidAttr = fluidAttrRamp;
-          iRamp++;
+          if (isGlassBlock) { currentMesh = this.glassRampMesh; currentI = iGlassRamp; iGlassRamp++; }
+          else { currentMesh = this.rampMesh; currentI = iRamp; iRamp++; }
           if (shape === 'ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
           else if (shape === 'ramp_n') dummy.rotation.set(0, 0, Math.PI);
           else if (shape === 'ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
+        } else if (shape.startsWith('stair')) {
+          if (isGlassBlock) { currentMesh = this.glassStairMesh; currentI = iGlassStair; iGlassStair++; }
+          else { currentMesh = this.stairMesh; currentI = iStair; iStair++; }
+          if (shape === 'stair_e') dummy.rotation.set(0, 0, -Math.PI / 2);
+          else if (shape === 'stair_n') dummy.rotation.set(0, 0, Math.PI);
+          else if (shape === 'stair_w') dummy.rotation.set(0, 0, Math.PI / 2);
+        } else if (shape.startsWith('door')) {
+          if (isGlassBlock) { currentMesh = this.glassDoorMesh; currentI = iGlassDoor; iGlassDoor++; }
+          else { currentMesh = this.doorMesh; currentI = iDoor; iDoor++; }
+          
+          let baseRot = 0;
+          if (shape.includes('door_e')) baseRot = -Math.PI / 2;
+          else if (shape.includes('door_n')) baseRot = Math.PI;
+          else if (shape.includes('door_w')) baseRot = Math.PI / 2;
+          else if (shape.includes('door_s')) baseRot = 0;
+          
+          let rot = baseRot;
+          const isOp = shape.includes('_open');
+          const isFlip = shape.includes('_flip');
+          
+          if (isOp) rot += isFlip ? -Math.PI / 2 : Math.PI / 2;
+          
+          this.doorMap[`${absX}_${absY}_${absZ}`] = { 
+            id: currentI, targetRot: rot, baseRot: baseRot, isGlass: isGlassBlock, 
+            cx: absX, cy: absY, cz: absZ, flip: isFlip
+          };
+          dummy.rotation.set(0, 0, rot);
         } else {
-          currentMesh = this.voxelMesh; currentI = iCube;
-          currentUVTop = this.voxelMesh.geometry.attributes.instanceUVTop;
-          currentUVSide = this.voxelMesh.geometry.attributes.instanceUVSide;
-          currentUVBottom = this.voxelMesh.geometry.attributes.instanceUVBottom;
-          currentFluidAttr = fluidAttrCube;
-          iCube++;
+          if (isGlassBlock) { currentMesh = this.glassMesh; currentI = iGlass; iGlass++; }
+          else { currentMesh = this.voxelMesh; currentI = iCube; iCube++; }
         }
+
+        currentUVTop = currentMesh.geometry.attributes.instanceUVTop;
+        currentUVSide = currentMesh.geometry.attributes.instanceUVSide;
+        currentUVBottom = currentMesh.geometry.attributes.instanceUVBottom;
+        currentFluidAttr = currentMesh.geometry.attributes.isFluid;
+        currentN1 = currentMesh.geometry.attributes.instanceNeighbors1;
+        currentN2 = currentMesh.geometry.attributes.instanceNeighbors2;
+
         if (currentI >= 100000) continue;
 
+        dummy.scale.set(1, 1, 1);
         dummy.position.set(absX, absY, absZ);
+        
         dummy.updateMatrix();
         currentMesh.setMatrixAt(currentI, dummy.matrix);
 
@@ -819,55 +1168,95 @@ export class Renderer {
         const blockId = nameToId[voxel.tex];
         const voxelDef = blockId ? BlockRegistry[blockId] : null;
         let mainAtlasPos, sidesAtlasPos, bottomAtlasPos;
+        
+        let blockType = voxel.tex || 'grass';
+        if (blockType === 'mud') {
+          const hash = Math.abs(Math.sin(vx * 12.9898 + vy * 78.233 + vz * 37.719)) * 10000;
+          blockType = `mud${Math.floor(hash) % 3 + 1}`;
+        } else if (blockType === 'stone-bricks') {
+          const hash = Math.abs(Math.sin(vx * 12.9898 + vy * 78.233 + vz * 37.719)) * 10000;
+          blockType = `stone-bricks${Math.floor(hash) % 6 + 1}`;
+        }
 
-        if (voxelDef && voxelDef.faces) {
+        if (voxelDef && voxelDef.faces && blockType === voxel.tex) {
           mainAtlasPos = this.atlasMap[voxelDef.name];
           sidesAtlasPos = this.atlasMap[voxelDef.name + '_flow'];
           if (!sidesAtlasPos) sidesAtlasPos = mainAtlasPos;
           bottomAtlasPos = this.atlasMap[voxelDef.name + '_bottom'] || mainAtlasPos;
         } else {
-          let blockType = voxel.tex || 'grass';
-          if (blockType === 'mud') {
-            const hash = Math.abs(Math.sin(vx * 12.9898 + vy * 78.233 + vz * 37.719)) * 10000;
-            blockType = `mud${Math.floor(hash) % 3 + 1}`;
-          }
           mainAtlasPos = this.atlasMap[blockType] || this.atlasMap['stone'];
           sidesAtlasPos = mainAtlasPos;
           bottomAtlasPos = mainAtlasPos;
         }
 
-        const uvScaleX = 64 / 256; const uvScaleY = 64 / 256;
+        const uvScaleX = 64 / 2048; const uvScaleY = 64 / 2048;
         
-        if (currentFluidAttr) currentFluidAttr.setX(currentI, isFluid ? 1.0 : 0.0);
+        if (currentFluidAttr) currentFluidAttr.setX(currentI, fluidType);
         
+        let visE = 1, visW = 1, visS = 1, visN = 1, visT = 1, visB = 1;
+        if (isGlassBlock || isFluid) {
+           const checkCull = (v) => v && v.tex === voxel.tex && (v.shape || 'cube') === shape;
+           if (checkCull(this.engine.mapManager.getVoxelAt(absX + 32, absY, absZ))) visE = 0;
+           if (checkCull(this.engine.mapManager.getVoxelAt(absX - 32, absY, absZ))) visW = 0;
+           if (checkCull(this.engine.mapManager.getVoxelAt(absX, absY + 32, absZ))) visS = 0;
+           if (checkCull(this.engine.mapManager.getVoxelAt(absX, absY - 32, absZ))) visN = 0;
+           if (checkCull(this.engine.mapManager.getVoxelAt(absX, absY, absZ + 32))) visT = 0;
+           if (checkCull(this.engine.mapManager.getVoxelAt(absX, absY, absZ - 32))) visB = 0;
+        }
+
+        if (currentN1) currentN1.setXYZW(currentI, visE, visW, visS, visN);
+        if (currentN2) currentN2.setXY(currentI, visT, visB);
+
         if (currentUVTop) {
           const tx = mainAtlasPos ? mainAtlasPos.x : 0; const ty = mainAtlasPos ? mainAtlasPos.y : 0;
-          currentUVTop.setXYZW(currentI, tx * uvScaleX, 1.0 - ((ty + 1) * uvScaleY), uvScaleX, uvScaleY);
+          let tw = uvScaleX; let to = tx * uvScaleX;
+          if (shape.includes('_flip')) { tw = -uvScaleX; to += uvScaleX; }
+          currentUVTop.setXYZW(currentI, to, 1.0 - ((ty + 1) * uvScaleY), tw, uvScaleY);
         }
         if (currentUVSide) {
           const sx = sidesAtlasPos ? sidesAtlasPos.x : 0; const sy = sidesAtlasPos ? sidesAtlasPos.y : 0;
-          currentUVSide.setXYZW(currentI, sx * uvScaleX, 1.0 - ((sy + 1) * uvScaleY), uvScaleX, uvScaleY);
+          let sw = uvScaleX; let so = sx * uvScaleX;
+          if (shape.includes('_flip')) { sw = -uvScaleX; so += uvScaleX; }
+          currentUVSide.setXYZW(currentI, so, 1.0 - ((sy + 1) * uvScaleY), sw, uvScaleY);
         }
         if (currentUVBottom) {
           const bx = bottomAtlasPos ? bottomAtlasPos.x : 0; const by = bottomAtlasPos ? bottomAtlasPos.y : 0;
-          currentUVBottom.setXYZW(currentI, bx * uvScaleX, 1.0 - ((by + 1) * uvScaleY), uvScaleX, uvScaleY);
+          let bw = uvScaleX; let bo = bx * uvScaleX;
+          if (shape.includes('_flip')) { bw = -uvScaleX; bo += uvScaleX; }
+          currentUVBottom.setXYZW(currentI, bo, 1.0 - ((by + 1) * uvScaleY), bw, uvScaleY);
         }
     }
     
     this.voxelMesh.count = iCube;
     this.slabMesh.count = iSlab;
     this.rampMesh.count = iRamp;
+    this.stairMesh.count = iStair;
     this.decorMesh.count = iDecor;
+    this.glassMesh.count = iGlass;
+    this.glassSlabMesh.count = iGlassSlab;
+    this.glassRampMesh.count = iGlassRamp;
+    this.glassStairMesh.count = iGlassStair;
+    this.doorMesh.count = iDoor;
+    this.glassDoorMesh.count = iGlassDoor;
     
-    [this.voxelMesh, this.slabMesh, this.rampMesh, this.decorMesh].forEach(m => {
+    [this.voxelMesh, this.slabMesh, this.rampMesh, this.stairMesh, this.decorMesh, this.glassMesh, this.glassSlabMesh, this.glassRampMesh, this.glassStairMesh, this.doorMesh, this.glassDoorMesh].forEach(m => {
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;
       if (m.geometry.attributes.instanceUVTop) m.geometry.attributes.instanceUVTop.needsUpdate = true;
       if (m.geometry.attributes.instanceUVSide) m.geometry.attributes.instanceUVSide.needsUpdate = true;
       if (m.geometry.attributes.instanceUVBottom) m.geometry.attributes.instanceUVBottom.needsUpdate = true;
       if (m.geometry.attributes.isFluid) m.geometry.attributes.isFluid.needsUpdate = true;
+      if (m.geometry.attributes.instanceNeighbors1) m.geometry.attributes.instanceNeighbors1.needsUpdate = true;
+      if (m.geometry.attributes.instanceNeighbors2) m.geometry.attributes.instanceNeighbors2.needsUpdate = true;
     });
     
+    for (const [id, mesh] of Object.entries(this.modelMeshes)) {
+      mesh.count = this.modelCounts[id] || 0;
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      if (mesh.geometry.attributes.instanceUVTop) mesh.geometry.attributes.instanceUVTop.needsUpdate = true;
+    }
+
     if (!this.initialLoadComplete) {
       this.initialLoadComplete = true;
       if (this.engine.ui) this.engine.ui.hideLoadingScreen();
@@ -1109,6 +1498,12 @@ export class Renderer {
       pGeo.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(uvsMain, 4));
       pGeo.setAttribute('instanceUVSide', new THREE.InstancedBufferAttribute(uvsSides, 4));
       pGeo.setAttribute('instanceUVBottom', new THREE.InstancedBufferAttribute(uvsSides, 4));
+      pGeo.setAttribute('isFluid', new THREE.InstancedBufferAttribute(new Float32Array(2000), 1));
+      
+      const n1 = new Float32Array(2000 * 4); n1.fill(1);
+      pGeo.setAttribute('instanceNeighbors1', new THREE.InstancedBufferAttribute(n1, 4));
+      const n2 = new Float32Array(2000 * 2); n2.fill(1);
+      pGeo.setAttribute('instanceNeighbors2', new THREE.InstancedBufferAttribute(n2, 2));
       
       const pMat = this.instancedMaterial.clone();
       pMat.onBeforeCompile = this.instancedMaterial.onBeforeCompile;
@@ -1167,10 +1562,11 @@ export class Renderer {
       if (p.tex === 'bubble') blockType = 'bubble';
       else if (p.tex === 'smoke') blockType = 'smoke';
       else if (blockType === 'mud') blockType = 'mud1'; // Fallback mapping for particle chunks
+      else if (blockType === 'stone-bricks') blockType = 'stone-bricks1';
       if (blockType === 'ice') blockType = 'ice';
       const atlasPos = this.atlasMap[blockType] || this.atlasMap['white'];
-      const uvScaleX = 64 / 256;
-      const uvScaleY = 64 / 256;
+      const uvScaleX = 64 / 2048;
+      const uvScaleY = 64 / 2048;
       
       let subUvX = p.uvOffsetX !== undefined ? p.uvOffsetX : 0;
       let subUvY = p.uvOffsetY !== undefined ? p.uvOffsetY : 0;
@@ -1314,10 +1710,14 @@ export class Renderer {
     if (this.previewCubeMesh) this.previewCubeMesh.count = 0;
     if (this.previewSlabMesh) this.previewSlabMesh.count = 0;
     if (this.previewRampMesh) this.previewRampMesh.count = 0;
+    if (this.previewStairMesh) this.previewStairMesh.count = 0;
+    if (this.previewDoorMesh) this.previewDoorMesh.count = 0;
+    for (const id in this.previewModelMeshes) this.previewModelMeshes[id].count = 0;
 
     eng.cursorGridPos = null;
 
-    const buildMeshes = [this.voxelMesh, this.slabMesh, this.rampMesh].filter(Boolean);
+    const modelMeshArr = this.modelMeshes ? Object.values(this.modelMeshes) : [];
+    const buildMeshes = [this.voxelMesh, this.slabMesh, this.rampMesh, this.stairMesh, this.glassMesh, this.glassSlabMesh, this.glassRampMesh, this.glassStairMesh, this.doorMesh, this.glassDoorMesh, ...modelMeshArr].filter(Boolean);
     if (buildMeshes.length > 0) {
       const hits = raycaster.intersectObjects(buildMeshes);
       if (hits.length > 0) {
@@ -1333,15 +1733,29 @@ export class Renderer {
     }
 
     this.highlightBox.visible = false;
+    if (this.selectionBox) this.selectionBox.visible = false;
 
     if (eng.editMode && targetPoint && (eng.devOptions.showTile || eng.devOptions.useBlockPreview)) {
       let hitPos = new THREE.Vector3();
       let normal = new THREE.Vector3(0, 0, 1);
       
       if (blockHit) {
-        const matrix = new THREE.Matrix4();
-        blockHit.object.getMatrixAt(blockHit.instanceId, matrix);
-        hitPos.setFromMatrixPosition(matrix);
+        let isDoor = false;
+        if (this.doorMap && (blockHit.object === this.doorMesh || (this.glassDoorMesh && blockHit.object === this.glassDoorMesh))) {
+          for (const [key, data] of Object.entries(this.doorMap)) {
+            if (data.id === blockHit.instanceId && ((data.isGlass && blockHit.object === this.glassDoorMesh) || (!data.isGlass && blockHit.object === this.doorMesh))) {
+              hitPos.set(data.cx, data.cy, data.cz);
+              isDoor = true;
+              break;
+            }
+          }
+        }
+        
+        if (!isDoor) {
+          const matrix = new THREE.Matrix4();
+          blockHit.object.getMatrixAt(blockHit.instanceId, matrix);
+          hitPos.setFromMatrixPosition(matrix);
+        }
         const rawNormal = blockHit.face ? blockHit.face.normal.clone() : new THREE.Vector3(0, 0, 1);
         const absX = Math.abs(rawNormal.x); const absY = Math.abs(rawNormal.y); const absZ = Math.abs(rawNormal.z);
         if (absZ >= absX && absZ >= absY) normal.set(0, 0, Math.sign(rawNormal.z));
@@ -1354,9 +1768,46 @@ export class Renderer {
       let targetX = Math.round(hitPos.x / 32) * 32; 
       let targetY = Math.round(hitPos.y / 32) * 32; 
       let targetZ = Math.round(hitPos.z / 32) * 32;
-      eng.cursorGridPos = { x: targetX, y: targetY, z: targetZ };
+      eng.cursorGridPos = { x: targetX, y: targetY, z: targetZ, normal: normal.clone(), hitExisting: !!blockHit };
+
+      if (eng.isDraggingSelection && eng.selectionStart && eng.selectionEnd) {
+        const minX = Math.min(eng.selectionStart.x, eng.selectionEnd.x);
+        const maxX = Math.max(eng.selectionStart.x, eng.selectionEnd.x);
+        const minY = Math.min(eng.selectionStart.y, eng.selectionEnd.y);
+        const maxY = Math.max(eng.selectionStart.y, eng.selectionEnd.y);
+        const minZ = Math.min(eng.selectionStart.z, eng.selectionEnd.z);
+        const maxZ = Math.max(eng.selectionStart.z, eng.selectionEnd.z);
+
+        const width = maxX - minX + 32;
+        const height = maxY - minY + 32;
+        const depth = maxZ - minZ + 32;
+
+        const centerX = minX + (width / 2) - 16;
+        const centerY = minY + (height / 2) - 16;
+        const centerZ = minZ + (depth / 2) - 16;
+
+        this.selectionBox.scale.set(width + 0.5, height + 0.5, depth + 0.5);
+        this.selectionBox.position.set(centerX, centerY, centerZ);
+
+        const activeSlot = document.querySelector('.hotbar-slot.active');
+        const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
+        const isDeleting = eng.input.keys['shift'] || tex === 'erase';
+        const isPicker = tex === 'picker' || eng.input.keys['alt'];
+
+        if (isDeleting) {
+          this.selectionBox.material.color.setHex(0xff4757); // Red for deleting
+          this.selectionBox.visible = true;
+        } else if (isPicker) {
+          this.selectionBox.material.color.setHex(0x9b59b6); // Purple for picker
+          this.selectionBox.visible = true;
+        } else {
+          this.selectionBox.material.color.setHex(0x3498db); // Blue for building
+          this.selectionBox.visible = true;
+        }
+      }
 
       if (eng.devOptions.showTile && !eng.devOptions.useBlockPreview) {
+        this.highlightBox.scale.set(1, 1, 1);
         this.highlightBox.position.set(targetX, targetY, targetZ);
         this.highlightBox.material.color.setHex(0xf1c40f);
         this.highlightBox.visible = true;
@@ -1366,80 +1817,205 @@ export class Renderer {
         const activeSlot = document.querySelector('.hotbar-slot.active');
         const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
         const isDeleting = eng.input.keys['shift'] || tex === 'erase';
-        const isPicker = tex === 'picker';
+        const isPicker = tex === 'picker' || eng.input.keys['alt'];
 
         if (isPicker) {
+           this.highlightBox.scale.set(1, 1, 1);
            this.highlightBox.position.set(targetX, targetY, targetZ);
            this.highlightBox.material.color.setHex(0x9b59b6); // Purple for picker
-           this.highlightBox.visible = true;
+           this.highlightBox.visible = !eng.isDraggingSelection;
         } else if (isDeleting) {
-           this.highlightBox.position.set(targetX, targetY, targetZ);
-           this.highlightBox.material.color.setHex(0xff4757); // Red for delete
-           this.highlightBox.visible = true;
-        } else {
-           let placeShape = eng.editShape || 'cube';
-           if (placeShape === 'ramp_player') {
-              const pDir = eng.player.dir;
-              if (pDir.includes('up')) placeShape = 'ramp_n';
-              else if (pDir.includes('down')) placeShape = 'ramp_s';
-              else if (pDir.includes('right')) placeShape = 'ramp_e';
-              else if (pDir.includes('left')) placeShape = 'ramp_w';
-              else placeShape = 'ramp_s';
-           }
-           const colorPicker = document.getElementById('build-color-picker');
-           const colorHex = colorPicker ? colorPicker.value : '#ffffff';
            const clickedVoxel = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
-
-           if (clickedVoxel && clickedVoxel.shape === 'slab' && normal.z === 1 && clickedVoxel.tex === tex && clickedVoxel.color === colorHex) {
-             placeShape = 'cube';
+           if (clickedVoxel && clickedVoxel.shape && clickedVoxel.shape.startsWith('door')) {
+             this.highlightBox.scale.set(1, 1, 2);
+             if (clickedVoxel.tex && clickedVoxel.tex.includes('door-bottom')) {
+               this.highlightBox.position.set(targetX, targetY, targetZ + 16);
+             } else {
+               this.highlightBox.position.set(targetX, targetY, targetZ - 16);
+             }
            } else {
-             targetX += normal.x * 32; targetY += normal.y * 32; targetZ += normal.z * 32;
+             this.highlightBox.scale.set(1, 1, 1);
+             this.highlightBox.position.set(targetX, targetY, targetZ);
            }
-
-           let currentMesh; const dummy = new THREE.Object3D(); dummy.position.set(targetX, targetY, targetZ);
-           if (placeShape === 'slab') { currentMesh = this.previewSlabMesh; }
-           else if (placeShape.startsWith('ramp')) { 
-             currentMesh = this.previewRampMesh; 
-             if (placeShape === 'ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
-             else if (placeShape === 'ramp_n') dummy.rotation.set(0, 0, Math.PI); // Corrected from -Math.PI to Math.PI
-             else if (placeShape === 'ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
-           } else { currentMesh = this.previewCubeMesh; }
-
-           dummy.updateMatrix(); currentMesh.setMatrixAt(0, dummy.matrix); currentMesh.setColorAt(0, new THREE.Color(colorHex));
-           
-           const nameToId = {};
-           for (const id in BlockRegistry) {
-             nameToId[BlockRegistry[id].name] = id;
-           }
-
-           const blockId = nameToId[tex];
-           const voxelDef = blockId ? BlockRegistry[blockId] : null;
-           let mainAtlasPos, sidesAtlasPos, bottomAtlasPos;
-           if (voxelDef && voxelDef.faces) {
-             mainAtlasPos = { x: voxelDef.faces.top[0], y: voxelDef.faces.top[1] };
-             sidesAtlasPos = { x: voxelDef.faces.sides[0], y: voxelDef.faces.sides[1] };
-             bottomAtlasPos = { x: voxelDef.faces.bottom[0], y: voxelDef.faces.bottom[1] };
+           this.highlightBox.material.color.setHex(0xff4757); // Red for delete
+           this.highlightBox.visible = !eng.isDraggingSelection;
+        } else {
+           this.highlightBox.scale.set(1, 1, 1);
+           let placeShape = eng.editShape || 'cube';
+           if (placeShape === 'none') {
+             this.highlightBox.visible = false;
            } else {
-             mainAtlasPos = this.atlasMap[tex] || this.atlasMap['stone'];
-             sidesAtlasPos = mainAtlasPos;
-             bottomAtlasPos = mainAtlasPos;
+             if (placeShape.endsWith('_player')) {
+                const base = placeShape.split('_')[0];
+                const pDir = eng.player.dir;
+                if (pDir.includes('up')) placeShape = base + '_n';
+                else if (pDir.includes('down')) placeShape = base + '_s';
+                else if (pDir.includes('right')) placeShape = base + '_e';
+                else if (pDir.includes('left')) placeShape = base + '_w';
+                else placeShape = base + '_s';
+             }
+             const colorHex = eng.buildColor || '#ffffff';
+
+             let tilesToPreview = [];
+             if (eng.isDraggingSelection && eng.selectedTiles && eng.selectedTiles.length > 0) {
+               tilesToPreview = [...eng.selectedTiles];
+             } else {
+               const clickedVoxel = eng.mapManager.getVoxelAt(targetX, targetY, targetZ);
+               if (clickedVoxel && clickedVoxel.shape === 'slab' && normal.z === 1 && clickedVoxel.tex === tex && clickedVoxel.color === colorHex) {
+                 placeShape = 'cube';
+               } else {
+                 targetX += normal.x * 32; targetY += normal.y * 32; targetZ += normal.z * 32;
+               }
+               tilesToPreview = [{ x: targetX, y: targetY, z: targetZ }];
+             }
+             
+             if (placeShape.startsWith('door')) {
+               const extraTiles = [];
+               const isTopTex = tex.includes('door-top');
+               tilesToPreview.forEach(t => {
+                 if (isTopTex) {
+                   extraTiles.push({ x: t.x, y: t.y, z: t.z - 32, isBottomDoor: true });
+                 } else {
+                   extraTiles.push({ x: t.x, y: t.y, z: t.z + 32, isTopDoor: true });
+                 }
+               });
+               tilesToPreview = tilesToPreview.concat(extraTiles);
+             }
+
+             let currentMesh; const dummy = new THREE.Object3D(); 
+             if (placeShape === 'slab') { currentMesh = this.previewSlabMesh; }
+             else if (placeShape.startsWith('ramp')) { 
+               currentMesh = this.previewRampMesh; 
+               if (placeShape === 'ramp_e') dummy.rotation.set(0, 0, -Math.PI / 2);
+               else if (placeShape === 'ramp_n') dummy.rotation.set(0, 0, Math.PI); // Corrected from -Math.PI to Math.PI
+               else if (placeShape === 'ramp_w') dummy.rotation.set(0, 0, Math.PI / 2);
+             } else if (placeShape.startsWith('stair')) { 
+               currentMesh = this.previewStairMesh; 
+               if (placeShape === 'stair_e') dummy.rotation.set(0, 0, -Math.PI / 2);
+               else if (placeShape === 'stair_n') dummy.rotation.set(0, 0, Math.PI);
+               else if (placeShape === 'stair_w') dummy.rotation.set(0, 0, Math.PI / 2);
+             } else if (placeShape.startsWith('door')) { 
+               currentMesh = this.previewDoorMesh; 
+               let rot = 0;
+               const isOp = placeShape.includes('_open');
+               const isOpIn = placeShape.includes('_open_in');
+               const isOpOut = placeShape.includes('_open_out');
+               const isFlip = placeShape.includes('_flip');
+               if (placeShape.includes('door_e')) rot = -Math.PI / 2;
+               else if (placeShape.includes('door_n')) rot = Math.PI;
+               else if (placeShape.includes('door_w')) rot = Math.PI / 2;
+               else if (placeShape.includes('door_s')) rot = 0;
+               
+               if (isOp) {
+                 rot += isFlip ? -Math.PI / 2 : Math.PI / 2;
+               }
+               dummy.rotation.set(0, 0, rot);
+             } else if (this.previewModelMeshes && this.previewModelMeshes[placeShape]) {
+               currentMesh = this.previewModelMeshes[placeShape]; 
+               let rot = 0;
+               if (eng.editShapeDir === 'e') rot = -Math.PI / 2;
+               else if (eng.editShapeDir === 'n') rot = Math.PI;
+               else if (eng.editShapeDir === 'w') rot = Math.PI / 2;
+               dummy.rotation.set(0, 0, rot);
+             } else { currentMesh = this.previewCubeMesh; }
+
+             const nameToId = {};
+             for (const id in BlockRegistry) {
+               nameToId[BlockRegistry[id].name] = id;
+             }
+
+             const blockId = nameToId[tex];
+             const voxelDef = blockId ? BlockRegistry[blockId] : null;
+             let mainAtlasPos, sidesAtlasPos, bottomAtlasPos;
+             if (voxelDef && voxelDef.faces) {
+               mainAtlasPos = { x: voxelDef.faces.top[0], y: voxelDef.faces.top[1] };
+               sidesAtlasPos = { x: voxelDef.faces.sides[0], y: voxelDef.faces.sides[1] };
+               bottomAtlasPos = { x: voxelDef.faces.bottom[0], y: voxelDef.faces.bottom[1] };
+             } else {
+               mainAtlasPos = this.atlasMap[tex] || this.atlasMap['stone'];
+               sidesAtlasPos = mainAtlasPos;
+               bottomAtlasPos = mainAtlasPos;
+             }
+
+             let fluidType = 0.0;
+             if (tex === 'water' || tex === 'water_flow') fluidType = 1.0;
+             else if (tex === 'lava' || tex === 'lava_flow') fluidType = 2.0;
+             else if (tex === 'acid') fluidType = 3.0;
+             const isFluid = fluidType > 0.0;
+             const isGlassBlock = tex.startsWith('glass');
+             const parsedColor = new THREE.Color(colorHex);
+
+             const maxPreview = Math.min(tilesToPreview.length, 4096);
+             
+             const previewSet = new Set();
+             for (let i = 0; i < maxPreview; i++) {
+               previewSet.add(`${tilesToPreview[i].x}_${tilesToPreview[i].y}_${tilesToPreview[i].z}`);
+             }
+
+             for (let i = 0; i < maxPreview; i++) {
+               const t = tilesToPreview[i];
+               dummy.position.set(t.x, t.y, t.z);
+               dummy.updateMatrix(); 
+               currentMesh.setMatrixAt(i, dummy.matrix); 
+               currentMesh.setColorAt(i, parsedColor);
+               
+               let tMainAtlasPos = mainAtlasPos;
+               let tSidesAtlasPos = sidesAtlasPos;
+               let tBottomAtlasPos = bottomAtlasPos;
+
+               if (t.isTopDoor) {
+                 const topTex = tex.replace('bottom', 'top');
+                 tMainAtlasPos = this.atlasMap[topTex] || mainAtlasPos;
+                 tSidesAtlasPos = tMainAtlasPos; tBottomAtlasPos = tMainAtlasPos;
+               } else if (t.isBottomDoor) {
+                 const botTex = tex.replace('top', 'bottom');
+                 tMainAtlasPos = this.atlasMap[botTex] || mainAtlasPos;
+                 tSidesAtlasPos = tMainAtlasPos; tBottomAtlasPos = tMainAtlasPos;
+               }
+
+               const setUVs = (uvAttr, atlasPos, idx) => {
+                 if (!uvAttr) return;
+                 let tw = 64/2048; let to = atlasPos.x * (64/2048);
+                 if (placeShape.includes('_flip')) { tw = -tw; to += (64/2048); }
+                 uvAttr.setXYZW(idx, to, 1.0 - ((atlasPos.y + 1) * (64/2048)), tw, 64/2048);
+               };
+               setUVs(currentMesh.geometry.attributes.instanceUVTop, tMainAtlasPos, i);
+               setUVs(currentMesh.geometry.attributes.instanceUVSide, tSidesAtlasPos, i);
+               setUVs(currentMesh.geometry.attributes.instanceUVBottom, tBottomAtlasPos, i);
+               if (currentMesh.geometry.attributes.isFluid) currentMesh.geometry.attributes.isFluid.setX(i, fluidType);
+
+               let visE = 1, visW = 1, visS = 1, visN = 1, visT = 1, visB = 1;
+               
+               const checkCull = (nx, ny, nz) => {
+                 if (previewSet.has(`${nx}_${ny}_${nz}`)) return true;
+                 if (isGlassBlock || isFluid) {
+                   const v = eng.mapManager.getVoxelAt(nx, ny, nz);
+                   if (v && v.tex === tex && (v.shape || 'cube') === placeShape) return true;
+                 }
+                 return false;
+               };
+
+               if (checkCull(t.x + 32, t.y, t.z)) visE = 0;
+               if (checkCull(t.x - 32, t.y, t.z)) visW = 0;
+               if (checkCull(t.x, t.y + 32, t.z)) visS = 0;
+               if (checkCull(t.x, t.y - 32, t.z)) visN = 0;
+               if (checkCull(t.x, t.y, t.z + 32)) visT = 0;
+               if (checkCull(t.x, t.y, t.z - 32)) visB = 0;
+
+               if (currentMesh.geometry.attributes.instanceNeighbors1) currentMesh.geometry.attributes.instanceNeighbors1.setXYZW(i, visE, visW, visS, visN);
+               if (currentMesh.geometry.attributes.instanceNeighbors2) currentMesh.geometry.attributes.instanceNeighbors2.setXY(i, visT, visB);
+             }
+
+             currentMesh.count = maxPreview; 
+             currentMesh.instanceMatrix.needsUpdate = true;
+             if (currentMesh.instanceColor) currentMesh.instanceColor.needsUpdate = true;
+             if (currentMesh.geometry.attributes.instanceUVTop) currentMesh.geometry.attributes.instanceUVTop.needsUpdate = true;
+             if (currentMesh.geometry.attributes.instanceUVSide) currentMesh.geometry.attributes.instanceUVSide.needsUpdate = true;
+             if (currentMesh.geometry.attributes.instanceUVBottom) currentMesh.geometry.attributes.instanceUVBottom.needsUpdate = true;
+             if (currentMesh.geometry.attributes.isFluid) currentMesh.geometry.attributes.isFluid.needsUpdate = true;
+             if (currentMesh.geometry.attributes.instanceNeighbors1) currentMesh.geometry.attributes.instanceNeighbors1.needsUpdate = true;
+             if (currentMesh.geometry.attributes.instanceNeighbors2) currentMesh.geometry.attributes.instanceNeighbors2.needsUpdate = true;
            }
-
-           const setUVs = (uvAttr, atlasPos) => {
-             uvAttr.setXYZW(0, atlasPos.x * (64/256), 1.0 - ((atlasPos.y + 1) * (64/256)), 64/256, 64/256);
-           };
-           setUVs(currentMesh.geometry.attributes.instanceUVTop, mainAtlasPos);
-           setUVs(currentMesh.geometry.attributes.instanceUVSide, sidesAtlasPos);
-           setUVs(currentMesh.geometry.attributes.instanceUVBottom, bottomAtlasPos);
-           const isFluid = tex === 'water' || tex === 'water_flow' || tex === 'lava' || tex === 'acid';
-           if (currentMesh.geometry.attributes.isFluid) currentMesh.geometry.attributes.isFluid.setX(0, isFluid ? 1.0 : 0.0);
-
-           currentMesh.count = 1; currentMesh.instanceMatrix.needsUpdate = true;
-           if (currentMesh.instanceColor) currentMesh.instanceColor.needsUpdate = true;
-           currentMesh.geometry.attributes.instanceUVTop.needsUpdate = true;
-           currentMesh.geometry.attributes.instanceUVSide.needsUpdate = true;
-           currentMesh.geometry.attributes.instanceUVBottom.needsUpdate = true;
-           if (currentMesh.geometry.attributes.isFluid) currentMesh.geometry.attributes.isFluid.needsUpdate = true;
         }
       }
     }
@@ -1450,6 +2026,8 @@ export class Renderer {
       
       this.arrowHelper.visible = false;
       if (this.debugOverlay) this.debugOverlay.style.display = 'none';
+
+      let tooltipHTML = '';
 
       if (eng.devOptions.showDistPlayerToMouse && eng.devOptions.useDebugTooltip) {
         const mathDir = new THREE.Vector3().copy(targetPoint).sub(feetPos);
@@ -1465,18 +2043,69 @@ export class Renderer {
           this.arrowHelper.setLength(visualDist, Math.min(visualDist * 0.2, 20), Math.min(visualDist * 0.05, 10));
           this.arrowHelper.position.copy(chestPos);
         }
-        if (this.debugOverlay) {
-          this.debugOverlay.style.display = 'block';
-          this.debugOverlay.style.left = (eng.input.mousePos.x + 20) + 'px';
-          this.debugOverlay.style.top = (eng.input.mousePos.y + 20) + 'px';
-          this.debugOverlay.innerHTML = `
-            <strong style="color: #f1c40f; border-bottom: 1px solid #f1c40f; padding-bottom: 3px; display: inline-block; margin-bottom: 5px;">Raycast Trace</strong><br>
-            Cursor XYZ: <span style="color: #2ecc71;">${Math.round(targetPoint.x)}, ${Math.round(targetPoint.y)}, ${Math.round(targetPoint.z)}</span><br>
-            Player XYZ: <span style="color: #3498db;">${Math.round(feetPos.x)}, ${Math.round(feetPos.y)}, ${Math.round(feetPos.z)}</span><br>
-            Trace Diff: <span style="color: #e74c3c;">${Math.round(targetPoint.x - feetPos.x)}, ${Math.round(targetPoint.y - feetPos.y)}, ${Math.round(targetPoint.z - feetPos.z)}</span><br>
-            Distance: &nbsp;&nbsp;<span style="color: #f39c12;">${Math.round(dist)}</span>
-          `;
+        
+        let vx = Math.round(targetPoint.x / 32) * 32;
+        let vy = Math.round(targetPoint.y / 32) * 32;
+        let vz = Math.round(targetPoint.z / 32) * 32;
+        
+        if (blockHit) {
+            let isDoor = false;
+            if (this.doorMap && (blockHit.object === this.doorMesh || (this.glassDoorMesh && blockHit.object === this.glassDoorMesh))) {
+              for (const [key, data] of Object.entries(this.doorMap)) {
+                if (data.id === blockHit.instanceId && ((data.isGlass && blockHit.object === this.glassDoorMesh) || (!data.isGlass && blockHit.object === this.doorMesh))) {
+                  vx = data.cx; vy = data.cy; vz = data.cz;
+                  isDoor = true; break;
+                }
+              }
+            }
+            if (!isDoor) {
+                const matrix = new THREE.Matrix4();
+                blockHit.object.getMatrixAt(blockHit.instanceId, matrix);
+                const blockPos = new THREE.Vector3();
+                blockPos.setFromMatrixPosition(matrix);
+                vx = Math.round(blockPos.x); vy = Math.round(blockPos.y); vz = Math.round(blockPos.z);
+            }
+        } else if (eng.cursorGridPos && eng.cursorGridPos.hitExisting) {
+           vx = eng.cursorGridPos.x;
+           vy = eng.cursorGridPos.y;
+           vz = eng.cursorGridPos.z;
         }
+        
+        const voxel = eng.mapManager.getVoxelAt(vx, vy, vz);
+        let voxelInfo = '<span style="color: #aaa;">Empty Space (Air)</span>';
+        if (voxel) {
+           let baseShape = voxel.shape || 'cube';
+           let shapeDisplay = baseShape;
+           
+           let isStandard = baseShape === 'cube' || baseShape === 'slab' || baseShape === 'decor' || baseShape.startsWith('ramp') || baseShape.startsWith('stair') || baseShape.startsWith('door');
+           
+           if (FURNITURE_REGISTRY && FURNITURE_REGISTRY[baseShape]) {
+               shapeDisplay = `Model (${FURNITURE_REGISTRY[baseShape].name})`;
+           } else if (isStandard) {
+               shapeDisplay = `Block (${baseShape})`;
+           } else {
+               shapeDisplay = `<span style="color: #ff4757;">Orphaned Data (${baseShape} &rarr; Cube)</span>`;
+           }
+
+           const dirNames = { 'n': 'North', 'e': 'East', 's': 'South', 'w': 'West' };
+           const dirDisplay = dirNames[voxel.dir || 'n'] || (voxel.dir || 'North');
+
+           voxelInfo = `Material: <span style="color: #f1c40f;">${voxel.tex}</span><br>Shape: <span style="color: #9b59b6;">${shapeDisplay}</span><br>Direction: <span style="color: #e67e22;">${dirDisplay}</span>`;
+        }
+
+        tooltipHTML += `
+            <strong style="color: #3498db; border-bottom: 1px solid #3498db; padding-bottom: 3px; display: inline-block; margin-bottom: 5px;">Voxel Inspector</strong><br>
+            XYZ: <span style="color: #2ecc71;">${vx}, ${vy}, ${vz}</span><br>
+            Distance: <span style="color: #f39c12;">${Math.round(dist)}</span><br>
+            ${voxelInfo}
+        `;
+      }
+      
+      if (tooltipHTML !== '' && this.debugOverlay) {
+         this.debugOverlay.style.display = 'block';
+         this.debugOverlay.style.left = (eng.input.mousePos.x + 20) + 'px';
+         this.debugOverlay.style.top = (eng.input.mousePos.y + 20) + 'px';
+         this.debugOverlay.innerHTML = tooltipHTML;
       }
 
       if (this.debugCtx && !eng.devOptions.useDebugTooltip) {
@@ -1531,22 +2160,38 @@ export class Renderer {
             ctx.restore();
         };
 
-        if (eng.devOptions.showDistPlayerToMouse) {
-          drawDashedTrace(feetPos, targetPoint, "Player", "Mouse", "#2ecc71");
+        if (eng.devOptions.showDistPlayerToMouse && eng.mouseWorldPos) {
+          const feetPos = new THREE.Vector3(eng.player.x, eng.player.y, eng.player.z || 0);
+          drawDashedTrace(feetPos, eng.mouseWorldPos, "Player", "Mouse", "#2ecc71");
         }
         
         if (eng.selectedTarget && eng.selectedTarget.type === 'npc') {
           const npc = eng.npcs.find(n => n.uuid === eng.selectedTarget.id);
           if (npc) {
             const npcPos = new THREE.Vector3(npc.x, npc.y, npc.z || 0);
+            const feetPos = new THREE.Vector3(eng.player.x, eng.player.y, eng.player.z || 0);
             if (eng.devOptions.showDistToNPC) drawDashedTrace(feetPos, npcPos, "Player", "NPC", "#f1c40f");
-            if (eng.devOptions.showDistNpcToMouse) drawDashedTrace(npcPos, targetPoint, "NPC", "Mouse", "#e74c3c");
+            if (eng.devOptions.showDistNpcToMouse && eng.mouseWorldPos) drawDashedTrace(npcPos, eng.mouseWorldPos, "NPC", "Mouse", "#e74c3c");
           }
         }
       }
     }
     
     eng.mouseWorldPos = targetPoint;
+  }
+
+  handleResize() {
+    this.webgl.setSize(window.innerWidth, window.innerHeight);
+    const aspect = window.innerWidth / window.innerHeight;
+    const frustumSize = 1000;
+    this.camera.left = frustumSize * aspect / -2;
+    this.camera.right = frustumSize * aspect / 2;
+    this.camera.updateProjectionMatrix();
+
+    if (this.debugCanvas) {
+      this.debugCanvas.width = window.innerWidth;
+      this.debugCanvas.height = window.innerHeight;
+    }
   }
 
   draw() {
@@ -1556,21 +2201,7 @@ export class Renderer {
         this.instancedMaterial.userData.time.value = performance.now() / 1000;
     }
 
-    // Handle resizing logic
-    if (this.webgl.domElement.width !== window.innerWidth || this.webgl.domElement.height !== window.innerHeight) {
-      this.webgl.setSize(window.innerWidth, window.innerHeight);
-      const aspect = window.innerWidth / window.innerHeight;
-      const frustumSize = 1000;
-      this.camera.left = frustumSize * aspect / -2;
-      this.camera.right = frustumSize * aspect / 2;
-      this.camera.updateProjectionMatrix();
-    }
-
     if (this.debugCanvas) {
-      if (this.debugCanvas.width !== window.innerWidth || this.debugCanvas.height !== window.innerHeight) {
-        this.debugCanvas.width = window.innerWidth;
-        this.debugCanvas.height = window.innerHeight;
-      }
       this.debugCtx.clearRect(0, 0, this.debugCanvas.width, this.debugCanvas.height);
     }
 
@@ -1615,6 +2246,52 @@ export class Renderer {
       }
       ctx.restore();
     }
+
+    if (this.doorMap) {
+      this.doorPhysics = this.doorPhysics || {};
+      let doorsUpdated = false;
+      const spring = 0.15;
+      const friction = 0.80;
+      
+      const rootObj = new THREE.Object3D();
+      const pivotObj = new THREE.Object3D();
+      const doorObj = new THREE.Object3D();
+      rootObj.add(pivotObj);
+      pivotObj.add(doorObj);
+
+      for (const [key, data] of Object.entries(this.doorMap)) {
+        let phys = this.doorPhysics[key];
+        if (!phys) { phys = { rot: data.targetRot, vel: 0 }; this.doorPhysics[key] = phys; }
+        
+        phys.vel += (data.targetRot - phys.rot) * spring;
+        phys.vel *= friction;
+        phys.rot += phys.vel;
+
+        if (Math.abs(phys.vel) > 0.001 || Math.abs(data.targetRot - phys.rot) > 0.001 || !phys.initialized) {
+          phys.initialized = true;
+          
+          rootObj.position.set(data.cx, data.cy, data.cz);
+          rootObj.rotation.set(0, 0, data.baseRot);
+          
+          pivotObj.position.set(data.flip ? 16 : -16, -14, 0);
+          pivotObj.rotation.set(0, 0, phys.rot - data.baseRot);
+          
+          doorObj.position.set(data.flip ? -16 : 16, 0, 0);
+          doorObj.rotation.set(0, 0, data.flip ? Math.PI : 0);
+          
+          rootObj.updateMatrixWorld(true);
+          
+          if (data.isGlass) this.glassDoorMesh.setMatrixAt(data.id, doorObj.matrixWorld);
+          else this.doorMesh.setMatrixAt(data.id, doorObj.matrixWorld);
+          doorsUpdated = true;
+        }
+      }
+      if (doorsUpdated) {
+        this.doorMesh.instanceMatrix.needsUpdate = true;
+        if (this.glassDoorMesh) this.glassDoorMesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+
     this.webgl.render(this.scene, this.camera);
   }
 
@@ -1891,16 +2568,43 @@ export class Renderer {
       const cx = Math.floor(eng.player.x / chunkSize);
       const cy = Math.floor(eng.player.y / chunkSize);
       
-      const minX = cx * chunkSize; const minY = cy * chunkSize;
-      const p3d = new THREE.Vector3(minX, minY, eng.player.z || 0).project(this.camera);
-      const sx = (p3d.x + 1) / 2 * window.innerWidth;
-      const sy = -(p3d.y - 1) / 2 * window.innerHeight;
+      const minX = cx * chunkSize;
+      const minY = cy * chunkSize;
+      const maxX = minX + chunkSize;
+      const maxY = minY + chunkSize;
+      const pZ = eng.player.z || 0;
+
+      const toScreen = (vx, vy, vz) => {
+        const p = new THREE.Vector3(vx, vy, vz).project(this.camera);
+        return {
+          x: (p.x + 1) / 2 * window.innerWidth,
+          y: -(p.y - 1) / 2 * window.innerHeight
+        };
+      };
+
+      const pNW = toScreen(minX, minY, pZ);
+      const pNE = toScreen(maxX, minY, pZ);
+      const pSE = toScreen(maxX, maxY, pZ);
+      const pSW = toScreen(minX, maxY, pZ);
+      const pNW_top = toScreen(minX, minY, pZ + 512); // Upwards line (Z+)
 
       ctx.save();
+      ctx.strokeStyle = '#9b59b6';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      
+      ctx.beginPath();
+      ctx.moveTo(pNW.x, pNW.y); ctx.lineTo(pNE.x, pNE.y);
+      ctx.lineTo(pSE.x, pSE.y); ctx.lineTo(pSW.x, pSW.y);
+      ctx.closePath(); ctx.stroke();
+      
+      ctx.beginPath(); ctx.moveTo(pNW.x, pNW.y); ctx.lineTo(pNW_top.x, pNW_top.y); ctx.stroke();
+      ctx.setLineDash([]);
+
       ctx.fillStyle = '#9b59b6'; ctx.font = 'bold 16px monospace';
       ctx.textAlign = 'center'; ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.lineWidth = 4;
-      ctx.strokeText(`Chunk [${cx}, ${cy}] NW`, sx, sy - 20);
-      ctx.fillText(`Chunk [${cx}, ${cy}] NW`, sx, sy - 20);
+      ctx.strokeText(`Chunk [${cx}, ${cy}] NW`, pNW_top.x, pNW_top.y - 20);
+      ctx.fillText(`Chunk [${cx}, ${cy}] NW`, pNW_top.x, pNW_top.y - 20);
       ctx.restore();
     }
 
@@ -1917,6 +2621,58 @@ export class Renderer {
       drawRect(eng.player, '#2ecc71');
       Object.values(eng.otherPlayers).forEach(op => { if (op.state !== 'death') drawRect(op, '#3498db'); });
       eng.npcs.forEach(npc => { if (npc.state !== 'dead') drawRect(npc, '#ff4757'); });
+    }
+
+    // --- Drag Selection Indicators ---
+    if (eng.editMode && eng.input.keys['control'] && eng.cursorGridPos) {
+      const activeSlot = document.querySelector('.hotbar-slot.active');
+      const tex = activeSlot ? activeSlot.dataset.tex : 'stone';
+      const isDeleting = eng.input.keys['shift'] || tex === 'erase';
+      const color = isDeleting ? 'rgba(255, 71, 87, 0.6)' : 'rgba(52, 152, 219, 0.6)';
+      
+      ctx.save();
+      const drawIsoArrow = (ox, oy, oz, dx, dy) => {
+        const p1 = new THREE.Vector3(ox + dx*16, oy + dy*16, oz).project(this.camera);
+        const p2 = new THREE.Vector3(ox + dx*48, oy + dy*48, oz).project(this.camera);
+        
+        const sx1 = (p1.x + 1) / 2 * window.innerWidth;
+        const sy1 = -(p1.y - 1) / 2 * window.innerHeight;
+        const sx2 = (p2.x + 1) / 2 * window.innerWidth;
+        const sy2 = -(p2.y - 1) / 2 * window.innerHeight;
+
+        ctx.beginPath();
+        ctx.moveTo(sx1, sy1);
+        ctx.lineTo(sx2, sy2);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        const angle = Math.atan2(sy2 - sy1, sx2 - sx1);
+        ctx.beginPath();
+        ctx.moveTo(sx2, sy2);
+        ctx.lineTo(sx2 - 12 * Math.cos(angle - Math.PI/6), sy2 - 12 * Math.sin(angle - Math.PI/6));
+        ctx.lineTo(sx2 - 12 * Math.cos(angle + Math.PI/6), sy2 - 12 * Math.sin(angle + Math.PI/6));
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+      };
+
+      if (eng.isDraggingSelection && eng.selectionStart && eng.selectionEnd) {
+        const minX = Math.min(eng.selectionStart.x, eng.selectionEnd.x);
+        const maxX = Math.max(eng.selectionStart.x, eng.selectionEnd.x);
+        const minY = Math.min(eng.selectionStart.y, eng.selectionEnd.y);
+        const maxY = Math.max(eng.selectionStart.y, eng.selectionEnd.y);
+        const cz = eng.selectionStart.z + 16;
+        const midX = (minX + maxX) / 2;
+        const midY = (minY + maxY) / 2;
+        drawIsoArrow(maxX, midY, cz, 1, 0); drawIsoArrow(minX, midY, cz, -1, 0);
+        drawIsoArrow(midX, maxY, cz, 0, 1); drawIsoArrow(midX, minY, cz, 0, -1);
+      } else {
+        const cz = eng.cursorGridPos.z + 16;
+        drawIsoArrow(eng.cursorGridPos.x, eng.cursorGridPos.y, cz, 1, 0); drawIsoArrow(eng.cursorGridPos.x, eng.cursorGridPos.y, cz, -1, 0);
+        drawIsoArrow(eng.cursorGridPos.x, eng.cursorGridPos.y, cz, 0, 1); drawIsoArrow(eng.cursorGridPos.x, eng.cursorGridPos.y, cz, 0, -1);
+      }
+      ctx.restore();
     }
     
     // Render Combat Floating Texts

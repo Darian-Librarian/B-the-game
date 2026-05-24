@@ -1,3 +1,5 @@
+const SCREEN_ANGLES = { 'right': 0, 'down-right': Math.PI/4, 'down': Math.PI/2, 'down-left': Math.PI*0.75, 'left': Math.PI, 'up-left': -Math.PI*0.75, 'up': -Math.PI/2, 'up-right': -Math.PI/4 };
+
 export class MinimapManager {
   constructor(engine) {
     this.engine = engine;
@@ -87,8 +89,7 @@ export class MinimapManager {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    const screenAngles = { 'right': 0, 'down-right': Math.PI/4, 'down': Math.PI/2, 'down-left': Math.PI*0.75, 'left': Math.PI, 'up-left': -Math.PI*0.75, 'up': -Math.PI/2, 'up-right': -Math.PI/4 };
-    const pAngle = screenAngles[eng.player.dir] || 0;
+    const pAngle = SCREEN_ANGLES[eng.player.dir] || 0;
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.lineTo(Math.cos(pAngle) * 8, Math.sin(pAngle) * 8);

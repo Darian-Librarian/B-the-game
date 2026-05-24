@@ -24,6 +24,19 @@ export class CharacterCreatorUIManager {
     const footerIntegrity = document.getElementById('footer-integrity-display');
     const footerArchetype = document.getElementById('footer-archetype-display');
 
+    // Dynamically create integrity warning element if it doesn't exist
+    let integrityWarning = document.getElementById('integrity-warning');
+    if (!integrityWarning) {
+      integrityWarning = document.createElement('div');
+      integrityWarning.id = 'integrity-warning';
+      integrityWarning.style.cssText = 'display: none; color: #ff4757; font-size: 0.85rem; text-align: center; margin-top: 10px;';
+
+      // Append it to the description box. We'll ensure it's not overwritten.
+      if (heritageDescBox) {
+        heritageDescBox.appendChild(integrityWarning);
+      }
+    }
+
     const heritageData = {
       standard: {
         name: 'Standard',
@@ -64,6 +77,22 @@ export class CharacterCreatorUIManager {
         description: 'Currently Locked: Requires Creation Discovery via Ptouille or The Neon Girl. Hybrids achieve true multi-path mastery, fusing conflicting integrities—such as synthetic hardware and biomorphic flesh—into a single, dominant vessel.',
         splash: 'assets/images/ui/creator/splashes/standard.png',
         affinities: []
+      }
+    };
+
+    const updateIntegrityWarning = () => {
+      const integrityVal = parseInt(integrityScrollbar.value, 10);
+      const currentClassItem = document.querySelector('#class-list .active');
+      const classKey = currentClassItem ? currentClassItem.dataset.class : 'standard';
+
+      if (integrityVal === -100 && (classKey === 'primal' || classKey === 'mutated')) {
+        integrityWarning.innerText = 'Warning: 100% Synthetic Integrity is restricted to Automaton under Standard heritages.';
+        integrityWarning.style.display = 'block';
+      } else if (integrityVal === 100 && classKey === 'standard') {
+        integrityWarning.innerText = 'Warning: 100% Mutation Integrity is restricted to specific affinities only selectable from the Heritage buttons.';
+        integrityWarning.style.display = 'block';
+      } else {
+        integrityWarning.style.display = 'none';
       }
     };
 
@@ -112,7 +141,14 @@ export class CharacterCreatorUIManager {
       if (!data) return;
 
       if (heritageSplash) heritageSplash.src = data.splash;
-      if (heritageDescBox) heritageDescBox.innerHTML = `<p>${data.description}</p>`;
+      if (heritageDescBox) {
+        let p = heritageDescBox.querySelector('p');
+        if (!p) {
+          p = document.createElement('p');
+          heritageDescBox.prepend(p);
+        }
+        p.innerHTML = data.description;
+      }
 
       data.affinities.forEach((affinity, index) => {
         const item = document.createElement('div');
@@ -135,6 +171,7 @@ export class CharacterCreatorUIManager {
               p.style.backgroundSize = '800% 1200%';
               p.style.backgroundPosition = '42.857% 0%';
               p.style.imageRendering = 'pixelated';
+              p.style.animation = 'none';
             }
           });
           
@@ -149,6 +186,7 @@ export class CharacterCreatorUIManager {
       });
 
       updateAffinityLocks();
+      updateIntegrityWarning(); // Update warning when affinities are rendered (class changes)
     };
 
     classItems.forEach(item => {
@@ -162,6 +200,7 @@ export class CharacterCreatorUIManager {
 
         const selectedClass = item.dataset.class;
         renderAffinities(selectedClass);
+        updateIntegrityWarning(); // Update warning when class changes
       });
     });
 
@@ -174,7 +213,7 @@ export class CharacterCreatorUIManager {
 
         playerPreviews.forEach(p => {
                 if (p) {
-                p.style.transform = `translateY(660px) scale(12) scaleX(${scaleX}) scaleY(${scaleY})`;
+                p.style.transform = `translateY(380px) scale(9) scaleX(${scaleX}) scaleY(${scaleY})`;
                 }
         });
 
@@ -257,6 +296,7 @@ export class CharacterCreatorUIManager {
         }
 
         updateAffinityLocks();
+        updateIntegrityWarning(); // Update warning when integrity changes
         
         const activeArchItem = document.querySelector('#archetype-list .active');
         if (activeArchItem && typeof archetypesData !== 'undefined') {
@@ -762,6 +802,16 @@ export class CharacterCreatorUIManager {
         const charName = document.getElementById('char-name').value.trim();
         if (!charName) return this.app.showModal("Input Error", "Character name cannot be empty.");
 
+        const activeHeritageItem = document.querySelector('#class-list .active');
+        const activeAffinityItem = document.querySelector('#affinity-list .active');
+
+        if (!activeHeritageItem) {
+          return this.app.showModal("Selection Incomplete", "You must select a Heritage before finalizing your character.");
+        }
+        if (!activeAffinityItem) {
+          return this.app.showModal("Selection Incomplete", "You must select an Affinity within your chosen Heritage before finalizing.");
+        }
+
         try {
           const response = await fetch('/check-char-name', {
             method: 'POST',
@@ -814,8 +864,13 @@ export class CharacterCreatorUIManager {
           });
         }
 
+        const heritage = activeHeritageItem.dataset.class;
+        const affinityData = heritageData[heritage].affinities.find(a => a.id === activeAffinityItem.dataset.id);
+
         pendingCharData = {
           name: charName,
+          heritage: heritage,
+          race: affinityData ? affinityData.name : 'Human',
           alignment: document.getElementById('id-card-alignment').value,
           city: document.getElementById('id-card-city').value,
           bio: document.getElementById('char-bio').value.trim(),
@@ -858,6 +913,7 @@ export class CharacterCreatorUIManager {
 
     renderAffinities('standard');
     renderStyle('standard');
+    updateIntegrityWarning(); // Initial update for the warning
     loadPowersets();
   }
 }

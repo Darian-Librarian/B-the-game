@@ -63,13 +63,34 @@ export class InGameMenuUIManager {
 
       const btnSettings = document.getElementById('btn-settings');
       if (btnSettings && !document.getElementById('btn-keybinds')) {
-        const btnKeybinds = document.createElement('button');
+        const btnKeybinds = btnSettings.cloneNode(true);
         btnKeybinds.id = 'btn-keybinds';
-        btnKeybinds.className = 'btn-secondary';
-        btnKeybinds.innerText = 'Keybinds';
-        btnKeybinds.style.cssText = 'width: 100%; text-align: left; padding: 10px; border: none; background: transparent; color: #fff; cursor: pointer; font-family: var(--font-header); letter-spacing: 1px; transition: background 0.2s;';
-        btnKeybinds.onmouseenter = () => btnKeybinds.style.background = 'rgba(255, 255, 255, 0.1)';
-        btnKeybinds.onmouseleave = () => btnKeybinds.style.background = 'transparent';
+        
+        const walker = document.createTreeWalker(btnKeybinds, NodeFilter.SHOW_TEXT, null, false);
+        let node;
+        let validNodes = [];
+        while (node = walker.nextNode()) {
+          // Only target text nodes containing actual alphanumeric characters
+          if (node.nodeValue.trim().match(/[a-zA-Z0-9]/)) {
+            const parent = node.parentNode;
+            const parentTag = parent && parent.tagName ? parent.tagName.toLowerCase() : '';
+            const parentClass = parent && typeof parent.className === 'string' ? parent.className.toLowerCase() : '';
+            // Skip typical icon elements (like FontAwesome or Material Icons)
+            if (parentTag === 'i' || parentTag === 'svg' || parentClass.includes('icon') || parentClass.includes('material')) {
+              continue;
+            }
+            validNodes.push(node);
+          }
+        }
+        
+        if (validNodes.length > 0) {
+          validNodes.forEach(n => n.nodeValue = '');
+          const targetNode = validNodes[validNodes.length - 1];
+          targetNode.nodeValue = 'Keybinds';
+        } else {
+          btnKeybinds.innerText = 'Keybinds';
+        }
+
         btnSettings.parentNode.insertBefore(btnKeybinds, btnSettings);
 
         const kbModal = document.createElement('div');
@@ -90,6 +111,10 @@ export class InGameMenuUIManager {
                     <span style="color: #fff;">Picker Tool</span>
                     <div style="display: flex; align-items: center; gap: 5px;"><input type="text" id="kb-picker" maxlength="1" style="width: 30px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;" placeholder="-"></div>
                 </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #fff;">Fly Down</span>
+                    <div style="display: flex; align-items: center; gap: 5px;"><input type="text" id="kb-flydown" maxlength="1" style="width: 30px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;" placeholder="x"></div>
+                </div>
                 <button id="btn-close-keybinds" class="btn-primary" style="margin-top: 10px;">Save & Close</button>
             </div>
         `;
@@ -100,7 +125,8 @@ export class InGameMenuUIManager {
                 const undoKey = document.getElementById('kb-undo').value.toLowerCase() || 'z';
                 const redoKey = document.getElementById('kb-redo').value.toLowerCase() || 'y';
                 const pickerKey = document.getElementById('kb-picker').value.toLowerCase() || '';
-                window.currentGameEngine.clientSettings.keybinds = { undo: undoKey, redo: redoKey, picker: pickerKey };
+                const flyDownKey = document.getElementById('kb-flydown').value.toLowerCase() || 'x';
+                window.currentGameEngine.clientSettings.keybinds = { undo: undoKey, redo: redoKey, picker: pickerKey, flyDown: flyDownKey };
                 localStorage.setItem('b_client_settings', JSON.stringify(window.currentGameEngine.clientSettings));
             }
             kbModal.style.display = 'none';
@@ -109,10 +135,11 @@ export class InGameMenuUIManager {
         btnKeybinds.onclick = () => {
             gameDropdown.style.display = 'none';
             const eng = window.currentGameEngine;
-            const kbs = eng?.clientSettings?.keybinds || { undo: 'z', redo: 'y', picker: '' };
+            const kbs = eng?.clientSettings?.keybinds || { undo: 'z', redo: 'y', picker: '', flyDown: 'x' };
             document.getElementById('kb-undo').value = kbs.undo;
             document.getElementById('kb-redo').value = kbs.redo;
             document.getElementById('kb-picker').value = kbs.picker || '';
+            document.getElementById('kb-flydown').value = kbs.flyDown || 'x';
             kbModal.style.display = 'flex';
         };
       }
@@ -202,7 +229,7 @@ export class InGameMenuUIManager {
         });
       }
 
-      const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, cameraSensitivity: 120, cameraAngleSnap: 0, invertCameraRotation: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, keybinds: { undo: 'z', redo: 'y', picker: '' } };
+      const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, cameraSensitivity: 120, cameraAngleSnap: 0, invertCameraRotation: false, invertDragRotation: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x' } };
       const savedSettingsStr = localStorage.getItem('b_client_settings');
       const savedSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
       
@@ -247,15 +274,6 @@ export class InGameMenuUIManager {
       setupSettingToggle('row-toggle-ping', 'btn-toggle-ping', 'showPing');
       setupSettingToggle('row-toggle-baseplates', 'btn-toggle-baseplates', 'showBaseplates');
 
-      const baseplatesRow = document.getElementById('row-toggle-baseplates');
-      if (baseplatesRow && !document.getElementById('row-toggle-lock-builder')) {
-        const lockBuilderRow = document.createElement('div');
-        lockBuilderRow.id = 'row-toggle-lock-builder';
-        lockBuilderRow.className = 'settings-row';
-        lockBuilderRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;';
-        lockBuilderRow.innerHTML = `<span style="color: #ccc;">Lock Builder Panel Pos</span><button id="btn-toggle-lock-builder" class="${savedSettings.lockBuilderPanel ? 'btn-primary' : 'btn-secondary'}">${savedSettings.lockBuilderPanel ? 'Enabled' : 'Disabled'}</button>`;
-        baseplatesRow.parentNode.insertBefore(lockBuilderRow, baseplatesRow.nextSibling);
-      }
       setupSettingToggle('row-toggle-lock-builder', 'btn-toggle-lock-builder', 'lockBuilderPanel');
       setupSettingToggle('row-toggle-cam-jump', 'btn-toggle-cam-jump', 'cameraFollowsJump');
       setupSettingToggle('row-toggle-minimap', 'btn-toggle-minimap', 'showMinimap');
@@ -266,48 +284,19 @@ export class InGameMenuUIManager {
       setupSettingToggle('row-toggle-player-health', 'btn-toggle-player-health', 'showPlayerHealth');
       setupSettingToggle('row-toggle-entity-names', 'btn-toggle-entity-names', 'showEntityNames');
       setupSettingToggle('row-toggle-entity-health', 'btn-toggle-entity-health', 'showEntityHealth');
-      
+            
+      // Wire up the camera rotation and drag settings
+      setupSettingToggle('row-toggle-invert-rot', 'btn-toggle-invert-rot', 'invertCameraRotation');
+      setupSettingToggle('row-toggle-invert-camera', 'btn-toggle-invert-camera', 'invertCameraRotation');
+      setupSettingToggle('row-toggle-invert', 'btn-toggle-invert', 'invertCameraRotation');
+      setupSettingToggle('row-toggle-invert-qe', 'btn-toggle-invert-qe', 'invertCameraRotation');
+      setupSettingToggle('row-toggle-invert-q-e', 'btn-toggle-invert-q-e', 'invertCameraRotation');
+      setupSettingToggle('row-toggle-middle-mouse', 'btn-toggle-middle-mouse', 'middleMouseRotation');
+      setupSettingToggle('row-toggle-drag-rot', 'btn-toggle-drag-rot', 'invertDragRotation');
+
       const camJumpRow = document.getElementById('row-toggle-cam-jump');
       if (camJumpRow && !document.getElementById('camera-sensitivity-row')) {
         const container = camJumpRow.parentNode;
-        
-        const rotMinimapRow = document.createElement('div');
-        rotMinimapRow.id = 'row-toggle-minimap-rotate';
-        rotMinimapRow.className = 'settings-row';
-        rotMinimapRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;';
-        rotMinimapRow.innerHTML = `<span style="color: #ccc;">Rotate Minimap w/ Camera</span><button id="btn-toggle-minimap-rotate" class="${savedSettings.rotateMinimap ? 'btn-primary' : 'btn-secondary'}">${savedSettings.rotateMinimap ? 'Enabled' : 'Disabled'}</button>`;
-        container.insertBefore(rotMinimapRow, camJumpRow.nextSibling);
-        setupSettingToggle('row-toggle-minimap-rotate', 'btn-toggle-minimap-rotate', 'rotateMinimap');
-        
-        const invertCamRow = document.createElement('div');
-        invertCamRow.id = 'row-toggle-invert-cam';
-        invertCamRow.className = 'settings-row';
-        invertCamRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;';
-        invertCamRow.innerHTML = `<span style="color: #ccc;">Invert Q/E Rotation</span><button id="btn-toggle-invert-cam" class="${savedSettings.invertCameraRotation ? 'btn-primary' : 'btn-secondary'}">${savedSettings.invertCameraRotation ? 'Enabled' : 'Disabled'}</button>`;
-        container.insertBefore(invertCamRow, rotMinimapRow.nextSibling);
-        setupSettingToggle('row-toggle-invert-cam', 'btn-toggle-invert-cam', 'invertCameraRotation');
-        
-        const middleMouseRow = document.createElement('div');
-        middleMouseRow.id = 'row-toggle-middle-mouse';
-        middleMouseRow.className = 'settings-row';
-        middleMouseRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;';
-        middleMouseRow.innerHTML = `<span style="color: #ccc;">Middle Mouse Drag</span><button id="btn-toggle-middle-mouse" class="${savedSettings.middleMouseRotation ? 'btn-primary' : 'btn-secondary'}">${savedSettings.middleMouseRotation ? 'Enabled' : 'Disabled'}</button>`;
-        container.insertBefore(middleMouseRow, invertCamRow.nextSibling);
-        setupSettingToggle('row-toggle-middle-mouse', 'btn-toggle-middle-mouse', 'middleMouseRotation');
-        
-        const dragSensRow = document.createElement('div');
-        dragSensRow.id = 'camera-drag-sens-row';
-        dragSensRow.className = 'settings-row';
-        dragSensRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: default;';
-        dragSensRow.innerHTML = `
-          <span style="color: #ccc;">Mouse Drag Sensitivity</span>
-          <input type="range" id="slider-drag-sensitivity" min="5" max="100" value="${(savedSettings.dragRotationSensitivity !== undefined ? savedSettings.dragRotationSensitivity : 0.25) * 100}" style="width: 150px; cursor: pointer;">
-        `;
-        if (middleMouseRow.nextSibling) {
-          container.insertBefore(dragSensRow, middleMouseRow.nextSibling);
-        } else {
-          container.appendChild(dragSensRow);
-        }
         
         const snapRow = document.createElement('div');
         snapRow.id = 'camera-snap-row';
@@ -333,6 +322,16 @@ export class InGameMenuUIManager {
           <input type="range" id="slider-camera-sensitivity" min="30" max="360" value="${savedSettings.cameraSensitivity || 120}" style="width: 150px; cursor: pointer;">
         `;
         container.insertBefore(sensRow, snapRow.nextSibling);
+
+        const dragSensRow = document.createElement('div');
+        dragSensRow.id = 'camera-drag-sens-row';
+        dragSensRow.className = 'settings-row';
+        dragSensRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: default;';
+        dragSensRow.innerHTML = `
+          <span style="color: #ccc;">Mouse Drag Sensitivity</span>
+          <input type="range" id="slider-drag-sensitivity" min="5" max="100" value="${(savedSettings.dragRotationSensitivity !== undefined ? savedSettings.dragRotationSensitivity : 0.25) * 100}" style="width: 150px; cursor: pointer;">
+        `;
+        container.insertBefore(dragSensRow, sensRow.nextSibling);
 
         const selectSnap = document.getElementById('select-camera-snap');
         selectSnap.value = savedSettings.cameraAngleSnap !== undefined ? savedSettings.cameraAngleSnap : 0;

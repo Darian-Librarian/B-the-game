@@ -11,7 +11,7 @@
       "imports": {
         "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
         "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-        "engine": "./src/ui/game/engine.js?v=new-engine-240"
+        "engine": "./src/ui/game/engine.js?v=new-engine-311"
       }
     }
   </script>
@@ -684,31 +684,50 @@
 
     <div id="settings-modal" class="modal-overlay" style="display: none;">
       <div class="screen-scaler" style="justify-content: center; align-items: center;">
-        <div class="modal-content" style="width: 800px; height: auto; min-height: 400px; justify-content: flex-start; gap: 20px; position: relative; background-image: none;">
+        <div class="modal-content settings-modal-content">
           <button id="btn-close-settings" class="btn-secondary" style="position: absolute; top: 15px; right: 15px; padding: 5px 15px; z-index: 10;">X</button>
-          <h3 style="font-family: var(--font-header); color: var(--accent-neon); margin-top: 0; text-align: center; border-bottom: 2px solid var(--accent); padding-bottom: 10px;">Settings</h3>
+          <h3 class="settings-title">Settings</h3>
           
-          <div style="display: flex; width: 100%; min-height: 300px;">
-            <div class="settings-tabs" style="width: 220px; border-right: 2px solid var(--text-dim); padding-right: 20px; display: flex; flex-direction: column; gap: 10px;">
+          <div class="settings-layout">
+            <div class="settings-tabs">
               <button class="btn-secondary settings-tab-btn active" data-tab="settings-gameplay" style="text-align: left; padding: 10px; border-color: var(--accent-neon); color: var(--accent-neon); background: rgba(116, 185, 255, 0.1);">Gameplay & Camera</button>
               <button class="btn-secondary settings-tab-btn" data-tab="settings-interface" style="text-align: left; padding: 10px;">Interface & Chat</button>
               <button class="btn-secondary settings-tab-btn" data-tab="settings-nameplates" style="text-align: left; padding: 10px;">Nameplates & Health</button>
               <button class="btn-secondary settings-tab-btn" data-tab="settings-misc" style="text-align: left; padding: 10px;">Miscellaneous</button>
             </div>
             
-            <div class="settings-panels" style="flex: 1; padding-left: 20px;">
+            <div class="settings-panels">
               <div id="settings-gameplay" class="settings-tab-panel" style="display: flex; flex-direction: column; gap: 10px;">
                 <div id="row-toggle-cam-jump" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
                   <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Camera Follows Jump</span>
                   <button id="btn-toggle-cam-jump" class="btn-primary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Enabled</button>
                 </div>
-                <div id="row-toggle-click-move" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
-                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Click To Move</span>
-                  <button id="btn-toggle-click-move" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
-                </div>
-                <div id="row-toggle-always-sprint" style="display: flex; align-items: center; justify-content: space-between; background: rgba(116, 185, 255, 0.1); padding: 15px; border: 1px solid var(--text-dim); border-radius: 4px; cursor: pointer; transition: background 0.2s;">
-                  <span style="color: var(--text-primary); font-family: var(--font-mono); font-size: 0.9rem;">Toggle Sprint</span>
-                  <button id="btn-toggle-always-sprint" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
+
+                <div class="settings-group-box">
+                  <div id="row-toggle-always-sprint" class="settings-row">
+                    <span class="settings-label" style="font-family: var(--font-mono); font-size: 0.9rem;">Always Sprint</span>
+                    <button id="btn-toggle-always-sprint" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
+                  </div>
+                  <div id="row-toggle-click-move" class="settings-row">
+                    <span class="settings-label" style="font-family: var(--font-mono); font-size: 0.9rem;">Click To Move</span>
+                    <button id="btn-toggle-click-move" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
+                  </div>
+                  <div id="row-toggle-minimap-rotate" class="settings-row">
+                    <span class="settings-label" style="font-family: var(--font-mono); font-size: 0.9rem;">Rotate Minimap w/ Camera</span>
+                    <button id="btn-toggle-minimap-rotate" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
+                  </div>
+                  <div id="row-toggle-invert-cam" class="settings-row">
+                    <span class="settings-label" style="font-family: var(--font-mono); font-size: 0.9rem;">Invert Q/E Rotation</span>
+                    <button id="btn-toggle-invert-cam" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
+                  </div>
+                  <div id="row-toggle-middle-mouse" class="settings-row">
+                    <span class="settings-label" style="font-family: var(--font-mono); font-size: 0.9rem;">Middle Mouse Drag</span>
+                    <button id="btn-toggle-middle-mouse" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
+                  </div>
+                  <div id="row-toggle-lock-builder" class="settings-row">
+                    <span class="settings-label" style="font-family: var(--font-mono); font-size: 0.9rem;">Lock Builder Panel Pos</span>
+                    <button id="btn-toggle-lock-builder" class="btn-secondary" style="width: auto; padding: 5px 20px; font-size: 1rem; height: 35px; pointer-events: none;">Disabled</button>
+                  </div>
                 </div>
               </div>
 
