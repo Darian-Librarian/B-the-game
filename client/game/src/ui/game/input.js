@@ -1,5 +1,5 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
-import { FURNITURE_REGISTRY } from './registry.js?v=new-engine-311';
+import { FURNITURE_REGISTRY } from './registry.js?v=new-engine-314';
 
 export class InputManager {
   constructor(engine) {
@@ -8,6 +8,7 @@ export class InputManager {
     this.mousePos = { x: 0, y: 0 };
     this.isDraggingCamera = false;
     this.lastMouseX = 0;
+    this.lastMouseY = 0;
 
     this.setupListeners();
   }
@@ -45,7 +46,7 @@ export class InputManager {
 
       const key = e.key.toLowerCase();
       
-      const kbs = eng.clientSettings.keybinds || { undo: 'z', redo: 'y', picker: '', flyDown: 'x' };
+      const kbs = eng.clientSettings.keybinds || { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' };
 
       if (e.ctrlKey) {
         if (key === kbs.undo) {
@@ -114,7 +115,7 @@ export class InputManager {
         }
       }
 
-      if (['alt', 'control', 'shift', ' '].includes(key) || e.ctrlKey || e.altKey) {
+      if (['alt', 'control', 'shift', ' ', 'pageup', 'pagedown', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key) || e.ctrlKey || e.altKey) {
         e.preventDefault();
       }
     };
@@ -152,6 +153,7 @@ export class InputManager {
         e.preventDefault();
         this.isDraggingCamera = true;
         this.lastMouseX = e.clientX;
+        this.lastMouseY = e.clientY;
         document.body.style.cursor = 'grabbing';
         if (eng.canvas) eng.canvas.style.cursor = 'grabbing';
         return;
@@ -606,10 +608,13 @@ export class InputManager {
 
       if (this.isDraggingCamera && eng.renderer && eng.renderer.rotateCamera) {
         const deltaX = e.clientX - this.lastMouseX;
-        const invertDrag = eng.clientSettings.invertDragRotation ? -1 : 1;
+        const deltaY = e.clientY - this.lastMouseY;
+        const invertX = eng.clientSettings.invertCameraX ? -1 : 1;
+        const invertY = eng.clientSettings.invertCameraY ? -1 : 1;
         const sensitivity = eng.clientSettings.dragRotationSensitivity !== undefined ? eng.clientSettings.dragRotationSensitivity : 0.25;
-        eng.renderer.rotateCamera(deltaX * sensitivity * invertDrag);
+        eng.renderer.rotateCamera(deltaX * sensitivity * invertX, deltaY * sensitivity * invertY);
         this.lastMouseX = e.clientX;
+        this.lastMouseY = e.clientY;
       }
     };
 

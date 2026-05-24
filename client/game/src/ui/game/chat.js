@@ -1,4 +1,4 @@
-import { CHAT_CONFIG } from './chat-config.js?v=new-engine-311';
+import { CHAT_CONFIG } from './chat-config.js?v=new-engine-314';
 
 export class ChatManager {
   constructor(engine) {

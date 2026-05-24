@@ -1,4 +1,4 @@
-import { FURNITURE_REGISTRY } from './registry.js?v=new-engine-311';
+import { FURNITURE_REGISTRY } from './registry.js?v=new-engine-314';
 const HUD_BTN_STYLE = 'width: auto; height: 45px; padding: 0 10px; font-weight: bold; background: rgba(0,0,0,0.8); border-color: #f39c12; color: #f39c12; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: background 0.2s;';
 const DEV_BTN_STYLE = 'width: 100%; margin-top: 5px;';
 const HEADER_STYLE = 'background: rgba(52, 152, 219, 0.2); padding: 8px 10px; border-bottom: 2px solid #3498db; display: flex; justify-content: space-between; align-items: center; cursor: move; user-select: none; margin-bottom: 10px;';

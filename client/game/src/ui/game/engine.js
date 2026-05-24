@@ -1,16 +1,16 @@
 
-import { ChatManager } from './chat.js?v=new-engine-311';
-import { NetworkManager } from './network.js?v=new-engine-311';
-import { UIManager } from './ui.js?v=new-engine-311';
-import { InputManager } from './input.js?v=new-engine-311';
-import { MinimapManager } from './minimap.js?v=new-engine-311';
-import { Renderer } from './renderer.js?v=new-engine-311';
-import { CombatManager } from './combat.js?v=new-engine-311';
-import { EntityManager } from './entity_manager.js?v=new-engine-311';
-import { MapOverlayManager } from './map_overlay.js?v=new-engine-311';
-import { MapManager } from './chunk_manager.js?v=new-engine-311';
-import { getBlockProps } from './blocks.js?v=new-engine-311';
-import { FURNITURE_REGISTRY, POWERSET_REGISTRY, POWER_REGISTRY } from './registry.js?v=new-engine-311';
+import { ChatManager } from './chat.js?v=new-engine-314';
+import { NetworkManager } from './network.js?v=new-engine-314';
+import { UIManager } from './ui.js?v=new-engine-314';
+import { InputManager } from './input.js?v=new-engine-314';
+import { MinimapManager } from './minimap.js?v=new-engine-314';
+import { Renderer } from './renderer.js?v=new-engine-314';
+import { CombatManager } from './combat.js?v=new-engine-314';
+import { EntityManager } from './entity_manager.js?v=new-engine-314';
+import { MapOverlayManager } from './map_overlay.js?v=new-engine-314';
+import { MapManager } from './chunk_manager.js?v=new-engine-314';
+import { getBlockProps } from './blocks.js?v=new-engine-314';
+import { FURNITURE_REGISTRY, POWERSET_REGISTRY, POWER_REGISTRY } from './registry.js?v=new-engine-314';
 
 export class GameEngine {
   constructor(canvasId, playerData, accountUuid) {
@@ -42,7 +42,7 @@ export class GameEngine {
     }
 
     const savedSettingsStr = localStorage.getItem('b_client_settings');
-    const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraRotation: false, invertDragRotation: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x' } };
+    const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, cameraAngle: 0, enableShadows: true, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' } };
     this.clientSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
     this.tilt = 0.5;
     this.selectedTarget = null;
@@ -715,9 +715,11 @@ export class GameEngine {
       }
   } else if (entity.activePowers && entity.activePowers.includes('fly')) {
       if (entity === this.player) {
+        const kbs = this.clientSettings.keybinds || {};
+        const flyDownKey = (kbs.flyDown || 'x').toLowerCase();
         if (this.keys && this.keys[' ']) {
           entity.vz = 450;
-        } else if (this.keys && this.keys['x']) {
+        } else if (this.keys && this.keys[flyDownKey]) {
           entity.vz = -450;
         } else {
           entity.vz = 0;

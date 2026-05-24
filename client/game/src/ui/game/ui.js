@@ -1,9 +1,9 @@
-import { DevToolsUIManager } from './dev-tools-ui.js?v=new-engine-311';
-import { InventoryUIManager } from './inventory-ui.js?v=new-engine-311';
-import { PowerbarUIManager } from './powerbar-ui.js?v=new-engine-311';
-import { TrainerUIManager } from './trainer-ui.js?v=new-engine-311';
-import { PlayerListUIManager } from './player-list-ui.js?v=new-engine-311';
-import { GAME_TIPS } from './tips.js?v=new-engine-311';
+import { DevToolsUIManager } from './dev-tools-ui.js?v=new-engine-314';
+import { InventoryUIManager } from './inventory-ui.js?v=new-engine-314';
+import { PowerbarUIManager } from './powerbar-ui.js?v=new-engine-314';
+import { TrainerUIManager } from './trainer-ui.js?v=new-engine-314';
+import { PlayerListUIManager } from './player-list-ui.js?v=new-engine-314';
+import { GAME_TIPS } from './tips.js?v=new-engine-314';
 
 export class UIManager {
   constructor(engine) {

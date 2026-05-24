@@ -97,36 +97,89 @@ export class InGameMenuUIManager {
         kbModal.id = 'keybinds-modal';
         kbModal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 1000000;';
         kbModal.innerHTML = `
-            <div style="background: #0b0e14; border: 2px solid #3498db; padding: 20px; border-radius: 8px; font-family: var(--font-mono); width: 280px; display: flex; flex-direction: column; gap: 15px;">
-                <h3 style="color: #3498db; margin-top: 0; text-align: center;">Keybinds</h3>
+            <div style="background: #0b0e14; border: 2px solid #3498db; padding: 20px; border-radius: 8px; font-family: var(--font-mono); width: 320px; display: flex; flex-direction: column; gap: 15px; max-height: 80vh; overflow-y: auto;">
+                <h3 style="color: #3498db; margin-top: 0; margin-bottom: 0; text-align: center;">Keybinds</h3>
+                <div style="display: flex; gap: 10px;">
+                    <button id="btn-preset-default" class="btn-secondary" style="flex: 1; padding: 5px; font-size: 0.8rem;">Preset: Default</button>
+                    <button id="btn-preset-arrows" class="btn-secondary" style="flex: 1; padding: 5px; font-size: 0.8rem;">Preset: Arrows</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #fff;">Camera Up</span>
+                    <input type="text" id="kb-camup" style="width: 80px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;">
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #fff;">Camera Down</span>
+                    <input type="text" id="kb-camdown" style="width: 80px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;">
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #fff;">Camera Left</span>
+                    <input type="text" id="kb-camleft" style="width: 80px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;">
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #fff;">Camera Right</span>
+                    <input type="text" id="kb-camright" style="width: 80px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;">
+                </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="color: #fff;">Undo</span>
-                    <div style="display: flex; align-items: center; gap: 5px;"><span style="color: #aaa;">Ctrl + </span><input type="text" id="kb-undo" maxlength="1" style="width: 30px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;"></div>
+                    <div style="display: flex; align-items: center; gap: 5px;"><span style="color: #aaa;">Ctrl + </span><input type="text" id="kb-undo" style="width: 40px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;"></div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="color: #fff;">Redo</span>
-                    <div style="display: flex; align-items: center; gap: 5px;"><span style="color: #aaa;">Ctrl + </span><input type="text" id="kb-redo" maxlength="1" style="width: 30px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;"></div>
+                    <div style="display: flex; align-items: center; gap: 5px;"><span style="color: #aaa;">Ctrl + </span><input type="text" id="kb-redo" style="width: 40px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;"></div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="color: #fff;">Picker Tool</span>
-                    <div style="display: flex; align-items: center; gap: 5px;"><input type="text" id="kb-picker" maxlength="1" style="width: 30px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;" placeholder="-"></div>
+                    <div style="display: flex; align-items: center; gap: 5px;"><input type="text" id="kb-picker" style="width: 60px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;" placeholder="-"></div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <span style="color: #fff;">Fly Down</span>
-                    <div style="display: flex; align-items: center; gap: 5px;"><input type="text" id="kb-flydown" maxlength="1" style="width: 30px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;" placeholder="x"></div>
+                    <div style="display: flex; align-items: center; gap: 5px;"><input type="text" id="kb-flydown" style="width: 60px; text-align: center; background: #111; color: #fff; border: 1px solid #444; padding: 5px; text-transform: lowercase;" placeholder="x"></div>
                 </div>
                 <button id="btn-close-keybinds" class="btn-primary" style="margin-top: 10px;">Save & Close</button>
             </div>
         `;
         document.body.appendChild(kbModal);
         
+        const captureKey = (e) => {
+            e.preventDefault();
+            let key = e.key.toLowerCase();
+            if (key === ' ') key = 'space';
+            e.target.value = key;
+        };
+        ['kb-camup', 'kb-camdown', 'kb-camleft', 'kb-camright', 'kb-undo', 'kb-redo', 'kb-picker', 'kb-flydown'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.onkeydown = captureKey;
+        });
+
+        document.getElementById('btn-preset-default').onclick = () => {
+            document.getElementById('kb-camup').value = 'pageup';
+            document.getElementById('kb-camdown').value = 'pagedown';
+            document.getElementById('kb-camleft').value = 'q';
+            document.getElementById('kb-camright').value = 'e';
+        };
+
+        document.getElementById('btn-preset-arrows').onclick = () => {
+            document.getElementById('kb-camup').value = 'arrowup';
+            document.getElementById('kb-camdown').value = 'arrowdown';
+            document.getElementById('kb-camleft').value = 'arrowleft';
+            document.getElementById('kb-camright').value = 'arrowright';
+        };
+
         document.getElementById('btn-close-keybinds').onclick = () => {
             if (window.currentGameEngine) {
                 const undoKey = document.getElementById('kb-undo').value.toLowerCase() || 'z';
                 const redoKey = document.getElementById('kb-redo').value.toLowerCase() || 'y';
                 const pickerKey = document.getElementById('kb-picker').value.toLowerCase() || '';
                 const flyDownKey = document.getElementById('kb-flydown').value.toLowerCase() || 'x';
-                window.currentGameEngine.clientSettings.keybinds = { undo: undoKey, redo: redoKey, picker: pickerKey, flyDown: flyDownKey };
+                const camUp = document.getElementById('kb-camup').value.toLowerCase() || 'pageup';
+                const camDown = document.getElementById('kb-camdown').value.toLowerCase() || 'pagedown';
+                const camLeft = document.getElementById('kb-camleft').value.toLowerCase() || 'q';
+                const camRight = document.getElementById('kb-camright').value.toLowerCase() || 'e';
+                
+                window.currentGameEngine.clientSettings.keybinds = { 
+                    undo: undoKey, redo: redoKey, picker: pickerKey, flyDown: flyDownKey,
+                    camUp, camDown, camLeft, camRight 
+                };
                 localStorage.setItem('b_client_settings', JSON.stringify(window.currentGameEngine.clientSettings));
             }
             kbModal.style.display = 'none';
@@ -135,11 +188,15 @@ export class InGameMenuUIManager {
         btnKeybinds.onclick = () => {
             gameDropdown.style.display = 'none';
             const eng = window.currentGameEngine;
-            const kbs = eng?.clientSettings?.keybinds || { undo: 'z', redo: 'y', picker: '', flyDown: 'x' };
-            document.getElementById('kb-undo').value = kbs.undo;
-            document.getElementById('kb-redo').value = kbs.redo;
+            const kbs = eng?.clientSettings?.keybinds || { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' };
+            document.getElementById('kb-undo').value = kbs.undo || 'z';
+            document.getElementById('kb-redo').value = kbs.redo || 'y';
             document.getElementById('kb-picker').value = kbs.picker || '';
             document.getElementById('kb-flydown').value = kbs.flyDown || 'x';
+            document.getElementById('kb-camup').value = kbs.camUp || 'pageup';
+            document.getElementById('kb-camdown').value = kbs.camDown || 'pagedown';
+            document.getElementById('kb-camleft').value = kbs.camLeft || 'q';
+            document.getElementById('kb-camright').value = kbs.camRight || 'e';
             kbModal.style.display = 'flex';
         };
       }
@@ -229,7 +286,7 @@ export class InGameMenuUIManager {
         });
       }
 
-      const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, cameraSensitivity: 120, cameraAngleSnap: 0, invertCameraRotation: false, invertDragRotation: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x' } };
+      const defaultSettings = { showCoords: false, showFPS: false, showPing: false, showBaseplates: false, cameraFollowsJump: true, showMinimap: true, rotateMinimap: true, clickToMove: false, alwaysSprint: false, showPlayerNames: true, showPlayerHealth: true, showEntityNames: true, showEntityHealth: true, cameraSensitivity: 120, cameraAngleSnap: 0, invertCameraX: false, invertCameraY: false, middleMouseRotation: true, dragRotationSensitivity: 0.25, lockBuilderPanel: false, enableShadows: true, keybinds: { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' } };
       const savedSettingsStr = localStorage.getItem('b_client_settings');
       const savedSettings = savedSettingsStr ? Object.assign({}, defaultSettings, JSON.parse(savedSettingsStr)) : defaultSettings;
       
@@ -238,7 +295,10 @@ export class InGameMenuUIManager {
         const btn = document.getElementById(btnId);
         if (!row || !btn) return;
         
-        if (savedSettings[settingKey]) {
+        let isEnabled = savedSettings[settingKey];
+        if (settingKey === 'enableShadows' && isEnabled === undefined) isEnabled = true;
+
+        if (isEnabled) {
           btn.innerText = 'Enabled';
           btn.className = 'btn-primary';
           btn.style.width = 'auto';
@@ -249,13 +309,20 @@ export class InGameMenuUIManager {
 
         row.addEventListener('click', () => {
           if (!window.currentGameEngine) return;
-          const isEnabled = !window.currentGameEngine.clientSettings[settingKey];
-          window.currentGameEngine.clientSettings[settingKey] = isEnabled;
+          let currentVal = window.currentGameEngine.clientSettings[settingKey];
+          if (settingKey === 'enableShadows' && currentVal === undefined) currentVal = true;
+          
+          const newVal = !currentVal;
+          window.currentGameEngine.clientSettings[settingKey] = newVal;
           localStorage.setItem('b_client_settings', JSON.stringify(window.currentGameEngine.clientSettings));
           
-          btn.innerText = isEnabled ? 'Enabled' : 'Disabled';
-          btn.className = isEnabled ? 'btn-primary' : 'btn-secondary';
+          btn.innerText = newVal ? 'Enabled' : 'Disabled';
+          btn.className = newVal ? 'btn-primary' : 'btn-secondary';
           btn.style.width = 'auto';
+
+          if (settingKey === 'enableShadows' && window.currentGameEngine.renderer) {
+            window.currentGameEngine.renderer.toggleShadows(newVal);
+          }
         });
       };
 
@@ -267,12 +334,21 @@ export class InGameMenuUIManager {
         coordsRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;';
         coordsRow.innerHTML = `<span style="color: #ccc;">Show Coordinates</span><button id="btn-toggle-coords" class="${savedSettings.showCoords ? 'btn-primary' : 'btn-secondary'}">${savedSettings.showCoords ? 'Enabled' : 'Disabled'}</button>`;
         fpsRow.parentNode.insertBefore(coordsRow, fpsRow);
+
+        const shadowRow = document.createElement('div');
+        shadowRow.id = 'row-toggle-shadows';
+        shadowRow.className = 'settings-row';
+        shadowRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;';
+        const enableShadows = savedSettings.enableShadows !== false;
+        shadowRow.innerHTML = `<span style="color: #ccc;">Enable Shadows</span><button id="btn-toggle-shadows" class="${enableShadows ? 'btn-primary' : 'btn-secondary'}">${enableShadows ? 'Enabled' : 'Disabled'}</button>`;
+        fpsRow.parentNode.insertBefore(shadowRow, fpsRow);
       }
 
       setupSettingToggle('row-toggle-coords', 'btn-toggle-coords', 'showCoords');
       setupSettingToggle('row-toggle-fps', 'btn-toggle-fps', 'showFPS');
       setupSettingToggle('row-toggle-ping', 'btn-toggle-ping', 'showPing');
       setupSettingToggle('row-toggle-baseplates', 'btn-toggle-baseplates', 'showBaseplates');
+      setupSettingToggle('row-toggle-shadows', 'btn-toggle-shadows', 'enableShadows');
 
       setupSettingToggle('row-toggle-lock-builder', 'btn-toggle-lock-builder', 'lockBuilderPanel');
       setupSettingToggle('row-toggle-cam-jump', 'btn-toggle-cam-jump', 'cameraFollowsJump');
@@ -286,13 +362,38 @@ export class InGameMenuUIManager {
       setupSettingToggle('row-toggle-entity-health', 'btn-toggle-entity-health', 'showEntityHealth');
             
       // Wire up the camera rotation and drag settings
-      setupSettingToggle('row-toggle-invert-rot', 'btn-toggle-invert-rot', 'invertCameraRotation');
-      setupSettingToggle('row-toggle-invert-camera', 'btn-toggle-invert-camera', 'invertCameraRotation');
-      setupSettingToggle('row-toggle-invert', 'btn-toggle-invert', 'invertCameraRotation');
-      setupSettingToggle('row-toggle-invert-qe', 'btn-toggle-invert-qe', 'invertCameraRotation');
-      setupSettingToggle('row-toggle-invert-q-e', 'btn-toggle-invert-q-e', 'invertCameraRotation');
+      const oldInvertRows = ['row-toggle-invert-rot', 'row-toggle-invert-camera', 'row-toggle-invert', 'row-toggle-invert-qe', 'row-toggle-invert-q-e', 'row-toggle-drag-rot'];
+      let insertAnchor = null;
+      oldInvertRows.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          if (!insertAnchor) insertAnchor = el;
+          el.style.display = 'none';
+        }
+      });
+
+      if (insertAnchor) {
+        if (!document.getElementById('row-toggle-invert-cam-x')) {
+          const xRow = document.createElement('div');
+          xRow.id = 'row-toggle-invert-cam-x';
+          xRow.className = 'settings-row';
+          xRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;';
+          xRow.innerHTML = `<span style="color: #ccc;">Invert Left/Right Rotation</span><button id="btn-toggle-invert-cam-x" class="${savedSettings.invertCameraX ? 'btn-primary' : 'btn-secondary'}">${savedSettings.invertCameraX ? 'Enabled' : 'Disabled'}</button>`;
+          insertAnchor.parentNode.insertBefore(xRow, insertAnchor);
+        }
+        if (!document.getElementById('row-toggle-invert-cam-y')) {
+          const yRow = document.createElement('div');
+          yRow.id = 'row-toggle-invert-cam-y';
+          yRow.className = 'settings-row';
+          yRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;';
+          yRow.innerHTML = `<span style="color: #ccc;">Invert Up/Down Rotation</span><button id="btn-toggle-invert-cam-y" class="${savedSettings.invertCameraY ? 'btn-primary' : 'btn-secondary'}">${savedSettings.invertCameraY ? 'Enabled' : 'Disabled'}</button>`;
+          insertAnchor.parentNode.insertBefore(yRow, insertAnchor);
+        }
+        setupSettingToggle('row-toggle-invert-cam-x', 'btn-toggle-invert-cam-x', 'invertCameraX');
+        setupSettingToggle('row-toggle-invert-cam-y', 'btn-toggle-invert-cam-y', 'invertCameraY');
+      }
+
       setupSettingToggle('row-toggle-middle-mouse', 'btn-toggle-middle-mouse', 'middleMouseRotation');
-      setupSettingToggle('row-toggle-drag-rot', 'btn-toggle-drag-rot', 'invertDragRotation');
 
       const camJumpRow = document.getElementById('row-toggle-cam-jump');
       if (camJumpRow && !document.getElementById('camera-sensitivity-row')) {

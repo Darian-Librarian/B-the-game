@@ -1,7 +1,7 @@
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { GLTFLoader } from 'https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'https://unpkg.com/three@0.160.0/examples/jsm/utils/BufferGeometryUtils.js';
-import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=new-engine-311';
+import { BlockRegistry, FURNITURE_REGISTRY } from './registry.js?v=new-engine-314';
 
 export class Renderer {
   constructor(engine) {
@@ -10,6 +10,7 @@ export class Renderer {
     THREE.Object3D.DEFAULT_UP.set(0, 0, 1);
 
     this.cameraAngle = this.engine.clientSettings.cameraAngle !== undefined ? this.engine.clientSettings.cameraAngle : 0; 
+    this.cameraPitch = Math.atan(1 / Math.sqrt(2));
     this.needsVoxelUpdate = true;
     this.initialLoadComplete = false;
     
@@ -31,6 +32,9 @@ export class Renderer {
     this.webgl.setPixelRatio(1);
     this.webgl.setSize(window.innerWidth, window.innerHeight);
     this.webgl.setClearColor(0x0b0e14, 1);
+
+    this.webgl.shadowMap.enabled = this.engine.clientSettings.enableShadows !== false;
+    this.webgl.shadowMap.type = THREE.PCFSoftShadowMap;
   }
 
   setupCamera() {
@@ -55,14 +59,20 @@ export class Renderer {
     const baseIsoAngle = Math.PI / 4; 
     const zRotOffset = -this.cameraAngle * (Math.PI / 180);
     
-    this.camera.rotation.x = Math.atan(1 / Math.sqrt(2));
+    this.camera.rotation.x = this.cameraPitch;
     this.camera.rotation.y = 0; // Handled by Z up
     this.camera.rotation.z = baseIsoAngle + zRotOffset;
     this.updateCompass();
   }
 
-  rotateCamera(direction) {
+  rotateCamera(direction, deltaY = 0) {
     this.cameraAngle = (this.cameraAngle + direction + 360) % 360;
+
+    if (deltaY !== 0) {
+      this.cameraPitch += deltaY * 0.01;
+      this.cameraPitch = Math.max(0.1, Math.min(this.cameraPitch, 80 * (Math.PI / 180)));
+    }
+
     this.engine.clientSettings.cameraAngle = this.cameraAngle;
     localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
     this.updateCameraRotation();
@@ -70,7 +80,26 @@ export class Renderer {
 
   setupScene() {
     this.scene = new THREE.Scene();
-    this.scene.add(new THREE.AmbientLight(0xffffff, 1.0)); 
+    
+    this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+    this.scene.add(this.hemiLight);
+
+    this.sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    this.sunLight.castShadow = this.engine.clientSettings.enableShadows !== false;
+    
+    this.sunLight.shadow.mapSize.width = 2048;
+    this.sunLight.shadow.mapSize.height = 2048;
+    const d = 1000;
+    this.sunLight.shadow.camera.left = -d;
+    this.sunLight.shadow.camera.right = d;
+    this.sunLight.shadow.camera.top = d;
+    this.sunLight.shadow.camera.bottom = -d;
+    this.sunLight.shadow.camera.near = 0.5;
+    this.sunLight.shadow.camera.far = 5000;
+    this.sunLight.shadow.bias = -0.0005;
+
+    this.scene.add(this.sunLight);
+    this.scene.add(this.sunLight.target);
 
     this.arrowHelper = new THREE.ArrowHelper(
       new THREE.Vector3(1, 0, 0),
@@ -188,13 +217,12 @@ export class Renderer {
   setupInstancedMesh() {
     const maxInstances = 100000;
 
-    this.instancedMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0xffffff,
-      alphaTest: 0.1
+    this.instancedMaterial = new THREE.MeshLambertMaterial({
+      color: 0xffffff
     }); 
     this.instancedMaterial.userData = { time: { value: 0 } };
 
-    this.glassMaterial = new THREE.MeshBasicMaterial({ 
+    this.glassMaterial = new THREE.MeshLambertMaterial({ 
       color: 0xffffff,
       transparent: true,
       alphaTest: 0.05,
@@ -202,49 +230,43 @@ export class Renderer {
     }); 
     this.glassMaterial.userData = { time: { value: 0 } };
 
-    this.modelMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, alphaTest: 0.1 });
+    this.modelMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff });
     this.modelMaterial.onBeforeCompile = (shader) => {
       shader.vertexShader = `
         attribute vec4 instanceUVTop;
         varying vec4 vInstanceUVTop;
         varying vec3 vWorldNormal;
+        varying vec3 vLocalNormal;
         varying vec3 vLocalPosition;
       ` + shader.vertexShader.replace(
         '#include <uv_vertex>',
         `
         #include <uv_vertex>
         vInstanceUVTop = instanceUVTop;
-        vWorldNormal = normalize( mat3( modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz ) * normal );
+        vLocalNormal = normal;
+        vWorldNormal = normalize( ( modelMatrix * vec4( mat3( instanceMatrix ) * normal, 0.0 ) ).xyz );
         vLocalPosition = position;
         `
       );
       shader.fragmentShader = `
         varying vec4 vInstanceUVTop;
         varying vec3 vWorldNormal;
+        varying vec3 vLocalNormal;
         varying vec3 vLocalPosition;
       ` + shader.fragmentShader.replace(
         '#include <map_fragment>',
         `
         #ifdef USE_MAP
           vec2 baseUV = vec2(0.0);
-          if (abs(vWorldNormal.z) > 0.5) {
+          if (abs(vLocalNormal.z) > 0.5) {
              baseUV = vec2(vLocalPosition.x, -vLocalPosition.y) / 32.0;
-          } else if (abs(vWorldNormal.x) > 0.5) {
-             baseUV = vec2(vWorldNormal.x > 0.0 ? -vLocalPosition.y : vLocalPosition.y, -vLocalPosition.z) / 32.0;
+          } else if (abs(vLocalNormal.x) > 0.5) {
+             baseUV = vec2(vLocalNormal.x > 0.0 ? -vLocalPosition.y : vLocalPosition.y, -vLocalPosition.z) / 32.0;
           } else {
-             baseUV = vec2(vWorldNormal.y > 0.0 ? vLocalPosition.x : -vLocalPosition.x, -vLocalPosition.z) / 32.0;
+             baseUV = vec2(vLocalNormal.y > 0.0 ? vLocalPosition.x : -vLocalPosition.x, -vLocalPosition.z) / 32.0;
           }
           vec2 modifiedUV = fract(baseUV) * vInstanceUVTop.zw + vInstanceUVTop.xy;
           vec4 sampledDiffuseColor = texture2D( map, modifiedUV );
-          float lighting = 1.0;
-          if (abs(vWorldNormal.z) < 0.9) {
-             lighting = 0.75;
-             float luma = dot(sampledDiffuseColor.rgb, vec3(0.299, 0.587, 0.114));
-             sampledDiffuseColor.rgb = mix(vec3(luma), sampledDiffuseColor.rgb, 1.35);
-          } else if (vWorldNormal.z < -0.9) {
-             lighting = 0.5;
-          }
-          sampledDiffuseColor.rgb *= lighting;
           diffuseColor *= sampledDiffuseColor;
         #endif
         `
@@ -276,6 +298,7 @@ export class Renderer {
         varying vec4 vInstanceNeighbors1;
         varying vec2 vInstanceNeighbors2;
         varying vec3 vWorldNormal;
+        varying vec3 vLocalNormal;
         varying vec3 vLocalPosition;
         varying vec3 vInstancePosition;
       ` + shader.vertexShader.replace(
@@ -288,7 +311,8 @@ export class Renderer {
         vInstanceUVBottom = instanceUVBottom;
         vInstanceNeighbors1 = instanceNeighbors1;
         vInstanceNeighbors2 = instanceNeighbors2;
-        vWorldNormal = normalize( mat3( modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz ) * normal );
+        vLocalNormal = normal;
+        vWorldNormal = normalize( ( modelMatrix * vec4( mat3( instanceMatrix ) * normal, 0.0 ) ).xyz );
         vLocalPosition = position;
         vInstancePosition = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
         `
@@ -302,6 +326,7 @@ export class Renderer {
         varying vec4 vInstanceNeighbors1;
         varying vec2 vInstanceNeighbors2;
         varying vec3 vWorldNormal;
+        varying vec3 vLocalNormal;
         varying vec3 vLocalPosition;
         varying vec3 vInstancePosition;
       ` + shader.fragmentShader.replace(
@@ -311,17 +336,17 @@ export class Renderer {
           vec2 baseUV = vMapUv;
           
           vec4 iuv;
-          if (vWorldNormal.z > 0.5) { // Top
+          if (vLocalNormal.z > 0.5) { // Top
             iuv = vInstanceUVTop;
-          } else if (vWorldNormal.z < -0.5) { // Bottom
+          } else if (vLocalNormal.z < -0.5) { // Bottom
             iuv = vInstanceUVBottom;
           } else { // Sides
             iuv = vInstanceUVSide;
             // Force ALL side faces to mathematically orient V directly downwards (-Z)
-            if (abs(vWorldNormal.x) > 0.5) {
-                baseUV.x = vWorldNormal.x > 0.0 ? fract(0.5 - vLocalPosition.y / 32.0) : fract(vLocalPosition.y / 32.0 + 0.5);
+            if (abs(vLocalNormal.x) > 0.5) {
+                baseUV.x = vLocalNormal.x > 0.0 ? fract(0.5 - vLocalPosition.y / 32.0) : fract(vLocalPosition.y / 32.0 + 0.5);
             } else {
-                baseUV.x = vWorldNormal.y > 0.0 ? fract(vLocalPosition.x / 32.0 + 0.5) : fract(0.5 - vLocalPosition.x / 32.0);
+                baseUV.x = vLocalNormal.y > 0.0 ? fract(vLocalPosition.x / 32.0 + 0.5) : fract(0.5 - vLocalPosition.x / 32.0);
             }
             baseUV.y = fract(vLocalPosition.z / 32.0 + 0.5);
           }
@@ -329,7 +354,7 @@ export class Renderer {
           // --- Fluid Animation Override ---
           if (vIsFluid > 0.5) {
               vec3 worldPos = vInstancePosition + vLocalPosition;
-              if (vWorldNormal.z > 0.9) { // Flat Top face ONLY
+              if (vLocalNormal.z > 0.9) { // Flat Top face ONLY
                   // Seamless world-aligned mapping, NO time sliding
                   baseUV = fract(vec2(worldPos.x, -worldPos.y) / 32.0);
               }
@@ -340,23 +365,14 @@ export class Renderer {
 
           // --- Interior Face Culling ---
           float faceVis = 1.0;
-          if (vWorldNormal.z > 0.5) faceVis = vInstanceNeighbors2.x;
-          else if (vWorldNormal.z < -0.5) faceVis = vInstanceNeighbors2.y;
-          else if (vWorldNormal.x > 0.5) faceVis = vInstanceNeighbors1.x; // East
-          else if (vWorldNormal.x < -0.5) faceVis = vInstanceNeighbors1.y; // West
-          else if (vWorldNormal.y > 0.5) faceVis = vInstanceNeighbors1.z; // South
-          else if (vWorldNormal.y < -0.5) faceVis = vInstanceNeighbors1.w; // North
+          if (vLocalNormal.z > 0.5) faceVis = vInstanceNeighbors2.x;
+          else if (vLocalNormal.z < -0.5) faceVis = vInstanceNeighbors2.y;
+          else if (vLocalNormal.x > 0.5) faceVis = vInstanceNeighbors1.x; // East
+          else if (vLocalNormal.x < -0.5) faceVis = vInstanceNeighbors1.y; // West
+          else if (vLocalNormal.y > 0.5) faceVis = vInstanceNeighbors1.z; // South
+          else if (vLocalNormal.y < -0.5) faceVis = vInstanceNeighbors1.w; // North
 
           if (faceVis < 0.5) discard;
-
-          // --- Fake AO/Lighting for Depth Perception ---
-          float lighting = 1.0;
-          if (abs(vWorldNormal.z) < 0.9) { 
-            lighting = 0.75;
-          } else if (vWorldNormal.z < -0.9) { 
-            lighting = 0.5;
-          }
-          sampledDiffuseColor.rgb *= lighting;
 
           diffuseColor *= sampledDiffuseColor;
         #endif
@@ -382,6 +398,8 @@ export class Renderer {
       geometry.setAttribute('instanceNeighbors2', new THREE.InstancedBufferAttribute(neighbors2, 2));
 
       const mesh = new THREE.InstancedMesh(geometry, material, maxInstances);
+      mesh.castShadow = this.engine.clientSettings.enableShadows !== false;
+      mesh.receiveShadow = this.engine.clientSettings.enableShadows !== false;
       
       mesh.frustumCulled = false;
       mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1000000);
@@ -525,6 +543,8 @@ export class Renderer {
       const n2 = new Float32Array(maxPreview * 2); n2.fill(1);
       geometry.setAttribute('instanceNeighbors2', new THREE.InstancedBufferAttribute(n2, 2));
       const mesh = new THREE.InstancedMesh(geometry, this.previewMaterial, maxPreview);
+      mesh.castShadow = this.engine.clientSettings.enableShadows !== false;
+      mesh.receiveShadow = this.engine.clientSettings.enableShadows !== false;
       mesh.frustumCulled = false; mesh.count = 0; mesh.renderOrder = 998;
       mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(maxPreview * 3), 3);
       this.scene.add(mesh); return mesh;
@@ -552,7 +572,7 @@ export class Renderer {
         `
         #include <uv_vertex>
         vInstanceUVTop = instanceUVTop;
-        vWorldNormal = normalize( mat3( modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz ) * normal );
+        vWorldNormal = normalize( ( modelMatrix * vec4( mat3( instanceMatrix ) * normal, 0.0 ) ).xyz );
         `
       );
       shader.fragmentShader = `
@@ -564,10 +584,6 @@ export class Renderer {
         #ifdef USE_MAP
           vec2 modifiedUV = vMapUv * vInstanceUVTop.zw + vInstanceUVTop.xy;
           vec4 sampledDiffuseColor = texture2D( map, modifiedUV );
-          float lighting = 1.0;
-          if (abs(vWorldNormal.z) < 0.9) lighting = 0.75;
-          else if (vWorldNormal.z < -0.9) lighting = 0.5;
-          sampledDiffuseColor.rgb *= lighting;
           diffuseColor *= sampledDiffuseColor;
         #endif
         `
@@ -588,20 +604,26 @@ export class Renderer {
     decorGeo.computeVertexNormals();
     this.decorMesh = createMesh(decorGeo);
     this.decorMesh.material = this.decorMaterial;
+    this.decorMesh.castShadow = false;
   }
 
   setupCompass() {
-    let compass = document.getElementById('compass-ui');
-    if (!compass) {
-      compass = document.createElement('div');
+    let compassWrapper = document.getElementById('compass-wrapper');
+    if (!compassWrapper) {
+      compassWrapper = document.createElement('div');
+      compassWrapper.id = 'compass-wrapper';
+      compassWrapper.style.cssText = 'position: absolute; top: 85px; right: 35px; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 1000;';
+
+      let compass = document.createElement('div');
       compass.id = 'compass-ui';
-      compass.style.cssText = 'position: absolute; top: 85px; right: 35px; width: 40px; height: 40px; background: rgba(5, 7, 10, 0.8); border: 2px solid #3498db; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 1000; pointer-events: auto; cursor: pointer; font-family: var(--font-mono); font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.8); transition: background 0.2s;';
-      
+      compass.style.cssText = 'position: relative; width: 40px; height: 40px; background: rgba(5, 7, 10, 0.8); border: 2px solid #3498db; border-radius: 50%; display: flex; align-items: center; justify-content: center; pointer-events: auto; cursor: pointer; font-family: var(--font-mono); font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.8); transition: background 0.2s;';
+
       compass.onmouseenter = () => compass.style.background = 'rgba(52, 152, 219, 0.3)';
       compass.onmouseleave = () => compass.style.background = 'rgba(5, 7, 10, 0.8)';
       compass.onclick = () => {
         const snapAngle = this.engine.clientSettings.cameraAngleSnap !== undefined ? this.engine.clientSettings.cameraAngleSnap : 0;
         this.cameraAngle = parseInt(snapAngle, 10);
+        this.cameraPitch = Math.atan(1 / Math.sqrt(2));
         this.engine.clientSettings.cameraAngle = this.cameraAngle;
         localStorage.setItem('b_client_settings', JSON.stringify(this.engine.clientSettings));
         this.updateCameraRotation();
@@ -609,7 +631,7 @@ export class Renderer {
       
       const needle = document.createElement('div');
       needle.id = 'compass-needle';
-      needle.style.cssText = 'position: relative; width: 4px; height: 32px; background: linear-gradient(to bottom, #e74c3c 50%, #bdc3c7 50%); border-radius: 2px;';
+      needle.style.cssText = 'position: relative; width: 4px; height: 32px; background: linear-gradient(to bottom, #e74c3c 50%, #bdc3c7 50%); border-radius: 2px; z-index: 2;';
       
       const nLabel = document.createElement('div');
       nLabel.innerText = 'N';
@@ -617,7 +639,21 @@ export class Renderer {
       needle.appendChild(nLabel);
       
       compass.appendChild(needle);
-      document.body.appendChild(compass);
+
+      const sunIcon = document.createElement('div');
+      sunIcon.id = 'compass-sun';
+      sunIcon.style.cssText = 'position: absolute; width: 10px; height: 10px; background: #f1c40f; border-radius: 50%; box-shadow: 0 0 8px #f1c40f; top: 50%; left: 50%; transform: translate(-50%, -50%); transition: background 0.5s, box-shadow 0.5s; pointer-events: none; z-index: 1;';
+      compass.appendChild(sunIcon);
+      
+      compassWrapper.appendChild(compass);
+
+      const clockDisplay = document.createElement('div');
+      clockDisplay.id = 'in-game-clock';
+      clockDisplay.style.cssText = 'background: rgba(5, 7, 10, 0.8); border: 1px solid #3498db; color: #fff; padding: 2px 6px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.75rem; font-weight: bold; text-shadow: 1px 1px 0 #000; pointer-events: auto; cursor: default; white-space: nowrap;';
+      clockDisplay.innerText = '06:00 AM';
+      compassWrapper.appendChild(clockDisplay);
+
+      document.body.appendChild(compassWrapper);
     }
   }
 
@@ -700,6 +736,8 @@ export class Renderer {
           meshGeo.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(new Float32Array(10000 * 4), 4));
 
           const mesh = new THREE.InstancedMesh(meshGeo, this.modelMaterial, 10000);
+          mesh.castShadow = this.engine.clientSettings.enableShadows !== false;
+          mesh.receiveShadow = this.engine.clientSettings.enableShadows !== false;
           mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
           mesh.frustumCulled = false;
           mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1000000);
@@ -713,6 +751,8 @@ export class Renderer {
           previewGeo.setAttribute('instanceUVTop', new THREE.InstancedBufferAttribute(new Float32Array(4096 * 4), 4));
 
           const previewMesh = new THREE.InstancedMesh(previewGeo, this.previewModelMaterial, 4096);
+          previewMesh.castShadow = this.engine.clientSettings.enableShadows !== false;
+          previewMesh.receiveShadow = this.engine.clientSettings.enableShadows !== false;
           previewMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
           previewMesh.frustumCulled = false; previewMesh.count = 0; previewMesh.renderOrder = 998;
           previewMesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(4096 * 3), 3);
@@ -1265,6 +1305,7 @@ export class Renderer {
 
   updateEntities() {
     const activeEntities = new Set();
+    const camUp = new THREE.Vector3(0, 1, 0).applyQuaternion(this.camera.quaternion);
 
     const updateEntityMesh = (entity, id) => {
       activeEntities.add(id);
@@ -1273,14 +1314,28 @@ export class Renderer {
       if (!group) {
         group = new THREE.Group();
 
-        const mat = new THREE.SpriteMaterial({ 
+        const mat = new THREE.MeshLambertMaterial({ 
           transparent: true, 
-          alphaTest: 0.1,
+          alphaTest: 0.5,
+          depthWrite: true,
+          side: THREE.DoubleSide,
           polygonOffset: true,
           polygonOffsetFactor: -1,
           polygonOffsetUnits: -1
         });
-        const sprite = new THREE.Sprite(mat);
+        // Force the sprite normal to always point UP in world space so the daylight hits it uniformly!
+        mat.onBeforeCompile = (shader) => {
+          shader.vertexShader = shader.vertexShader.replace(
+            '#include <defaultnormal_vertex>',
+            `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`
+          );
+        };
+        const geo = new THREE.PlaneGeometry(1, 1);
+        const sprite = new THREE.Mesh(geo, mat);
+        sprite.castShadow = this.engine.clientSettings.enableShadows !== false;
+        sprite.receiveShadow = true;
+        sprite.frustumCulled = false;
+
         group.add(sprite);
         group.userData.sprite = sprite;
 
@@ -1305,18 +1360,18 @@ export class Renderer {
 
       let width = 192;
       let height = 192;
-      let zOffset = 0;
+
       if (state === 'attack1' || state === 'attack2' || state === 'throw_attack1') {
         width = 288;
         height = 288;
-        zOffset = -48;
       }
+
       sprite.scale.set(width, height, 1);
 
-      // This is PLAYER SPRITE HEIGHT
-      const groundOffset = -50
-
-      sprite.position.set(0, 0, (height / 2) + zOffset + groundOffset);
+      // By shifting the sprite 46 units along the camera's local Y axis, 
+      // its physical feet perfectly anchor to the exact center of the world group!
+      sprite.position.copy(camUp).multiplyScalar(46);
+      sprite.quaternion.copy(this.camera.quaternion);
       
       group.position.set(entity.x, entity.y, entity.z || 0);
 
@@ -1387,8 +1442,18 @@ export class Renderer {
       let group = this.projectileMeshes.get(id);
       if (!group) {
         group = new THREE.Group();
-        const mat = new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.1 });
-        const sprite = new THREE.Sprite(mat);
+        const mat = new THREE.MeshLambertMaterial({ transparent: true, alphaTest: 0.5, depthWrite: true, side: THREE.DoubleSide });
+        mat.onBeforeCompile = (shader) => {
+          shader.vertexShader = shader.vertexShader.replace(
+            '#include <defaultnormal_vertex>',
+            `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`
+          );
+        };
+        const geo = new THREE.PlaneGeometry(1, 1);
+        const sprite = new THREE.Mesh(geo, mat);
+        sprite.castShadow = this.engine.clientSettings.enableShadows !== false;
+        sprite.receiveShadow = true;
+        sprite.frustumCulled = false;
         group.add(sprite);
         group.userData.sprite = sprite;
 
@@ -1406,6 +1471,7 @@ export class Renderer {
       const shadow = group.userData.shadow;
 
       let isLeft = false;
+      let rotAngle = 0;
       
       if (proj.isCritLoop && proj.loopPitch !== undefined) {
         const v1 = new THREE.Vector3(proj.startX, proj.startY, proj.startZ).project(this.camera);
@@ -1413,29 +1479,27 @@ export class Renderer {
         const baseAngle = Math.atan2(v2.y - v1.y, v2.x - v1.x);
         
         isLeft = Math.abs(baseAngle) > Math.PI / 2;
-        sprite.material.rotation = baseAngle + (isLeft ? -proj.loopPitch : proj.loopPitch);
-        proj.lastAngle = sprite.material.rotation;
+        rotAngle = baseAngle + (isLeft ? -proj.loopPitch : proj.loopPitch);
+        proj.lastAngle = rotAngle;
       } else if (proj.lastX !== undefined) {
         const v1 = new THREE.Vector3(proj.lastX, proj.lastY, proj.lastZ).project(this.camera);
         const v2 = new THREE.Vector3(proj.x, proj.y, proj.z).project(this.camera);
         const dxScreen = v2.x - v1.x;
         const dyScreen = v2.y - v1.y;
         if (Math.abs(dxScreen) > 0.00001 || Math.abs(dyScreen) > 0.00001) {
-          const angle = Math.atan2(dyScreen, dxScreen);
-          sprite.material.rotation = angle;
-          isLeft = Math.abs(angle) > Math.PI / 2;
-          proj.lastAngle = angle;
+          rotAngle = Math.atan2(dyScreen, dxScreen);
+          isLeft = Math.abs(rotAngle) > Math.PI / 2;
+          proj.lastAngle = rotAngle;
         } else if (proj.lastAngle !== undefined) {
-          sprite.material.rotation = proj.lastAngle;
+          rotAngle = proj.lastAngle;
           isLeft = Math.abs(proj.lastAngle) > Math.PI / 2;
         }
       } else {
         const v1 = new THREE.Vector3(proj.startX, proj.startY, proj.startZ).project(this.camera);
         const v2 = new THREE.Vector3(proj.targetX, proj.targetY, proj.targetZ).project(this.camera);
-        const angle = Math.atan2(v2.y - v1.y, v2.x - v1.x);
-        sprite.material.rotation = angle;
-        isLeft = Math.abs(angle) > Math.PI / 2;
-        proj.lastAngle = angle;
+        rotAngle = Math.atan2(v2.y - v1.y, v2.x - v1.x);
+        isLeft = Math.abs(rotAngle) > Math.PI / 2;
+        proj.lastAngle = rotAngle;
       }
       
       proj.lastX = proj.x;
@@ -1445,6 +1509,8 @@ export class Renderer {
       sprite.scale.set(64, 64, 1);
 
       sprite.position.set(0, 0, 0);
+      sprite.quaternion.copy(this.camera.quaternion);
+      sprite.rotateZ(rotAngle);
       group.position.set(proj.x, proj.y, proj.z);
 
       if (shadow) {
@@ -1601,8 +1667,18 @@ export class Renderer {
       let group = this.debrisMeshes.get(id);
       if (!group) {
         group = new THREE.Group();
-        const mat = new THREE.SpriteMaterial({ transparent: true, alphaTest: 0.01 });
-        const sprite = new THREE.Sprite(mat);
+        const mat = new THREE.MeshLambertMaterial({ transparent: true, alphaTest: 0.5, depthWrite: true, side: THREE.DoubleSide });
+        mat.onBeforeCompile = (shader) => {
+          shader.vertexShader = shader.vertexShader.replace(
+            '#include <defaultnormal_vertex>',
+            `vec3 transformedNormal = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);`
+          );
+        };
+        const geo = new THREE.PlaneGeometry(1, 1);
+        const sprite = new THREE.Mesh(geo, mat);
+        sprite.castShadow = this.engine.clientSettings.enableShadows !== false;
+        sprite.receiveShadow = true;
+        sprite.frustumCulled = false;
         group.add(sprite);
         group.userData.sprite = sprite;
 
@@ -1633,7 +1709,8 @@ export class Renderer {
       }
 
       sprite.scale.set(48, 48, 1);
-      sprite.material.rotation = deb.rotation || 0;
+      sprite.quaternion.copy(this.camera.quaternion);
+      sprite.rotateZ(deb.rotation || 0);
       sprite.material.opacity = deb.life < 1.0 ? deb.life : 1.0;
       
       const fadeStart = 3.0;
@@ -1682,11 +1759,17 @@ export class Renderer {
     
     this.camera.position.x = cx + (Math.sin(orbitAngle) * camOffsetDist);
     this.camera.position.y = cy + (Math.cos(orbitAngle) * camOffsetDist);
-    this.camera.position.z = cz + (camOffsetDist * Math.tan(Math.atan(1 / Math.sqrt(2))));
+    this.camera.position.z = cz + (camOffsetDist * Math.tan(this.cameraPitch));
     
     this.camera.lookAt(cx, cy, cz);
     // Force a matrix update so the Raycaster perfectly aligns with the new camera position!
     this.camera.updateMatrixWorld();
+
+    if (this.sunLight) {
+      this.sunLight.position.set(cx + (this.sunOffsetX || 0), cy + (this.sunOffsetY || 500), cz + (this.sunOffsetZ || 1500));
+      this.sunLight.target.position.set(cx, cy, cz);
+      this.sunLight.target.updateMatrixWorld();
+    }
   }
 
   updateArrowHelper() {
@@ -2194,6 +2277,107 @@ export class Renderer {
     }
   }
 
+  toggleShadows(isEnabled) {
+    this.webgl.shadowMap.enabled = isEnabled;
+    if (this.sunLight) this.sunLight.castShadow = isEnabled;
+
+    const meshes = [
+      this.voxelMesh, this.slabMesh, this.rampMesh, this.stairMesh, this.decorMesh,
+      this.glassMesh, this.glassSlabMesh, this.glassRampMesh, this.glassStairMesh,
+      this.doorMesh, this.glassDoorMesh, ...Object.values(this.modelMeshes || {}),
+      ...Object.values(this.previewModelMeshes || {}),
+      this.previewCubeMesh, this.previewSlabMesh, this.previewRampMesh, this.previewStairMesh, this.previewDoorMesh
+    ].filter(Boolean);
+
+    meshes.forEach(mesh => {
+      mesh.castShadow = isEnabled;
+      mesh.receiveShadow = isEnabled;
+      if (mesh.material) mesh.material.needsUpdate = true;
+    });
+
+    const updateSpriteShadows = (map) => {
+      if (map) {
+        for (const group of map.values()) {
+          if (group.userData.sprite && group.userData.sprite.isMesh) {
+            group.userData.sprite.castShadow = isEnabled;
+            group.userData.sprite.receiveShadow = isEnabled;
+            if (group.userData.sprite.material) group.userData.sprite.material.needsUpdate = true;
+          }
+        }
+      }
+    };
+
+    updateSpriteShadows(this.entityMeshes);
+    updateSpriteShadows(this.projectileMeshes);
+    updateSpriteShadows(this.debrisMeshes);
+  }
+
+  updateTimeOfDay() {
+    const cycleDuration = 120000; 
+    const t = (performance.now() % cycleDuration) / cycleDuration;
+    
+    let angle;
+    if (t < (2 / 3)) {
+      angle = (t / (2 / 3)) * Math.PI; // Expand daytime (0 to PI) over the first 66% of the cycle
+    } else {
+      angle = Math.PI + ((t - (2 / 3)) / (1 / 3)) * Math.PI; // Compress nighttime (PI to 2PI) into the last 33%
+    }
+
+    const sunDist = 2000;
+    const height = Math.sin(angle);
+    this.sunOffsetZ = Math.abs(height) * sunDist; 
+    this.sunOffsetY = Math.cos(angle) * sunDist;
+    this.sunOffsetX = Math.cos(angle) * sunDist * 0.5;
+
+    if (height > 0.2) {
+      this.hemiLight.color.setHex(0xffffff);
+      this.hemiLight.groundColor.setHex(0x444444);
+      this.hemiLight.intensity = 0.7;
+      this.sunLight.color.setHex(0xffffee);
+      this.sunLight.intensity = 1.2;
+    } else if (height > 0) {
+      this.hemiLight.color.setHex(0xffaa55);
+      this.hemiLight.groundColor.setHex(0x221100);
+      this.hemiLight.intensity = 0.55;
+      this.sunLight.color.setHex(0xff6600);
+      this.sunLight.intensity = 0.9;
+    } else {
+      this.hemiLight.color.setHex(0x334466);
+      this.hemiLight.groundColor.setHex(0x1a2233);
+      this.hemiLight.intensity = 0.4; // Boosted ambient light at night
+      this.sunLight.color.setHex(0x6677aa);
+      this.sunLight.intensity = 0.6; // Boosted moonlight casting shadows
+    }
+
+    const sunEl = document.getElementById('compass-sun');
+    const clockEl = document.getElementById('in-game-clock');
+    if (sunEl && clockEl) {
+      const r = 26; 
+      const sx = -Math.cos(angle) * r;
+      const sy = -height * r;
+      sunEl.style.transform = `translate(calc(-50% + ${sx}px), calc(-50% + ${sy}px))`;
+
+      if (height > 0.2) {
+        sunEl.style.background = '#f1c40f';
+        sunEl.style.boxShadow = '0 0 8px #f1c40f';
+      } else if (height > 0) {
+        sunEl.style.background = '#e67e22';
+        sunEl.style.boxShadow = '0 0 8px #e67e22';
+      } else {
+        sunEl.style.background = '#bdc3c7'; 
+        sunEl.style.boxShadow = '0 0 8px #bdc3c7';
+      }
+
+      let hours = ((angle / (Math.PI * 2)) * 24 + 6) % 24;
+      const h = Math.floor(hours);
+      const m = Math.floor((hours - h) * 60);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const displayH = h % 12 === 0 ? 12 : h % 12;
+      const displayM = m < 10 ? '0' + m : m;
+      clockEl.innerText = `${displayH}:${displayM} ${ampm}`;
+    }
+  }
+
   draw() {
     const eng = this.engine;
     
@@ -2205,13 +2389,14 @@ export class Renderer {
       this.debugCtx.clearRect(0, 0, this.debugCanvas.width, this.debugCanvas.height);
     }
 
+    this.updateTimeOfDay();
+    this.updateCameraTracking();
     this.updateAnimatedTiles();
     this.updateVoxels();
     this.updateEntities();
     this.updateProjectiles();
     this.updateParticles();
     this.updateDebris();
-    this.updateCameraTracking();
     this.updateArrowHelper();
     this.update3DDebug();
 

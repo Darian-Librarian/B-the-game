@@ -1,4 +1,4 @@
-import { POWER_REGISTRY } from './registry.js?v=new-engine-311';
+import { POWER_REGISTRY } from './registry.js?v=new-engine-314';
 export class PowerbarUIManager {
   constructor(engine, mainUIManager) {
     this.engine = engine;

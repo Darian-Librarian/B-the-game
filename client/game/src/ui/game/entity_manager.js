@@ -1,4 +1,4 @@
-import { getBlockProps } from './blocks.js?v=new-engine-311';
+import { getBlockProps } from './blocks.js?v=new-engine-314';
 
 const DIRECTIONS = ['down-left', 'down', 'down-right', 'right', 'up-right', 'up', 'up-left', 'left'];
 
@@ -177,12 +177,26 @@ export class EntityManager {
       }
 
       const camSens = eng.clientSettings.cameraSensitivity !== undefined ? eng.clientSettings.cameraSensitivity : 120;
-      const invertCam = eng.clientSettings.invertCameraRotation ? -1 : 1;
-      if (eng.keys['q']) {
-        if (eng.renderer && eng.renderer.rotateCamera) eng.renderer.rotateCamera(-camSens * invertCam * (dt / 1000));
+      const invertX = eng.clientSettings.invertCameraX ? -1 : 1;
+      const invertY = eng.clientSettings.invertCameraY ? -1 : 1;
+      
+      const kbs = eng.clientSettings.keybinds || { undo: 'z', redo: 'y', picker: '', flyDown: 'x', camUp: 'pageup', camDown: 'pagedown', camLeft: 'q', camRight: 'e' };
+      const camLeftKey = (kbs.camLeft || 'q').toLowerCase();
+      const camRightKey = (kbs.camRight || 'e').toLowerCase();
+      const camUpKey = (kbs.camUp || 'pageup').toLowerCase();
+      const camDownKey = (kbs.camDown || 'pagedown').toLowerCase();
+
+      if (eng.keys[camLeftKey]) {
+        if (eng.renderer && eng.renderer.rotateCamera) eng.renderer.rotateCamera(-camSens * invertX * (dt / 1000), 0);
       }
-      if (eng.keys['e']) {
-        if (eng.renderer && eng.renderer.rotateCamera) eng.renderer.rotateCamera(camSens * invertCam * (dt / 1000));
+      if (eng.keys[camRightKey]) {
+        if (eng.renderer && eng.renderer.rotateCamera) eng.renderer.rotateCamera(camSens * invertX * (dt / 1000), 0);
+      }
+      if (eng.keys[camUpKey]) {
+        if (eng.renderer && eng.renderer.rotateCamera) eng.renderer.rotateCamera(0, -camSens * 1.5 * invertY * (dt / 1000));
+      }
+      if (eng.keys[camDownKey]) {
+        if (eng.renderer && eng.renderer.rotateCamera) eng.renderer.rotateCamera(0, camSens * 1.5 * invertY * (dt / 1000));
       }
 
       if (player.isSitting || player.teleportTarget) {

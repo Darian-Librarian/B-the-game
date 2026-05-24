@@ -1,5 +1,5 @@
 
-import { TerrainGenerator } from './generator.js?v=new-engine-311';
+import { TerrainGenerator } from './generator.js?v=new-engine-314';
 
 export class MapManager {
   constructor(engine) {
