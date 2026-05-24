@@ -34,6 +34,20 @@ For powersets that fall between these primary nodes, use the `color-mix()` logic
 * **The Synthetic Leak**: As a powerset drifts from **Human** to **Synthetic**, the Gold/White base should gradually transition into Neon Cyan.
 * **Visual Density**: Maintain the sharp 16/32-bit pixelated scaling for all icons to ensure they keep that pixel grid qwispy against the dark space background.
 
+---
+
+## 3D Modeling & Blockbench Standards
+
+For models like Furniture and environmental assets, follow these strict configuration rules in Blockbench:
+
+- **Format & UV**: Select the `generic` model type and use `Box UV` mapping. 
+- **Base Resolution**: Use `32x32` for your grid resolution.
+- **Dynamic Texturing & Zero-UV Workflow**: All furniture models automatically tile textures from the builder's hotbar based on their physical 3D dimensions. 
+  - *The Rule*: You **do not** need to map UVs in Blockbench. 
+  - *The Math*: The engine's shader calculates seamless UVs procedurally in 3D space. For every 16 units of length in Blockbench (which equals 32 units or 1 Block in the engine), the texture will seamlessly loop 1 full time. This allows you to build a 44-unit long bench, and the wood grain will flawlessly tile across the entire object without stretching!
+
+---
+
 ## Tools & Templates
 
 To maintain consistency in power icon creation, use the master template:

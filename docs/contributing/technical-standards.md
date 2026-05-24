@@ -1,67 +1,41 @@
 # Technical Standards
 
-To keep the **B** wiki intuitive, all contributions should follow these structural and aesthetic standards. Consistency keeps scripts hot-loadable and docs readable.
+To keep the **B** ecosystem fast, efficient, and readable, we strictly enforce these technical standards across our codebase.
 
 ---
 
-## Editor & Environment
+## JavaScript Coding Practices
 
-* **Primary Editor**: **VSCode** is required for most development.
-* **Typography**:
-    * **Headers**: Use **Impact** for a high-contrast, aggressive 90s look.
-    * **Body Text**: Use **Segoe UI** for consistent legibility.
-    * **Monospaced/Code**: Use **Consolas** for all code blocks, UIs, and scripts.
+JavaScript is our heaviest language, powering the core game engine, networking, and UI systems. All contributions to the client must adhere to the following practices:
 
----
+* **ES6 Modules & Classes**: Use modern `import`/`export` syntax and encapsulate logic inside `class` structures (e.g., `GameEngine`, `UIManager`).
+* **Indentation**: We use a strict **2-space** indentation rule. Do not use tabs.
+* **Variable Declarations**: Use `const` by default. Use `let` only when mutability is required. Never use `var`.
+* **Performance & Caching**: **B** is a high-performance simulation. Avoid heavy calculations and DOM lookups inside animation or render loops (`update()`, `draw()`). Cache elements in your constructors (e.g., `this.els = { ... }`).
+* **Avoid "AI Slop" Refactoring**: Do not blindly pass files through an AI to "clean them up" or "refactor" them. Automated restructuring often strips the human intent and logic from our code.
 
-## Syntax & Spacing
+## File Structure & Formatting
 
-We enforce a strict layout for all scripts and markdown files.
-
-* **Two-Space Spacing**: Use exactly **two spaces** for indentation. Never use tabs.
-* **Spaces Only**: All editors must convert tabs to spaces on save.
-* **NLAEOF (Cursor Parking on live)**: Every file ends with a single empty new line.
-  > On the **Live Server**, this gives us cursor "parking space" so we don't bump into each other's code while hot-loading scripts. It keeps development smooth and error-free.
+* **NLAEOF (New Line At End Of File)**: Always leave an empty line at the bottom of your scripts. On the Live Server, this provides "parking space" for our cursors so we don't collide when hot-loading scripts.
 
 ---
-
-## The Development Stack
-
-We recommend you stick to our verified tech stack:
-
-* **DenizenScript**: Used for all custom Minecraft server accessories and world logic.
-* **AHK 2.0**: Strictly for automation, window management, and multiboxing efficiency.
-* **JavaScript**: Used for core simulation logic and the web-based rewards engine.
-* **CSS/HTML**: Maintaining our **Dark**, **Dim**, and **Ecstatic** archive themes.
-
----
-
-## Aesthetic Standards
-
-Visual assets and UI should fit our digital theme:
-
-* **Theme-Aware Accents**: Callouts (like blockquotes) should use CSS variables that shift with the active **Dark**, **Dim**, or **Ecstatic** theme.
-* **Rainbow Guidelines**: Only the **Ecstatic** theme can use multi-color gradients for borders and transitions.
-* **Image Rendering**: Icons and low-poly assets should use pixelated scaling for a sharp, gritty 16/32-bit look on high-res displays.
 
 <div align="left">
   <a href="#/contributing/contributing"><b>←  Back to Contributing</b></a>
 </div>
 
----
-
-<div class="nav-tray" style="flex-wrap: wrap;">
-  <strong>B</strong><span>|</span> 
-  <a href="#/wiki/play-info">Play</a><span>|</span> 
+<div class="nav-tray" style="flex-wrap: wrap; margin-top: 40px;">
+  <strong>B</strong><span>|</span>
+  <a href="#/wiki/play-info">Play</a><span>|</span>
   <a href="#/wiki/discord-community">Discord</a>
 </div>
 
 <div class="nav-tray" style="margin-top: 10px; flex-wrap: wrap;">
   <strong>Categories:</strong>
-  <a href="#/contributing/contributing">Contributing</a><span>|</span> 
-  <a href="#/contributing/contributing-on-github">GitHub Guide</a><span>|</span> 
-  <a href="#/contributing/technical-standards"><strong>Technical Standards</strong></a><span>|</span> 
-  <a href="#/contributing/artistic-standards">Artistic Standards</a><span>|</span> 
-  <a href="#/contributing/2026-roadmap">2026 Roadmap</a><span>|</span> 
+  <a href="#/contributing/contributing">Contributing</a><span>|</span>
+  <a href="#/contributing/contributing-on-github">GitHub Guide</a><span>|</span>
+  <a href="#/contributing/technical-standards"><strong>Technical Standards</strong></a><span>|</span>
+  <a href="#/contributing/artistic-standards">Artistic Standards</a><span>|</span>
+  <a href="#/contributing/2026-roadmap">2026 Roadmap</a><span>|</span>
   <a href="#/contributing/stubs">Stubs</a>
 </div>

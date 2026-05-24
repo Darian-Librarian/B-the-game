@@ -9,6 +9,7 @@
 * **Documentation**: Expand stubs and refine gameplay guides for new operators.
 * **Technical Scripts**: Develop **JavaScript** core systems, **DenizenScript** accessories, or **AHK 2.0** efficiency macros.
 * **Asset & Art Creation**: Provide 3D models or gritty 90s-style illustrations for project skits.
+  - **3D Models**: Furniture models must use the `generic` type and `Box UV` mapping, scaled for our 2048x2048 Master Atlas (see Artistic Standards).
   - **Icon Generation**: Use the template at `assets/icons/powers/power-template.xcf` with **GIMP**.
   - **Color Logic**: Tint icons based on the powerset position on the **Integrity Axis**.
 
